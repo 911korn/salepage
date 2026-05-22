@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -11,19 +10,22 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { buttonStyles } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 
-const ORDERS = [
-  { id: "#A2391", item: "ทองหยิบเซต 9 ชิ้น", price: "฿290", city: "เชียงใหม่" },
-  { id: "#A2392", item: "ขนมหม้อแกง", price: "฿159", city: "ขอนแก่น" },
-  { id: "#A2393", item: "ตะโก้ใบเตย", price: "฿220", city: "ภูเก็ต" },
-  { id: "#A2394", item: "บัตรของขวัญ", price: "฿1,000", city: "กรุงเทพฯ" },
-  { id: "#A2395", item: "ขนมชั้น 5 สี", price: "฿180", city: "นนทบุรี" },
-];
+interface TickerOrder {
+  id: string;
+  item: string;
+  price: string;
+  city: string;
+}
 
 export function Hero() {
+  const t = useTranslations("hero");
+  const tCommon = useTranslations("common");
   return (
     <section className="relative overflow-hidden pb-16 pt-10 sm:pt-14 lg:pb-24 lg:pt-20">
       <div className="absolute inset-0 -z-10 bg-radial-brand" />
@@ -39,7 +41,7 @@ export function Hero() {
               className="inline-flex items-center"
             >
               <Badge tone="soft-brand" className="px-3 py-1.5">
-                <Sparkles className="size-3.5" /> เปิดร้านได้ใน 30 วินาที — เร็วกว่าทุกค่าย 2 เท่า
+                <Sparkles className="size-3.5" /> {t("badge")}
               </Badge>
             </motion.div>
 
@@ -49,10 +51,14 @@ export function Hero() {
               transition={{ duration: 0.5, delay: 0.05 }}
               className="font-display mt-5 text-balance text-[40px] font-bold leading-[1.05] tracking-tight sm:text-[52px] lg:text-[64px]"
             >
-              เปิด<span className="text-[color:var(--color-brand-600)]">ร้านออนไลน์</span>
+              {t("title1")}{" "}
+              <span className="text-[color:var(--color-brand-600)]">
+                {t("titleHighlight")}
+              </span>
               <br />
-              รับเงินตรง <span className="relative">
-                <span className="relative z-10">ไม่มีตัวกลาง</span>
+              {t("title2")}{" "}
+              <span className="relative">
+                <span className="relative z-10">{t("titleStruck")}</span>
                 <span className="absolute inset-x-0 bottom-1 -z-0 h-3 bg-[color:var(--color-brand-100)]" />
               </span>
             </motion.h1>
@@ -63,9 +69,18 @@ export function Hero() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="mx-auto mt-5 max-w-xl text-balance text-[17px] leading-relaxed text-zinc-600 sm:text-lg lg:mx-0"
             >
-              แพลตฟอร์มสร้างร้านสำเร็จรูป — กรอกเบอร์ก็ได้ <strong className="text-[color:var(--color-brand-700)]">PromptPay QR อัตโนมัติ</strong>
-              {" "}
-              พร้อมระบบ <strong className="text-[color:var(--color-brand-700)]">ตรวจสลิป AI</strong> ลูกค้าโอน-ยืนยัน-ส่งของ ภายใน 1 นาที
+              {t.rich("desc", {
+                qr: (chunks) => (
+                  <strong className="text-[color:var(--color-brand-700)]">
+                    {chunks}
+                  </strong>
+                ),
+                ai: (chunks) => (
+                  <strong className="text-[color:var(--color-brand-700)]">
+                    {chunks}
+                  </strong>
+                ),
+              })}
             </motion.p>
 
             <motion.div
@@ -78,7 +93,8 @@ export function Hero() {
                 href="/signup"
                 className={cn(buttonStyles({ size: "xl" }), "w-full sm:w-auto")}
               >
-                สร้างร้านฟรี <ArrowRight className="size-5" />
+                {tCommon("createFreeShop")}
+                <ArrowRight className="size-5" />
               </Link>
               <Link
                 href="/s/siam-snack"
@@ -87,7 +103,8 @@ export function Hero() {
                   "w-full sm:w-auto",
                 )}
               >
-                <ShoppingBag className="size-5" /> ดูตัวอย่างร้าน
+                <ShoppingBag className="size-5" />{" "}
+                {tCommon("viewExample")}
               </Link>
             </motion.div>
 
@@ -98,13 +115,14 @@ export function Hero() {
               className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-zinc-600 lg:justify-start"
             >
               <span className="inline-flex items-center gap-1.5">
-                <Check className="size-4 text-emerald-600" /> ฟรีตลอดชีพ
+                <Check className="size-4 text-emerald-600" /> {t("trustFree")}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <Check className="size-4 text-emerald-600" /> ไม่ใช้บัตรเครดิต
+                <Check className="size-4 text-emerald-600" /> {t("trustNoCard")}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <Check className="size-4 text-emerald-600" /> รับเงินตรงเข้าบัญชี
+                <Check className="size-4 text-emerald-600" />{" "}
+                {t("trustDirect")}
               </span>
             </motion.div>
           </div>
@@ -119,6 +137,8 @@ export function Hero() {
 }
 
 function HeroVisual() {
+  const t = useTranslations("hero");
+  const tCommon = useTranslations("common");
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -143,21 +163,21 @@ function HeroVisual() {
               </div>
             </div>
             <Badge tone="success" className="hidden sm:inline-flex">
-              เปิดอยู่
+              {tCommon("open")}
             </Badge>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
             <ProductCard
               gradient="from-yellow-200 via-yellow-300 to-amber-400"
-              name="ทองหยิบเซต 9 ชิ้น"
+              name={t("previewProductHotName")}
               price="฿290"
               compare="฿390"
               badge="HOT"
             />
             <ProductCard
               gradient="from-emerald-200 to-emerald-400"
-              name="ลอดช่อง กะทิสด"
+              name={t("previewProductSaleName")}
               price="฿89"
               compare="฿120"
               badge="SALE"
@@ -170,8 +190,8 @@ function HeroVisual() {
                 <QrCode className="size-5" />
               </span>
               <div>
-                <p className="text-[13px] font-medium">PromptPay QR · ฿290</p>
-                <p className="text-[11px] text-zinc-500">ออเดอร์ #A2391</p>
+                <p className="text-[13px] font-medium">{t("previewQrLabel")}</p>
+                <p className="text-[11px] text-zinc-500">{t("previewQrOrder")}</p>
               </div>
             </div>
             <Badge tone="brand">
@@ -231,6 +251,7 @@ function ProductCard({
 }
 
 function FloatingNotification() {
+  const t = useTranslations("hero");
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -244,8 +265,8 @@ function FloatingNotification() {
           <Check className="size-5 text-emerald-600" strokeWidth={3} />
         </span>
         <div className="flex-1">
-          <p className="text-[13px] font-semibold">สลิปยืนยันแล้ว ✨</p>
-          <p className="text-[11px] text-zinc-500">฿290 · จาก K-Bank · 2 วินาที</p>
+          <p className="text-[13px] font-semibold">{t("previewSlipVerified")}</p>
+          <p className="text-[11px] text-zinc-500">{t("previewSlipMeta")}</p>
         </div>
       </div>
     </motion.div>
@@ -253,11 +274,13 @@ function FloatingNotification() {
 }
 
 function OrderTicker() {
-  const items = [...ORDERS, ...ORDERS];
+  const t = useTranslations("hero");
+  const orders = t.raw("tickerOrders") as TickerOrder[];
+  const items = [...orders, ...orders];
   return (
     <div className="mt-14 sm:mt-20">
       <p className="text-center text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
-        ออเดอร์ที่เกิดขึ้นจริงในเครือข่ายของเรา
+        {t("tickerHeading")}
       </p>
       <div className="mt-4 overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_10%,#000_90%,transparent)]">
         <div className="flex w-max animate-ticker gap-3">

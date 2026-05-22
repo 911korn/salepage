@@ -1,25 +1,27 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Eye, ShieldCheck, Star } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { DEMO_SHOPS } from "@/lib/demo-data";
 
 export function StorefrontPreview() {
+  const t = useTranslations("preview");
   const shop = DEMO_SHOPS["siam-snack"]!;
   return (
     <section id="preview" className="py-20 sm:py-24">
       <div className="container-page">
         <div className="mx-auto max-w-2xl text-center">
-          <Badge tone="soft-brand">ดูตัวอย่าง</Badge>
+          <Badge tone="soft-brand">{t("tagline")}</Badge>
           <h2 className="font-display mt-4 text-balance text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-            หน้าร้านสวยตั้งแต่ออเดอร์แรก
+            {t("title")}
           </h2>
           <p className="mt-4 text-balance text-[17px] leading-relaxed text-zinc-600">
-            ดูตัวอย่างร้านจริง — แตะที่การ์ดเพื่อเปิดหน้าร้านเต็มรูปแบบ
+            {t("desc")}
           </p>
         </div>
 
@@ -63,7 +65,7 @@ export function StorefrontPreview() {
                   href={`/s/${shop.slug}`}
                   className={cn(buttonStyles({ size: "md" }), "w-full sm:w-auto")}
                 >
-                  <Eye className="size-4" /> เปิดหน้าร้าน
+                  <Eye className="size-4" /> {t("openShop")}
                 </Link>
               </div>
 
@@ -110,7 +112,7 @@ export function StorefrontPreview() {
                 href={`/s/${shop.slug}`}
                 className="mt-5 flex items-center justify-center gap-1.5 text-sm font-medium text-[color:var(--color-brand-700)] hover:underline"
               >
-                ดูสินค้าทั้งหมด ({shop.productCount})
+                {t("viewAll")} ({shop.productCount})
                 <ArrowRight className="size-4" />
               </Link>
             </div>

@@ -1,22 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { buttonStyles } from "@/components/ui/button";
 import { LogoMark, Wordmark } from "@/components/ui/logo";
+import { LocaleSwitcher } from "@/components/ui/locale-switcher";
 import { cn } from "@/lib/cn";
 
-const NAV_LINKS = [
-  { href: "#features", label: "ฟีเจอร์" },
-  { href: "#promptpay", label: "PromptPay & สลิป" },
-  { href: "#preview", label: "ตัวอย่างร้าน" },
-  { href: "#pricing", label: "ราคา" },
-];
+const NAV_KEYS = [
+  { href: "#features", key: "features" },
+  { href: "#promptpay", key: "promptpay" },
+  { href: "#preview", key: "preview" },
+  { href: "#pricing", key: "pricing" },
+] as const;
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const tNav = useTranslations("nav");
+  const tCommon = useTranslations("common");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -41,23 +45,24 @@ export function Navbar() {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {NAV_LINKS.map((l) => (
+          {NAV_KEYS.map((l) => (
             <Link
               key={l.href}
               href={l.href}
               className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-[color:var(--color-soft)] hover:text-[color:var(--color-fg)]"
             >
-              {l.label}
+              {tNav(l.key)}
             </Link>
           ))}
         </nav>
 
         <div className="flex items-center gap-2">
+          <LocaleSwitcher className="hidden md:inline-flex" />
           <Link
             href="/login"
             className="hidden text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)] md:inline-flex md:px-3 md:py-2"
           >
-            เข้าสู่ระบบ
+            {tCommon("signIn")}
           </Link>
           <Link
             href="/signup"
@@ -66,11 +71,11 @@ export function Navbar() {
               "hidden md:inline-flex",
             )}
           >
-            สร้างร้านฟรี
+            {tCommon("createFreeShop")}
           </Link>
           <button
             type="button"
-            aria-label="เมนู"
+            aria-label={tCommon("menu")}
             onClick={() => setOpen((v) => !v)}
             className="grid size-10 place-items-center rounded-lg border border-[color:var(--color-border)] bg-white md:hidden"
           >
@@ -83,28 +88,34 @@ export function Navbar() {
         <div className="md:hidden">
           <div className="border-t border-[color:var(--color-border)] bg-white px-5 py-4">
             <nav className="flex flex-col gap-1">
-              {NAV_LINKS.map((l) => (
+              {NAV_KEYS.map((l) => (
                 <Link
                   key={l.href}
                   href={l.href}
                   onClick={() => setOpen(false)}
                   className="rounded-lg px-3 py-3 text-[15px] font-medium text-zinc-800 hover:bg-[color:var(--color-soft)]"
                 >
-                  {l.label}
+                  {tNav(l.key)}
                 </Link>
               ))}
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                  {tCommon("language")}
+                </span>
+                <LocaleSwitcher />
+              </div>
               <div className="mt-2 flex gap-2 pt-2">
                 <Link
                   href="/login"
                   className="flex-1 rounded-xl border border-[color:var(--color-border)] py-3 text-center text-[15px] font-medium"
                 >
-                  เข้าสู่ระบบ
+                  {tCommon("signIn")}
                 </Link>
                 <Link
                   href="/signup"
                   className="flex-1 rounded-xl bg-[color:var(--color-brand-600)] py-3 text-center text-[15px] font-medium text-white"
                 >
-                  สร้างร้านฟรี
+                  {tCommon("createFreeShop")}
                 </Link>
               </div>
             </nav>

@@ -1,12 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 export function FinalCta() {
+  const t = useTranslations("finalCta");
+  const tCommon = useTranslations("common");
   return (
     <section className="relative overflow-hidden py-20 sm:py-24">
       <div className="container-page">
@@ -21,13 +24,13 @@ export function FinalCta() {
           <div className="absolute -bottom-20 left-0 size-72 rounded-full bg-white/10 blur-3xl" />
 
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-            <Sparkles className="size-3.5" /> เปิดร้านได้ใน 30 วินาที
+            <Sparkles className="size-3.5" /> {t("tagline")}
           </span>
           <h2 className="font-display mx-auto mt-5 max-w-2xl text-balance text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-            พร้อมเริ่มขายแล้วใช่ไหม?
+            {t("title")}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-balance text-[17px] leading-relaxed text-rose-50/90">
-            สมัครฟรี ไม่ต้องใช้บัตรเครดิต ไม่มีค่าธรรมเนียมต่อออเดอร์ — เริ่มขายได้ทันที
+            {t("desc")}
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -38,13 +41,14 @@ export function FinalCta() {
                 "w-full bg-white !text-[color:var(--color-brand-700)] hover:bg-rose-50 hover:!text-[color:var(--color-brand-800)] sm:w-auto",
               )}
             >
-              สร้างร้านฟรี <ArrowRight className="size-5" />
+              {tCommon("createFreeShop")}
+              <ArrowRight className="size-5" />
             </Link>
             <Link
               href="/s/siam-snack"
               className="text-sm font-medium text-rose-50 underline-offset-4 hover:underline"
             >
-              หรือดูตัวอย่างร้านก่อน →
+              {t("secondary")}
             </Link>
           </div>
         </motion.div>

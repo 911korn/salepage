@@ -1,0 +1,238 @@
+{
+  "meta": {
+    "title": "SalePage — Launch your online store in 30 seconds | salepage.in.th",
+    "description": "Ready-made e-commerce platform for Thai sellers. Direct PromptPay payments, AI slip verification, no code required — free forever.",
+    "ogTitle": "SalePage — Launch your online store in 30 seconds",
+    "ogDescription": "Create an online store free. Get paid directly via PromptPay with built-in AI slip verification."
+  },
+  "common": {
+    "createFreeShop": "Start free",
+    "signIn": "Sign in",
+    "viewExample": "View example shop",
+    "recommended": "Recommended",
+    "tryItNow": "Try it now",
+    "instant": "Instant",
+    "open": "Open",
+    "verified": "Verified",
+    "menu": "Menu",
+    "language": "Language"
+  },
+  "nav": {
+    "features": "Features",
+    "promptpay": "PromptPay & slip",
+    "preview": "Example shop",
+    "pricing": "Pricing"
+  },
+  "hero": {
+    "badge": "Open in 30 seconds — 2× faster than any competitor",
+    "title1": "Open your",
+    "titleHighlight": "online store",
+    "title2": "get paid",
+    "titleStruck": "with no middleman",
+    "desc": "Ready-made store platform — just enter your phone and you get <qr>an automatic PromptPay QR</qr>, plus our <ai>AI slip verifier</ai>. Your customer transfers, you verify, you ship — all in 1 minute.",
+    "trustFree": "Free forever",
+    "trustNoCard": "No credit card",
+    "trustDirect": "Money lands in your account",
+    "previewProductHotName": "Thong Yip set of 9",
+    "previewProductSaleName": "Coconut Lod Chong",
+    "previewQrLabel": "PromptPay QR · ฿290",
+    "previewQrOrder": "Order #A2391",
+    "previewSlipVerified": "Slip verified ✨",
+    "previewSlipMeta": "฿290 · from K-Bank · 2 seconds",
+    "tickerHeading": "Real orders happening across our network",
+    "tickerOrders": [
+      { "id": "#A2391", "item": "Thong Yip set of 9", "price": "฿290", "city": "Chiang Mai" },
+      { "id": "#A2392", "item": "Mor Kaeng custard", "price": "฿159", "city": "Khon Kaen" },
+      { "id": "#A2393", "item": "Tako pandan", "price": "฿220", "city": "Phuket" },
+      { "id": "#A2394", "item": "Gift card", "price": "฿1,000", "city": "Bangkok" },
+      { "id": "#A2395", "item": "5-color Khanom Chan", "price": "฿180", "city": "Nonthaburi" }
+    ]
+  },
+  "promptpay": {
+    "tagline": "Try it now",
+    "title1": "Enter your phone → get",
+    "titleHighlight": "PromptPay QR",
+    "title2": "in a fraction of a second",
+    "desc": "QR generated to the Bank of Thailand spec. Your customers scan with any bank app.",
+    "idLabel": "PromptPay ID",
+    "idPlaceholder": "08x-xxx-xxxx or 13-digit national ID",
+    "idHint": "Supports 10-digit phone / 13-digit national ID / 15-digit e-wallet",
+    "amountLabel": "Amount (THB)",
+    "amountOptional": "— optional",
+    "amountPlaceholder": "e.g. 290",
+    "anyAmount": "Any amount",
+    "freeAmount": "Open amount",
+    "amountLabelDisplay": "Total",
+    "scanHint": "Scan with any bank app",
+    "qrEmpty": "Enter a PromptPay ID to generate a QR",
+    "copyPayload": "Copy payload",
+    "download": "Download",
+    "footer": "Generated real-time by our API · try it for real",
+    "idTypePhone": "Phone",
+    "idTypeNationalId": "National ID",
+    "idTypeEwallet": "e-Wallet",
+    "errors": {
+      "invalidId": "Enter a 10-digit phone or 13-digit national ID",
+      "invalidAmount": "Invalid amount",
+      "qrFailed": "Could not generate QR",
+      "apiFailed": "Could not reach API",
+      "copySuccess": "Payload copied",
+      "downloadSuccess": "QR downloaded"
+    }
+  },
+  "features": {
+    "tagline": "Why SalePage",
+    "title1": "Better, cooler, simpler —",
+    "titleHighlight": "than every SalePage you've tried",
+    "desc": "Every feature an online shop needs — redesigned to be faster, prettier, and easier.",
+    "items": {
+      "speed": {
+        "title": "30-second setup",
+        "desc": "3 steps and you're selling — no code, no design, the system styles it for you."
+      },
+      "qr": {
+        "title": "Automatic PromptPay QR",
+        "desc": "Enter your phone or national ID; we generate a QR with the right amount instantly."
+      },
+      "ai": {
+        "title": "AI slip verification",
+        "desc": "Customers upload a slip — we check amount, recipient, and time in under 2 seconds."
+      },
+      "fees": {
+        "title": "No fees, no skim",
+        "desc": "Money flows directly from your customer's account to yours — SalePage is never a money intermediary."
+      },
+      "link": {
+        "title": "One link, sell everywhere",
+        "desc": "salepage.in.th/{your-shop} pasted on IG, TikTok, LINE OA, FB — sells anywhere."
+      },
+      "admin": {
+        "title": "Pro back-office",
+        "desc": "Orders, stock, coupons, reviews, dashboard — everything a serious shop needs."
+      },
+      "mobile": {
+        "title": "Web + mobile app",
+        "desc": "API-first. Run your shop from web or a native mobile app — real-time sync."
+      },
+      "theme": {
+        "title": "Pro-grade themes",
+        "desc": "Big-brand level design. Tweak colors / logo / banner — or pick a preset."
+      },
+      "performance": {
+        "title": "Fast every page, every time",
+        "desc": "< 1s page loads, instant orders, real-time slip alerts — no waiting."
+      }
+    }
+  },
+  "preview": {
+    "tagline": "See an example",
+    "title": "A beautiful storefront from order #1",
+    "desc": "A real example shop — tap the card to open the full storefront.",
+    "openShop": "Open shop",
+    "viewAll": "View all products"
+  },
+  "pricing": {
+    "tagline": "Starts free",
+    "title1": "Pay only for what you use —",
+    "titleHighlight": "30%+ cheaper than competitors",
+    "desc": "Free forever. No per-order fee. Customers transfer money straight to your account.",
+    "footnote": "Prices include 7% VAT · cancel anytime · upgrade/downgrade any month",
+    "perMonth": "/month",
+    "lifetime": "Forever",
+    "plans": {
+      "starter": {
+        "name": "Starter",
+        "desc": "Start selling with no costs",
+        "cta": "Start free",
+        "features": [
+          "Up to 5 products",
+          "2 images per product",
+          "Automatic PromptPay QR",
+          "Manual slip verification",
+          "subdomain salepage.in.th/{your-shop}",
+          "Basic back-office"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "desc": "For shops that need full power",
+        "cta": "Try Pro free 14 days",
+        "features": [
+          "Unlimited products",
+          "10 images per product",
+          "AI slip verify ฿0.50 / slip",
+          "Coupons + loyalty points",
+          "Analytics + funnel report",
+          "Your own custom domain",
+          "Verified ✓ badge",
+          "VIP support within 1 hour"
+        ]
+      },
+      "business": {
+        "name": "Business",
+        "desc": "Multiple shops, multiple brands, one account",
+        "cta": "Contact sales",
+        "features": [
+          "Everything in Pro",
+          "Up to 5 shops per account",
+          "Unlimited free AI slip verify",
+          "API + Webhook for ERP",
+          "Webhook → LINE OA / Slack",
+          "10 staff users per branch",
+          "99.9% SLA + Account Manager"
+        ]
+      }
+    }
+  },
+  "finalCta": {
+    "tagline": "Open in 30 seconds",
+    "title": "Ready to start selling?",
+    "desc": "Sign up free, no credit card, no per-order fee — start selling immediately.",
+    "secondary": "Or see an example shop first →"
+  },
+  "footer": {
+    "tagline": "Ready-made store platform with direct PromptPay payouts and AI slip verification — for Thai online shops of every size.",
+    "colProduct": "Product",
+    "colDevs": "Developers",
+    "colCompany": "Company",
+    "linkApiV1": "API v1",
+    "linkDocs": "Docs",
+    "linkPromptpayApi": "PromptPay API",
+    "linkSlipApi": "Slip Verify API",
+    "linkAbout": "About",
+    "linkContact": "Contact",
+    "linkTerms": "Terms of service",
+    "linkPrivacy": "Privacy",
+    "linkExample": "Example shop",
+    "copyright": "© {year} SalePage. All rights reserved.",
+    "credit": "Made in Thailand with ❤"
+  },
+  "shop": {
+    "back": "Back",
+    "createOwn": "Create your own shop",
+    "products": "Products",
+    "rating": "Rating",
+    "sold": "Sold",
+    "allProducts": "All products",
+    "items": "items",
+    "soldCount": "Sold {n}",
+    "physical": "PHYSICAL",
+    "digital": "DIGITAL",
+    "badgeHot": "HOT",
+    "badgeNew": "NEW",
+    "badgeSale": "SALE",
+    "poweredBy": "This shop runs on {brand} — start your own free in 30 seconds"
+  },
+  "categories": {
+    "fashion": "Fashion",
+    "food": "Food & drink",
+    "tech": "Tech",
+    "beauty": "Beauty",
+    "health": "Health",
+    "furniture": "Furniture",
+    "pets": "Pets",
+    "books": "Books",
+    "sport": "Sports",
+    "other": "Other"
+  }
+}

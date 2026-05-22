@@ -3,7 +3,6 @@
 import { useEffect, useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import {
-  AlertCircle,
   Banknote,
   Check,
   Copy,
@@ -14,6 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,16 +29,11 @@ interface QrResponse {
   data: { payload: string; dataUrl: string; svg: string; id: string; amount?: number };
 }
 
-const ID_TYPE_LABEL: Record<PromptPayIdType, string> = {
-  phone: "เบอร์โทร",
-  "national-id": "บัตรประชาชน",
-  ewallet: "e-Wallet",
-};
-
 const FORMATTERS: Record<PromptPayIdType, (digits: string) => string> = {
-  phone: (d) => d.replace(/^(\d{3})(\d{0,3})(\d{0,4}).*/, (_, a, b, c) =>
-    [a, b, c].filter(Boolean).join("-"),
-  ),
+  phone: (d) =>
+    d.replace(/^(\d{3})(\d{0,3})(\d{0,4}).*/, (_, a, b, c) =>
+      [a, b, c].filter(Boolean).join("-"),
+    ),
   "national-id": (d) =>
     d.replace(/^(\d{1})(\d{0,4})(\d{0,5})(\d{0,2})(\d{0,1}).*/, (_, a, b, c, e, f) =>
       [a, b, c, e, f].filter(Boolean).join("-"),
@@ -54,6 +49,13 @@ function formatId(value: string) {
 }
 
 export function PromptPayDemo() {
+  const t = useTranslations("promptpay");
+  const idTypeLabel: Record<PromptPayIdType, string> = {
+    phone: t("idTypePhone"),
+    "national-id": t("idTypeNationalId"),
+    ewallet: t("idTypeEwallet"),
+  };
+
   const [id, setId] = useState("0812345678");
   const [amount, setAmount] = useState("290");
   const [qr, setQr] = useState<QrResponse["data"] | null>(null);
@@ -67,12 +69,12 @@ export function PromptPayDemo() {
   useEffect(() => {
     if (!idType) {
       setQr(null);
-      setError(digits.length === 0 ? null : "ใส่เบอร์ 10 หลัก หรือเลขบัตร 13 หลัก");
+      setError(digits.length === 0 ? null : t("errors.invalidId"));
       return;
     }
     const parsedAmount = amount ? Number(amount.replace(/,/g, "")) : undefined;
     if (parsedAmount !== undefined && (!Number.isFinite(parsedAmount) || parsedAmount < 0)) {
-      setError("ยอดเงินไม่ถูกต้อง");
+      setError(t("errors.invalidAmount"));
       return;
     }
     setError(null);
@@ -98,7 +100,7 @@ export function PromptPayDemo() {
           setQr(json.data);
         } catch (e) {
           if ((e as Error).name === "AbortError") return;
-          setError("เกิดข้อผิดพลาดในการสร้าง QR");
+          setError(t("errors.qrFailed"));
         } finally {
           setLoading(false);
         }
@@ -108,7 +110,7 @@ export function PromptPayDemo() {
       clearTimeout(debounce);
       ctrl.abort();
     };
-  }, [digits, amount, idType]);
+  }, [digits, amount, idType, t]);
 
   return (
     <section
@@ -119,15 +121,17 @@ export function PromptPayDemo() {
       <div className="container-page">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[color:var(--color-brand-700)] shadow-sm">
-            <QrCode className="size-3.5" /> ลองเล่นได้เลย
+            <QrCode className="size-3.5" /> {t("tagline")}
           </span>
           <h2 className="font-display mt-4 text-balance text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-            ใส่เบอร์ → ได้{" "}
-            <span className="text-[color:var(--color-brand-600)]">PromptPay QR</span>
-            <br className="hidden sm:block" /> ภายในเสี้ยววินาที
+            {t("title1")}{" "}
+            <span className="text-[color:var(--color-brand-600)]">
+              {t("titleHighlight")}
+            </span>
+            <br className="hidden sm:block" /> {t("title2")}
           </h2>
           <p className="mt-4 text-balance text-[17px] leading-relaxed text-zinc-600">
-            ระบบสร้าง QR ตามมาตรฐานธนาคารแห่งประเทศไทย ลูกค้าสแกนจ่ายผ่านแอปธนาคารใดก็ได้
+            {t("desc")}
           </p>
         </div>
 
@@ -137,11 +141,11 @@ export function PromptPayDemo() {
               <div>
                 <label className="mb-2 flex items-center justify-between gap-2 text-sm font-medium">
                   <span className="flex items-center gap-1.5">
-                    <Smartphone className="size-4 text-[color:var(--color-brand-600)]" /> PromptPay ID
+                    <Smartphone className="size-4 text-[color:var(--color-brand-600)]" /> {t("idLabel")}
                   </span>
                   {idType ? (
                     <Badge tone="soft-brand">
-                      <Check className="size-3" /> {ID_TYPE_LABEL[idType]}
+                      <Check className="size-3" /> {idTypeLabel[idType]}
                     </Badge>
                   ) : null}
                 </label>
@@ -149,24 +153,24 @@ export function PromptPayDemo() {
                   value={formatId(id)}
                   onChange={(e) => setId(e.target.value)}
                   inputMode="numeric"
-                  placeholder="08x-xxx-xxxx หรือ เลขบัตร 13 หลัก"
+                  placeholder={t("idPlaceholder")}
                   className="h-13"
                 />
-                <p className="mt-2 text-xs text-zinc-500">
-                  รองรับเบอร์โทร 10 หลัก / เลขบัตรประชาชน 13 หลัก / e-wallet 15 หลัก
-                </p>
+                <p className="mt-2 text-xs text-zinc-500">{t("idHint")}</p>
               </div>
 
               <div>
                 <label className="mb-2 flex items-center gap-1.5 text-sm font-medium">
-                  <Banknote className="size-4 text-[color:var(--color-brand-600)]" /> ยอดเงิน (บาท)
-                  <span className="text-xs font-normal text-zinc-500">— ไม่ใส่ก็ได้</span>
+                  <Banknote className="size-4 text-[color:var(--color-brand-600)]" /> {t("amountLabel")}
+                  <span className="text-xs font-normal text-zinc-500">
+                    {t("amountOptional")}
+                  </span>
                 </label>
                 <Input
                   value={amount}
                   onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
                   inputMode="decimal"
-                  placeholder="เช่น 290"
+                  placeholder={t("amountPlaceholder")}
                   prefix={<span className="font-semibold">฿</span>}
                   className="h-13"
                 />
@@ -191,14 +195,14 @@ export function PromptPayDemo() {
                     onClick={() => setAmount("")}
                     className="rounded-full border border-[color:var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-zinc-600 hover:border-[color:var(--color-brand-300)]"
                   >
-                    Any amount
+                    {t("anyAmount")}
                   </button>
                 </div>
               </div>
 
               {error ? (
                 <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                  <Sparkles className="mt-0.5 size-4 shrink-0" />
                   <span>{error}</span>
                 </div>
               ) : null}
@@ -216,7 +220,7 @@ export function PromptPayDemo() {
           <div className="relative rounded-3xl border border-[color:var(--color-border)] bg-gradient-to-br from-rose-50 via-white to-rose-50 p-6 sm:p-8">
             <div className="absolute inset-x-6 -top-2 flex items-center justify-between text-[11px] font-medium text-zinc-500">
               <span className="inline-flex items-center gap-1.5">
-                <Wallet className="size-3.5" /> สแกนด้วยแอปธนาคารใดก็ได้
+                <Wallet className="size-3.5" /> {t("scanHint")}
               </span>
             </div>
             <div className="grid place-items-center">
@@ -228,6 +232,7 @@ export function PromptPayDemo() {
                 className="relative aspect-square w-full max-w-[300px] rounded-2xl border-2 border-[color:var(--color-brand-200)] bg-white p-4 shadow-xl shadow-rose-100"
               >
                 {qr ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={qr.dataUrl}
                     alt="PromptPay QR"
@@ -237,7 +242,7 @@ export function PromptPayDemo() {
                   <div className="grid size-full place-items-center rounded-lg bg-zinc-50 text-zinc-400">
                     <div className="flex flex-col items-center gap-2 text-center">
                       <QrCode className="size-12" />
-                      <p className="text-xs">ใส่ PromptPay ID เพื่อสร้าง QR</p>
+                      <p className="text-xs">{t("qrEmpty")}</p>
                     </div>
                   </div>
                 )}
@@ -252,16 +257,16 @@ export function PromptPayDemo() {
             <div className="mt-5 grid gap-2 text-center">
               {qr?.amount ? (
                 <p className="font-display text-3xl font-bold text-[color:var(--color-brand-700)]">
-                  ฿{qr.amount.toLocaleString("th-TH", { minimumFractionDigits: 0 })}
+                  ฿{qr.amount.toLocaleString(undefined, { minimumFractionDigits: 0 })}
                 </p>
               ) : qr ? (
                 <p className="font-display text-xl font-semibold text-zinc-700">
-                  ยอดเงินอิสระ
+                  {t("freeAmount")}
                 </p>
               ) : null}
               {qr?.id ? (
                 <p className="font-mono text-[13px] text-zinc-500">
-                  {formatId(qr.id)} · {idType ? ID_TYPE_LABEL[idType] : ""}
+                  {formatId(qr.id)} · {idType ? idTypeLabel[idType] : ""}
                 </p>
               ) : null}
             </div>
@@ -274,10 +279,10 @@ export function PromptPayDemo() {
                 onClick={() => {
                   if (!qr) return;
                   navigator.clipboard.writeText(qr.payload);
-                  toast.success("คัดลอก payload แล้ว");
+                  toast.success(t("errors.copySuccess"));
                 }}
               >
-                <Copy className="size-4" /> คัดลอก payload
+                <Copy className="size-4" /> {t("copyPayload")}
               </Button>
               <Button
                 variant="primary"
@@ -289,16 +294,16 @@ export function PromptPayDemo() {
                   a.href = qr.dataUrl;
                   a.download = `promptpay-${qr.id}${qr.amount ? `-${qr.amount}` : ""}.png`;
                   a.click();
-                  toast.success("ดาวน์โหลด QR แล้ว");
+                  toast.success(t("errors.downloadSuccess"));
                 }}
               >
-                <Download className="size-4" /> ดาวน์โหลด
+                <Download className="size-4" /> {t("download")}
               </Button>
             </div>
 
             <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[12px] text-zinc-500">
               <Sparkles className="size-3.5 text-[color:var(--color-brand-500)]" />
-              สร้าง real-time จาก API ของเรา · ทดสอบจริงได้เลย
+              {t("footer")}
             </p>
           </div>
         </div>

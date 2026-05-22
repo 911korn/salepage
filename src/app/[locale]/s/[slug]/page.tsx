@@ -1,19 +1,25 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ShieldCheck, Star } from "lucide-react";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { getShopBySlug } from "@/lib/demo-data";
+import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string; locale: Locale }>;
 }
 
 export default async function StorefrontPage({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug, locale } = await params;
+  setRequestLocale(locale);
   const shop = getShopBySlug(slug);
   if (!shop) notFound();
+
+  const t = await getTranslations("shop");
+  const tCommon = await getTranslations("common");
 
   return (
     <div className="min-h-screen bg-[color:var(--color-soft)]">
@@ -23,14 +29,13 @@ export default async function StorefrontPage({ params }: PageProps) {
             href="/"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)]"
           >
-            <ArrowLeft className="size-4" /> ย้อนกลับ
+            <ArrowLeft className="size-4" /> {t("back")}
           </Link>
-          <p className="font-mono text-xs text-zinc-500">salepage.in.th/{shop.slug}</p>
-          <Link
-            href="/signup"
-            className={cn(buttonStyles({ size: "sm" }))}
-          >
-            สร้างร้านของคุณ
+          <p className="font-mono text-xs text-zinc-500">
+            salepage.in.th/{shop.slug}
+          </p>
+          <Link href="/signup" className={cn(buttonStyles({ size: "sm" }))}>
+            {t("createOwn")}
           </Link>
         </div>
       </header>
@@ -63,11 +68,13 @@ export default async function StorefrontPage({ params }: PageProps) {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="success">เปิดอยู่</Badge>
+                <Badge tone="success">{tCommon("open")}</Badge>
                 <Badge tone="soft-brand">
                   <Star className="size-3 fill-current" /> {shop.rating}
                 </Badge>
-                <Badge tone="neutral">ขายไปแล้ว {shop.totalSold.toLocaleString()}+</Badge>
+                <Badge tone="neutral">
+                  {t("sold")} {shop.totalSold.toLocaleString()}+
+                </Badge>
               </div>
             </div>
 
@@ -76,10 +83,10 @@ export default async function StorefrontPage({ params }: PageProps) {
             </p>
 
             <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-[color:var(--color-soft)] p-3 sm:grid-cols-3">
-              <Stat label="สินค้า" value={String(shop.productCount)} />
-              <Stat label="คะแนน" value={`${shop.rating} / 5`} />
+              <Stat label={t("products")} value={String(shop.productCount)} />
+              <Stat label={t("rating")} value={`${shop.rating} / 5`} />
               <Stat
-                label="ขายไปแล้ว"
+                label={t("sold")}
                 value={`${shop.totalSold.toLocaleString()}+`}
                 className="col-span-2 sm:col-span-1"
               />
@@ -89,10 +96,10 @@ export default async function StorefrontPage({ params }: PageProps) {
           <div className="mt-8">
             <div className="flex items-baseline justify-between">
               <h2 className="font-display text-xl font-bold sm:text-2xl">
-                สินค้าทั้งหมด
+                {t("allProducts")}
               </h2>
               <span className="text-sm text-zinc-500">
-                {shop.products.length} รายการ
+                {shop.products.length} {t("items")}
               </span>
             </div>
 
@@ -121,7 +128,7 @@ export default async function StorefrontPage({ params }: PageProps) {
                           p.badge === "SALE" && "bg-[color:var(--color-brand-600)]",
                         )}
                       >
-                        {p.badge}
+                        {p.badge === "HOT" ? t("badgeHot") : p.badge === "NEW" ? t("badgeNew") : t("badgeSale")}
                       </span>
                     ) : null}
                   </div>
@@ -148,9 +155,9 @@ export default async function StorefrontPage({ params }: PageProps) {
                             : "border-zinc-200 bg-zinc-50",
                         )}
                       >
-                        {p.type === "digital" ? "DIGITAL" : "PHYSICAL"}
+                        {p.type === "digital" ? t("digital") : t("physical")}
                       </span>
-                      <span>ขาย {p.sold.toLocaleString()}</span>
+                      <span>{t("soldCount", { n: p.sold.toLocaleString() })}</span>
                     </div>
                   </div>
                 </Link>
@@ -161,14 +168,16 @@ export default async function StorefrontPage({ params }: PageProps) {
           <footer className="mt-16 pb-10">
             <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white p-5 text-center">
               <p className="text-sm text-zinc-600">
-                ร้านนี้ใช้แพลตฟอร์ม{" "}
-                <Link
-                  href="/"
-                  className="font-semibold text-[color:var(--color-brand-700)] hover:underline"
-                >
-                  SalePage
-                </Link>
-                {" "}— สร้างร้านของคุณฟรี ใช้เวลา 30 วินาที
+                {t.rich("poweredBy", {
+                  brand: () => (
+                    <Link
+                      href="/"
+                      className="font-semibold text-[color:var(--color-brand-700)] hover:underline"
+                    >
+                      SalePage
+                    </Link>
+                  ),
+                })}
               </p>
             </div>
           </footer>
