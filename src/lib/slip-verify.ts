@@ -1,0 +1,172 @@
+/**
+ * Slip verification — pluggable provider.
+ *
+ * Production providers we can swap in by setting SLIP_VERIFY_PROVIDER:
+ *  - "slipok"   → calls https://api.slipok.com/api/line/apikey/{branchId}
+ *  - "easyslip" → calls https://developer.easyslip.com/api/v1/verify
+ *  - "mock"     → returns a deterministic fake result. Used until the team adds keys.
+ *
+ * The verify result shape is normalized across providers so the rest of the
+ * code (and the future React Native app) only ever sees one type.
+ */
+export type SlipProvider = "slipok" | "easyslip" | "mock";
+
+export interface SlipVerifyInput {
+  /** Base64-encoded slip image, or `qrPayload` from a scanned QR. Exactly one required. */
+  imageBase64?: string;
+  qrPayload?: string;
+  /** Expected amount in THB to cross-check against the slip. */
+  expectAmount?: number;
+  /** Expected receiver PromptPay ID. */
+  expectReceiverId?: string;
+}
+
+export interface SlipVerifyResult {
+  /** True if the slip was successfully parsed and verified. */
+  verified: boolean;
+  /** Transaction reference / bank transaction ID. */
+  ref?: string;
+  /** Amount in THB the slip claims. */
+  amount?: number;
+  /** ISO timestamp of the transfer. */
+  transferredAt?: string;
+  /** Sender info as parsed. */
+  sender?: { name?: string; bank?: string; account?: string };
+  /** Receiver info as parsed. */
+  receiver?: { name?: string; bank?: string; account?: string };
+  /** Any mismatch we detected vs. expected values. */
+  mismatch?: { field: "amount" | "receiver"; expected: unknown; got: unknown }[];
+  /** Provider used. */
+  provider: SlipProvider;
+  /** Raw provider response for debugging (only in non-production). */
+  raw?: unknown;
+}
+
+function getProvider(): SlipProvider {
+  const env = process.env.SLIP_VERIFY_PROVIDER?.toLowerCase();
+  if (env === "slipok" || env === "easyslip") return env;
+  return "mock";
+}
+
+export async function verifySlip(input: SlipVerifyInput): Promise<SlipVerifyResult> {
+  if (!input.imageBase64 && !input.qrPayload) {
+    throw new Error("ต้องส่ง imageBase64 หรือ qrPayload อย่างน้อย 1 อย่าง");
+  }
+  const provider = getProvider();
+  switch (provider) {
+    case "slipok":
+      return verifyViaSlipOk(input);
+    case "easyslip":
+      return verifyViaEasySlip(input);
+    default:
+      return verifyViaMock(input);
+  }
+}
+
+async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult> {
+  const apiKey = process.env.SLIPOK_API_KEY;
+  const branchId = process.env.SLIPOK_BRANCH_ID;
+  if (!apiKey || !branchId) {
+    throw new Error("ไม่ได้ตั้งค่า SLIPOK_API_KEY / SLIPOK_BRANCH_ID");
+  }
+  const body = input.qrPayload
+    ? { payload: input.qrPayload, amount: input.expectAmount }
+    : { data: input.imageBase64, amount: input.expectAmount };
+
+  const res = await fetch(`https://api.slipok.com/api/line/apikey/${branchId}`, {
+    method: "POST",
+    headers: {
+      "x-authorization": apiKey,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const json = (await res.json()) as Record<string, unknown> & {
+    success?: boolean;
+    data?: Record<string, unknown>;
+  };
+  if (!res.ok || !json.success) {
+    return {
+      verified: false,
+      provider: "slipok",
+      raw: json,
+    };
+  }
+  const data = json.data ?? {};
+  return {
+    verified: true,
+    provider: "slipok",
+    ref: pickString(data, ["transRef", "transactionId"]),
+    amount: pickNumber(data, ["amount"]),
+    transferredAt: pickString(data, ["transTimestamp", "transferredAt"]),
+    sender: {
+      name: pickString(data, ["sender", "name"]),
+      bank: pickString(data, ["sender", "bank", "short"]),
+      account: pickString(data, ["sender", "account", "value"]),
+    },
+    receiver: {
+      name: pickString(data, ["receiver", "name"]),
+      bank: pickString(data, ["receiver", "bank", "short"]),
+      account: pickString(data, ["receiver", "account", "value"]),
+    },
+    raw: process.env.NODE_ENV === "production" ? undefined : json,
+  };
+}
+
+async function verifyViaEasySlip(_input: SlipVerifyInput): Promise<SlipVerifyResult> {
+  // Stub — to be implemented once the team picks Easyslip as primary.
+  return {
+    verified: false,
+    provider: "easyslip",
+  };
+}
+
+async function verifyViaMock(input: SlipVerifyInput): Promise<SlipVerifyResult> {
+  await new Promise((r) => setTimeout(r, 600));
+  const amount = input.expectAmount ?? 100;
+  return {
+    verified: true,
+    provider: "mock",
+    ref: "MOCK-" + Math.random().toString(36).slice(2, 10).toUpperCase(),
+    amount,
+    transferredAt: new Date().toISOString(),
+    sender: { name: "นายทดสอบ ระบบ", bank: "KBANK", account: "xxx-x-x1234-x" },
+    receiver: {
+      name: "ร้าน SalePage Demo",
+      bank: "SCB",
+      account: input.expectReceiverId
+        ? maskTail(input.expectReceiverId)
+        : "xxx-x-x9999-x",
+    },
+  };
+}
+
+function maskTail(id: string) {
+  const digits = id.replace(/\D/g, "");
+  if (digits.length < 4) return digits;
+  return "xxx-x-x" + digits.slice(-4) + "-x";
+}
+
+function pickString(obj: Record<string, unknown>, path: string[]): string | undefined {
+  let cur: unknown = obj;
+  for (const key of path) {
+    if (cur && typeof cur === "object" && key in cur) {
+      cur = (cur as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return typeof cur === "string" ? cur : undefined;
+}
+
+function pickNumber(obj: Record<string, unknown>, path: string[]): number | undefined {
+  let cur: unknown = obj;
+  for (const key of path) {
+    if (cur && typeof cur === "object" && key in cur) {
+      cur = (cur as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return typeof cur === "number" ? cur : undefined;
+}

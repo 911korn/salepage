@@ -1,0 +1,54 @@
+"use client";
+
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { ArrowRight, Sparkles } from "lucide-react";
+import { buttonStyles } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
+
+export function FinalCta() {
+  return (
+    <section className="relative overflow-hidden py-20 sm:py-24">
+      <div className="container-page">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[color:var(--color-brand-600)] via-rose-600 to-[color:var(--color-brand-700)] px-6 py-14 text-center text-white shadow-2xl shadow-rose-200 sm:px-10 sm:py-20"
+        >
+          <div className="absolute inset-0 -z-10 opacity-30 [background-image:radial-gradient(white_1px,transparent_1px)] [background-size:32px_32px]" />
+          <div className="absolute -top-20 right-0 size-72 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-20 left-0 size-72 rounded-full bg-white/10 blur-3xl" />
+
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
+            <Sparkles className="size-3.5" /> เปิดร้านได้ใน 30 วินาที
+          </span>
+          <h2 className="font-display mx-auto mt-5 max-w-2xl text-balance text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+            พร้อมเริ่มขายแล้วใช่ไหม?
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-balance text-[17px] leading-relaxed text-rose-50/90">
+            สมัครฟรี ไม่ต้องใช้บัตรเครดิต ไม่มีค่าธรรมเนียมต่อออเดอร์ — เริ่มขายได้ทันที
+          </p>
+
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              href="/signup"
+              className={cn(
+                buttonStyles({ size: "xl" }),
+                "w-full bg-white !text-[color:var(--color-brand-700)] hover:bg-rose-50 hover:!text-[color:var(--color-brand-800)] sm:w-auto",
+              )}
+            >
+              สร้างร้านฟรี <ArrowRight className="size-5" />
+            </Link>
+            <Link
+              href="/s/siam-snack"
+              className="text-sm font-medium text-rose-50 underline-offset-4 hover:underline"
+            >
+              หรือดูตัวอย่างร้านก่อน →
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
