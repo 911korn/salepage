@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
+import { db, PlanKey, SubscriptionStatus } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs"; // raw body access for signature verification
@@ -8,18 +9,12 @@ export const runtime = "nodejs"; // raw body access for signature verification
 export async function POST(request: Request) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret) {
-    return NextResponse.json(
-      { ok: false, error: { code: "missing_secret", message: "STRIPE_WEBHOOK_SECRET not set" } },
-      { status: 500 },
-    );
+    return jsonErr("missing_secret", "STRIPE_WEBHOOK_SECRET not set", 500);
   }
 
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
-    return NextResponse.json(
-      { ok: false, error: { code: "missing_signature", message: "stripe-signature header required" } },
-      { status: 400 },
-    );
+    return jsonErr("missing_signature", "stripe-signature header required", 400);
   }
 
   const rawBody = await request.text();
@@ -30,62 +25,196 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(rawBody, signature, secret);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Invalid signature";
-    return NextResponse.json(
-      { ok: false, error: { code: "bad_signature", message } },
-      { status: 400 },
-    );
+    return jsonErr("bad_signature", message, 400);
   }
 
-  // Audit log — once we have Prisma, persist events here for replay/debug.
-  console.log(
-    `[stripe-webhook] ${event.id} ${event.type} livemode=${event.livemode}`,
-  );
+  // Audit log — store every event we receive. Idempotent thanks to event.id PK.
+  try {
+    await db.stripeEvent.upsert({
+      where: { id: event.id },
+      create: {
+        id: event.id,
+        type: event.type,
+        livemode: event.livemode,
+        // Stripe.Event isn't shaped as InputJsonValue; safe to round-trip via JSON.
+        payload: JSON.parse(JSON.stringify(event)),
+      },
+      update: {}, // never overwrite an already-recorded event
+    });
+  } catch (e) {
+    console.error("[stripe-webhook] failed to persist event log:", e);
+  }
 
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object;
-      const plan = session.metadata?.plan;
-      const subscription = session.subscription;
-      const customer = session.customer;
-      console.log(
-        `[stripe-webhook]  checkout completed: plan=${plan} customer=${customer} subscription=${subscription}`,
-      );
-      // TODO when DB lands:
-      //   - upsert User by email/session.customer_email
-      //   - link User.stripe_customer_id = customer
-      //   - upsert Subscription record with subscription.id + status + period
-      break;
-    }
-    case "customer.subscription.created":
-    case "customer.subscription.updated":
-    case "customer.subscription.deleted": {
-      const sub = event.data.object;
-      console.log(
-        `[stripe-webhook]  subscription ${event.type.split(".").pop()}: id=${sub.id} status=${sub.status} customer=${sub.customer}`,
-      );
-      // TODO: sync Subscription record
-      break;
-    }
-    case "customer.subscription.trial_will_end": {
-      const sub = event.data.object;
-      console.log(
-        `[stripe-webhook]  trial ending soon: id=${sub.id} customer=${sub.customer}`,
-      );
-      // TODO: notify user via email / LINE OA
-      break;
-    }
-    case "invoice.payment_succeeded":
-    case "invoice.payment_failed": {
-      const invoice = event.data.object;
-      console.log(
-        `[stripe-webhook]  invoice ${event.type.split(".").pop()}: id=${invoice.id} customer=${invoice.customer} amount=${invoice.amount_paid}`,
-      );
-      // TODO: send receipt / dunning email
-      break;
-    }
-    default:
-      console.log(`[stripe-webhook]  unhandled event type: ${event.type}`);
+  try {
+    await handleEvent(event, stripe);
+    await db.stripeEvent.update({
+      where: { id: event.id },
+      data: { processedAt: new Date() },
+    }).catch(() => {});
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[stripe-webhook] handler failed for ${event.type}:`, message);
+    await db.stripeEvent
+      .update({ where: { id: event.id }, data: { error: message } })
+      .catch(() => {});
+    // Still 200 so Stripe doesn't endlessly retry on a bug in our code; the
+    // event log retains the error for manual replay.
   }
 
   return NextResponse.json({ ok: true, received: true });
+}
+
+async function handleEvent(event: Stripe.Event, stripe: Stripe) {
+  switch (event.type) {
+    case "checkout.session.completed":
+      await onCheckoutCompleted(event.data.object, stripe);
+      break;
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted":
+      await onSubscriptionChanged(event.data.object);
+      break;
+    case "customer.subscription.trial_will_end":
+      // Future: send email or LINE OA reminder. Just log for now.
+      console.log(
+        `[stripe-webhook] trial ending: sub=${event.data.object.id}`,
+      );
+      break;
+    case "invoice.payment_succeeded":
+    case "invoice.payment_failed":
+      // Future: send receipt / dunning email
+      break;
+    default:
+      // Unknown but recorded in StripeEvent for replay if needed.
+      break;
+  }
+}
+
+async function onCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+  stripe: Stripe,
+) {
+  const customerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id;
+  const email = session.customer_details?.email ?? session.customer_email;
+  if (!customerId || !email) return;
+
+  // Upsert user by email, link stripeCustomerId
+  const user = await db.user.upsert({
+    where: { email },
+    create: {
+      email,
+      name: session.customer_details?.name ?? undefined,
+      stripeCustomerId: customerId,
+    },
+    update: {
+      stripeCustomerId: customerId,
+    },
+  });
+
+  // If a subscription is on the session, persist its initial state.
+  if (session.subscription) {
+    const subId =
+      typeof session.subscription === "string"
+        ? session.subscription
+        : session.subscription.id;
+    const subscription = await stripe.subscriptions.retrieve(subId);
+    await upsertSubscription(user.id, subscription);
+  }
+}
+
+async function onSubscriptionChanged(subscription: Stripe.Subscription) {
+  // Find the user by stripeCustomerId
+  const customerId =
+    typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer.id;
+  const user = await db.user.findUnique({
+    where: { stripeCustomerId: customerId },
+  });
+  if (!user) {
+    console.warn(
+      `[stripe-webhook] subscription event for unknown customer ${customerId}`,
+    );
+    return;
+  }
+  await upsertSubscription(user.id, subscription);
+}
+
+async function upsertSubscription(userId: string, sub: Stripe.Subscription) {
+  const planKey = mapPlan(sub);
+  const status = mapStatus(sub.status);
+  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+
+  const item = sub.items.data[0];
+  const currentPeriodEndUnix = item?.current_period_end ?? null;
+
+  await db.subscription.upsert({
+    where: { stripeSubscriptionId: sub.id },
+    create: {
+      stripeSubscriptionId: sub.id,
+      stripeCustomerId: customerId,
+      userId,
+      plan: planKey,
+      status,
+      currentPeriodEnd: currentPeriodEndUnix
+        ? new Date(currentPeriodEndUnix * 1000)
+        : null,
+      trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+      cancelAtPeriodEnd: sub.cancel_at_period_end,
+    },
+    update: {
+      plan: planKey,
+      status,
+      currentPeriodEnd: currentPeriodEndUnix
+        ? new Date(currentPeriodEndUnix * 1000)
+        : null,
+      trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+      cancelAtPeriodEnd: sub.cancel_at_period_end,
+    },
+  });
+}
+
+function mapPlan(sub: Stripe.Subscription): PlanKey {
+  // Prefer metadata.plan (we set this on Checkout creation), fall back to price id lookup.
+  const metaPlan = sub.metadata?.plan;
+  if (metaPlan === "pro") return PlanKey.PRO;
+  if (metaPlan === "business") return PlanKey.BUSINESS;
+
+  const priceId = sub.items.data[0]?.price?.id;
+  if (priceId === process.env.STRIPE_PRICE_PRO) return PlanKey.PRO;
+  if (priceId === process.env.STRIPE_PRICE_BUSINESS) return PlanKey.BUSINESS;
+  return PlanKey.PRO; // safe default
+}
+
+function mapStatus(s: Stripe.Subscription.Status): SubscriptionStatus {
+  switch (s) {
+    case "trialing":
+      return SubscriptionStatus.TRIALING;
+    case "active":
+      return SubscriptionStatus.ACTIVE;
+    case "past_due":
+      return SubscriptionStatus.PAST_DUE;
+    case "canceled":
+      return SubscriptionStatus.CANCELED;
+    case "incomplete":
+      return SubscriptionStatus.INCOMPLETE;
+    case "incomplete_expired":
+      return SubscriptionStatus.INCOMPLETE_EXPIRED;
+    case "unpaid":
+      return SubscriptionStatus.UNPAID;
+    case "paused":
+      return SubscriptionStatus.PAUSED;
+    default:
+      return SubscriptionStatus.INCOMPLETE;
+  }
+}
+
+function jsonErr(code: string, message: string, status: number) {
+  return NextResponse.json(
+    { ok: false, error: { code, message } },
+    { status },
+  );
 }

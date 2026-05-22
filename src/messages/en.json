@@ -223,6 +223,24 @@
     "badgeSale": "SALE",
     "poweredBy": "This shop runs on {brand} — start your own free in 30 seconds"
   },
+  "auth": {
+    "signIn": {
+      "title": "Sign in to SalePage",
+      "subtitle": "Start managing your shop in 30 seconds",
+      "withGoogle": "Continue with Google",
+      "withEmail": "Continue with email",
+      "emailPlaceholder": "you@example.com",
+      "sendMagicLink": "Send sign-in link",
+      "or": "or",
+      "noAccount": "No account? We create one automatically on first sign-in.",
+      "terms": "By continuing you agree to our {terms} and {privacy}.",
+      "termsLink": "Terms",
+      "privacyLink": "Privacy Policy",
+      "sentTitle": "Sign-in link sent ✉",
+      "sentDesc": "Open your inbox and click the link to sign in — valid for 24 hours.",
+      "googleNotConfigured": "Google sign-in is enabled once admin adds credentials."
+    }
+  },
   "billing": {
     "loading": "Redirecting to checkout...",
     "errorTitle": "Could not open checkout",

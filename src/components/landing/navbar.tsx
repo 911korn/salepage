@@ -59,7 +59,7 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <LocaleSwitcher className="hidden md:inline-flex" />
           <Link
-            href="/login"
+            href="/signin"
             className="hidden text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)] md:inline-flex md:px-3 md:py-2"
           >
             {tCommon("signIn")}
@@ -106,7 +106,7 @@ export function Navbar() {
               </div>
               <div className="mt-2 flex gap-2 pt-2">
                 <Link
-                  href="/login"
+                  href="/signin"
                   className="flex-1 rounded-xl border border-[color:var(--color-border)] py-3 text-center text-[15px] font-medium"
                 >
                   {tCommon("signIn")}

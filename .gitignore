@@ -50,3 +50,5 @@ next-env.d.ts
 !public/*.jpg
 !public/*.jpeg
 /_research/
+# Prisma generated client
+/src/generated/
