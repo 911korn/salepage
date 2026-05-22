@@ -63,15 +63,37 @@ export async function verifySlip(input: SlipVerifyInput): Promise<SlipVerifyResu
   }
 }
 
+/**
+ * SlipOK in **open verify mode** (`log: false`).
+ *
+ * Why `log: false` for SalePage:
+ * - SalePage is multi-tenant — every shop has its own PromptPay receiver.
+ * - With `log: true`, SlipOK rejects (error 1014) any slip whose receiver
+ *   doesn't equal the branch's preconfigured account. That blocks shops
+ *   other than the branch owner from using slip verify.
+ * - With `log: false`, SlipOK validates the slip is real on the BoT network
+ *   and returns parsed fields. SalePage then matches the slip's receiver
+ *   against the shop's `promptpayId` in our own code (see receiver-match below).
+ *
+ * Downsides we mitigate:
+ * - Quota is consumed regardless of match (vs `log:true` only-charged-on-match).
+ *   Acceptable: it's how the StoreLink-style SaaS pattern works.
+ * - SlipOK no longer guards against duplicate slips. Caller MUST persist
+ *   `result.ref` and reject incoming slips with `ref` already seen for the
+ *   same shop. (See `src/app/api/v1/slip/verify/route.ts` for the duplicate
+ *   check once Orders flow lands.)
+ */
 async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult> {
   const apiKey = process.env.SLIPOK_API_KEY;
   const branchId = process.env.SLIPOK_BRANCH_ID;
   if (!apiKey || !branchId) {
     throw new Error("ไม่ได้ตั้งค่า SLIPOK_API_KEY / SLIPOK_BRANCH_ID");
   }
-  const body = input.qrPayload
-    ? { payload: input.qrPayload, amount: input.expectAmount }
-    : { data: input.imageBase64, amount: input.expectAmount };
+
+  const body: Record<string, unknown> = { log: false };
+  if (input.qrPayload) body.payload = input.qrPayload;
+  else if (input.imageBase64) body.data = input.imageBase64;
+  if (input.expectAmount !== undefined) body.amount = input.expectAmount;
 
   const res = await fetch(`https://api.slipok.com/api/line/apikey/${branchId}`, {
     method: "POST",
@@ -84,31 +106,54 @@ async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult
   const json = (await res.json()) as Record<string, unknown> & {
     success?: boolean;
     data?: Record<string, unknown>;
+    code?: number;
+    message?: string;
   };
   if (!res.ok || !json.success) {
     return {
       verified: false,
       provider: "slipok",
-      raw: json,
+      raw: process.env.NODE_ENV === "production" ? undefined : json,
     };
   }
   const data = json.data ?? {};
+  const receiverAccount = pickString(data, ["receiver", "account", "value"]);
+
+  // Manual receiver match — `log: false` means SlipOK didn't enforce this.
+  const mismatch: NonNullable<SlipVerifyResult["mismatch"]> = [];
+  if (input.expectReceiverId && receiverAccount) {
+    const expectedTail = input.expectReceiverId.replace(/\D/g, "").slice(-4);
+    const gotTail = receiverAccount.replace(/\D/g, "").slice(-4);
+    if (expectedTail.length === 4 && expectedTail !== gotTail) {
+      mismatch.push({
+        field: "receiver",
+        expected: input.expectReceiverId,
+        got: receiverAccount,
+      });
+    }
+  }
+
   return {
-    verified: true,
+    verified: mismatch.length === 0,
     provider: "slipok",
     ref: pickString(data, ["transRef", "transactionId"]),
     amount: pickNumber(data, ["amount"]),
     transferredAt: pickString(data, ["transTimestamp", "transferredAt"]),
     sender: {
-      name: pickString(data, ["sender", "name"]),
-      bank: pickString(data, ["sender", "bank", "short"]),
+      name: pickString(data, ["sender", "name"]) ??
+        pickString(data, ["sender", "displayName"]),
+      bank: pickString(data, ["sender", "bank", "short"]) ??
+        pickString(data, ["sendingBank"]),
       account: pickString(data, ["sender", "account", "value"]),
     },
     receiver: {
-      name: pickString(data, ["receiver", "name"]),
-      bank: pickString(data, ["receiver", "bank", "short"]),
-      account: pickString(data, ["receiver", "account", "value"]),
+      name: pickString(data, ["receiver", "name"]) ??
+        pickString(data, ["receiver", "displayName"]),
+      bank: pickString(data, ["receiver", "bank", "short"]) ??
+        pickString(data, ["receivingBank"]),
+      account: receiverAccount,
     },
+    mismatch: mismatch.length > 0 ? mismatch : undefined,
     raw: process.env.NODE_ENV === "production" ? undefined : json,
   };
 }
