@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SalePage
 
-## Getting Started
+แพลตฟอร์มสร้างร้านขายของออนไลน์แบบสำเร็จรูป — **salepage.in.th**
 
-First, run the development server:
+**ดีกว่า เท่กว่า ง่ายกว่า** — รับเงินตรงเข้าบัญชี PromptPay พร้อมระบบตรวจสลิป AI
+
+## Stack
+
+- Next.js 16 (App Router + Turbopack) + React 19 + TypeScript
+- Tailwind CSS v4 (`@theme` in `src/app/globals.css`)
+- Framer Motion · Lucide React · Sonner · React Hook Form · Zod
+- `promptpay-qr` + `qrcode` for Thai QR Payment standard
+- API-first — every feature exposed under `/api/v1/*` for web + future React Native app
+
+## Dev
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev            # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+If port 3000 is taken: `PORT=3030 pnpm dev`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm build && pnpm start
+```
 
-## Learn More
+## API v1
 
-To learn more about Next.js, take a look at the following resources:
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/v1/health` | service + endpoint list |
+| POST/GET | `/api/v1/promptpay/qr` | generate Thai QR Payment for a PromptPay ID + optional amount |
+| POST | `/api/v1/slip/verify` | verify a bank slip (image or QR payload) — provider-pluggable |
+| GET | `/api/v1/shops/:slug` | public shop info |
+| GET | `/api/v1/shops/:slug/products` | shop's products |
+| GET | `/api/v1/shops/:slug/products/:productSlug` | product detail |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+All responses follow `{ ok: true, data }` or `{ ok: false, error: { code, message, details? } }`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Slip verification
 
-## Deploy on Vercel
+Set `SLIP_VERIFY_PROVIDER` to switch:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `mock` (default) — deterministic fake result, used until production keys land
+- `slipok` — requires `SLIPOK_API_KEY` + `SLIPOK_BRANCH_ID`
+- `easyslip` — stub, to be wired up
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Domain
+
+- Production: https://salepage.in.th
+- DNS: Cloudflare (A `salepage.in.th → 76.76.21.21`, CNAME `www → cname.vercel-dns.com`)
+- Host: Vercel (`911korns-projects/salepage`)
