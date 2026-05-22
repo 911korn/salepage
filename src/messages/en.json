@@ -223,6 +223,84 @@
     "badgeSale": "SALE",
     "poweredBy": "This shop runs on {brand} — start your own free in 30 seconds"
   },
+  "dashboard": {
+    "common": {
+      "open": "Open shop",
+      "viewShop": "View storefront",
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied",
+      "menuMain": "Main",
+      "menuTools": "Tools",
+      "signOut": "Sign out",
+      "switchShop": "Switch shop",
+      "createShop": "Create new shop",
+      "comingSoon": "Coming soon",
+      "comingSoonDesc": "We're building this — meanwhile you can manage your shop from other menus."
+    },
+    "nav": {
+      "overview": "Overview",
+      "orders": "Orders",
+      "products": "Products",
+      "settings": "Settings",
+      "analytics": "Analytics",
+      "chat": "Customer chat",
+      "coupons": "Coupons",
+      "customers": "Customers",
+      "reviews": "Reviews",
+      "announcements": "Announcements"
+    },
+    "overview": {
+      "greeting": "Hi 👋",
+      "subtitle": "Here's an overview of {name}",
+      "todaySales": "Today's sales",
+      "todaySalesNote": "Total amount",
+      "pendingOrders": "Pending",
+      "pendingOrdersNote": "Orders to handle",
+      "lowStock": "Low stock",
+      "lowStockNote": "Items to restock",
+      "quickTools": "Quick tools",
+      "recentOrders": "Recent orders",
+      "viewAll": "View all",
+      "noOrdersTitle": "No orders yet",
+      "noOrdersDesc": "Share your shop link on Bio/IG/LINE OA to get your first order"
+    },
+    "empty": {
+      "title": "Create your first shop",
+      "desc": "Open an online store in a few steps — share the link and you're selling.",
+      "cta": "Start creating"
+    },
+    "createShop": {
+      "title": "Create a new shop",
+      "step": "Step {n}/{total}",
+      "next": "Next",
+      "back": "Back",
+      "submit": "Open shop",
+      "step1Title": "Name your shop",
+      "step1Desc": "Name + link are what customers see — both can change later.",
+      "nameLabel": "Shop name",
+      "namePlaceholder": "e.g. Siam Snack",
+      "slugLabel": "Shop link",
+      "slugHint": "Only a-z, 0-9, and hyphens (-) allowed",
+      "step2Title": "Category & theme",
+      "step2Desc": "Pick a category and primary color — both can change later.",
+      "categoryLabel": "Category",
+      "themeLabel": "Theme color",
+      "step3Title": "Contact + PromptPay",
+      "step3Desc": "Add at least one contact — customers will use it to reach you and pay.",
+      "promptpayLabel": "PromptPay (phone / national ID)",
+      "phoneLabel": "Phone (optional)",
+      "lineLabel": "LINE ID (optional)",
+      "facebookLabel": "Facebook (optional)",
+      "successTitle": "Your shop is live! 🎉",
+      "successDesc": "Your shop link: {url}",
+      "errors": {
+        "nameRequired": "Please enter a shop name",
+        "categoryRequired": "Pick a category",
+        "contactRequired": "Add PromptPay or a phone number",
+        "createFailed": "Could not create shop"
+      }
+    }
+  },
   "auth": {
     "signIn": {
       "title": "Sign in to SalePage",

@@ -223,6 +223,84 @@
     "badgeSale": "SALE",
     "poweredBy": "ร้านนี้ใช้แพลตฟอร์ม {brand} — สร้างร้านของคุณฟรี ใช้เวลา 30 วินาที"
   },
+  "dashboard": {
+    "common": {
+      "open": "เปิดร้าน",
+      "viewShop": "ดูหน้าร้าน",
+      "copyLink": "คัดลอกลิงก์",
+      "linkCopied": "คัดลอกลิงก์แล้ว",
+      "menuMain": "หลัก",
+      "menuTools": "เครื่องมือ",
+      "signOut": "ออกจากระบบ",
+      "switchShop": "สลับร้าน",
+      "createShop": "สร้างร้านใหม่",
+      "comingSoon": "ฟีเจอร์นี้กำลังจะเปิดให้ใช้งานเร็วๆ นี้",
+      "comingSoonDesc": "ทีมงานกำลังพัฒนาฟีเจอร์นี้ — ในระหว่างนี้คุณสามารถจัดการร้านผ่านเมนูอื่นได้"
+    },
+    "nav": {
+      "overview": "ภาพรวม",
+      "orders": "ออเดอร์",
+      "products": "สินค้า",
+      "settings": "ตั้งค่า",
+      "analytics": "Analytics",
+      "chat": "แชทลูกค้า",
+      "coupons": "คูปองส่วนลด",
+      "customers": "สมาชิก",
+      "reviews": "รีวิวลูกค้า",
+      "announcements": "ประกาศ"
+    },
+    "overview": {
+      "greeting": "สวัสดี 👋",
+      "subtitle": "นี่คือภาพรวมของร้าน {name}",
+      "todaySales": "ยอดขายวันนี้",
+      "todaySalesNote": "รวมยอดทั้งหมด",
+      "pendingOrders": "รอดำเนินการ",
+      "pendingOrdersNote": "ออเดอร์ที่ต้องจัดการ",
+      "lowStock": "สินค้าใกล้หมด",
+      "lowStockNote": "ต้องเติมสต็อก",
+      "quickTools": "เครื่องมือด่วน",
+      "recentOrders": "ออเดอร์ล่าสุด",
+      "viewAll": "ดูทั้งหมด",
+      "noOrdersTitle": "ยังไม่มีออเดอร์",
+      "noOrdersDesc": "แชร์ลิงก์ร้านบน Bio/IG/LINE OA เพื่อเริ่มรับออเดอร์แรก"
+    },
+    "empty": {
+      "title": "สร้างร้านแรกของคุณ",
+      "desc": "เปิดร้านออนไลน์ในไม่กี่ขั้นตอน — แชร์ลิงก์ขายได้ทันที",
+      "cta": "เริ่มสร้างร้าน"
+    },
+    "createShop": {
+      "title": "สร้างร้านใหม่",
+      "step": "ขั้นที่ {n}/{total}",
+      "next": "ถัดไป",
+      "back": "ย้อนกลับ",
+      "submit": "เปิดร้าน",
+      "step1Title": "ตั้งชื่อร้าน",
+      "step1Desc": "ชื่อร้านและลิงก์จะถูกแสดงให้ลูกค้าเห็น เปลี่ยนภายหลังได้",
+      "nameLabel": "ชื่อร้าน",
+      "namePlaceholder": "เช่น สยามสแน็ค",
+      "slugLabel": "ลิงก์ร้าน",
+      "slugHint": "ใช้ a-z, 0-9, ขีดกลาง (-) เท่านั้น",
+      "step2Title": "หมวดหมู่และธีม",
+      "step2Desc": "เลือกประเภทร้านและสีหลัก เปลี่ยนภายหลังได้",
+      "categoryLabel": "หมวดหมู่ร้าน",
+      "themeLabel": "สีธีม",
+      "step3Title": "ช่องทางติดต่อและ PromptPay",
+      "step3Desc": "ใส่อย่างน้อย 1 ช่องทาง — ลูกค้าจะใช้ตอบกลับและจ่ายเงิน",
+      "promptpayLabel": "PromptPay (เบอร์โทร / เลขบัตร)",
+      "phoneLabel": "เบอร์โทร (ไม่บังคับ)",
+      "lineLabel": "LINE ID (ไม่บังคับ)",
+      "facebookLabel": "Facebook (ไม่บังคับ)",
+      "successTitle": "เปิดร้านเรียบร้อย! 🎉",
+      "successDesc": "ลิงก์ร้านของคุณ: {url}",
+      "errors": {
+        "nameRequired": "กรุณาใส่ชื่อร้าน",
+        "categoryRequired": "เลือกหมวดหมู่",
+        "contactRequired": "ใส่ PromptPay หรือเบอร์โทรอย่างน้อย 1 ช่อง",
+        "createFailed": "สร้างร้านไม่สำเร็จ"
+      }
+    }
+  },
   "auth": {
     "signIn": {
       "title": "เข้าสู่ระบบ SalePage",
