@@ -171,7 +171,7 @@
       "business": {
         "name": "Business",
         "desc": "Multiple shops, multiple brands, one account",
-        "cta": "Contact sales",
+        "cta": "Start Business",
         "features": [
           "Everything in Pro",
           "Up to 5 shops per account",
@@ -222,6 +222,25 @@
     "badgeNew": "NEW",
     "badgeSale": "SALE",
     "poweredBy": "This shop runs on {brand} — start your own free in 30 seconds"
+  },
+  "billing": {
+    "loading": "Redirecting to checkout...",
+    "errorTitle": "Could not open checkout",
+    "errorRetry": "Try again",
+    "success": {
+      "title": "Welcome to SalePage {plan} 🎉",
+      "desc": "Your subscription is active — every Pro feature is unlocked now.",
+      "trialNote": "Your {days}-day free trial has started. First charge happens after the trial — cancel anytime.",
+      "cta": "Open dashboard",
+      "ctaSecondary": "Back to home",
+      "receiptHint": "Your receipt and details have been emailed to you."
+    },
+    "cancel": {
+      "title": "Checkout cancelled",
+      "desc": "No worries — review the plans again or browse features before deciding.",
+      "cta": "See plans again",
+      "ctaSecondary": "Back to home"
+    }
   },
   "categories": {
     "fashion": "Fashion",

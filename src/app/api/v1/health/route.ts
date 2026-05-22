@@ -15,6 +15,10 @@ export async function GET() {
       "GET    /api/v1/shops/:slug",
       "GET    /api/v1/shops/:slug/products",
       "GET    /api/v1/shops/:slug/products/:productSlug",
+      "GET    /api/v1/billing/plans",
+      "POST   /api/v1/billing/checkout",
+      "POST   /api/v1/billing/portal",
+      "POST   /api/v1/billing/webhook  (Stripe signed)",
     ],
   });
 }

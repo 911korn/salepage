@@ -1,40 +1,82 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Sparkles } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
-import { buttonStyles } from "@/components/ui/button";
+import { Button, buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
-const PLANS = [
+type PlanId = "starter" | "pro" | "business";
+
+interface PlanConfig {
+  id: PlanId;
+  price: string;
+  suffixKey: "perMonth" | "lifetime";
+  /** "link" → simple anchor (Starter, free); "checkout" → Stripe checkout via API. */
+  action: { type: "link"; href: string } | { type: "checkout"; plan: "pro" | "business" };
+  highlight: boolean;
+}
+
+const PLANS: PlanConfig[] = [
   {
     id: "starter",
     price: "฿0",
-    suffixKey: "lifetime" as const,
-    href: "/signup",
+    suffixKey: "lifetime",
+    action: { type: "link", href: "/signup" },
     highlight: false,
   },
   {
     id: "pro",
     price: "฿299",
-    suffixKey: "perMonth" as const,
-    href: "/signup?plan=pro",
+    suffixKey: "perMonth",
+    action: { type: "checkout", plan: "pro" },
     highlight: true,
   },
   {
     id: "business",
     price: "฿790",
-    suffixKey: "perMonth" as const,
-    href: "/contact",
+    suffixKey: "perMonth",
+    action: { type: "checkout", plan: "business" },
     highlight: false,
   },
-] as const;
+];
 
 export function Pricing() {
   const t = useTranslations("pricing");
   const tCommon = useTranslations("common");
+  const tBilling = useTranslations("billing");
+  const locale = useLocale() as "th" | "en";
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  async function startCheckout(plan: "pro" | "business") {
+    setLoadingPlan(plan);
+    try {
+      const res = await fetch("/api/v1/billing/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ plan, locale }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        toast.error(tBilling("errorTitle"), {
+          description: json.error?.message ?? `HTTP ${res.status}`,
+        });
+        return;
+      }
+      window.location.href = json.data.url;
+    } catch (e) {
+      toast.error(tBilling("errorTitle"), {
+        description: e instanceof Error ? e.message : "network error",
+      });
+    } finally {
+      setLoadingPlan(null);
+    }
+  }
+
   return (
     <section id="pricing" className="py-20 sm:py-24">
       <div className="container-page">
@@ -56,6 +98,7 @@ export function Pricing() {
         <div className="mt-12 grid gap-4 lg:grid-cols-3 lg:gap-6">
           {PLANS.map((p, i) => {
             const features = t.raw(`plans.${p.id}.features`) as string[];
+            const isLoading = loadingPlan === p.id;
             return (
               <motion.div
                 key={p.id}
@@ -98,18 +141,34 @@ export function Pricing() {
                   </span>
                 </div>
 
-                <Link
-                  href={p.href}
-                  className={cn(
-                    buttonStyles({
-                      size: "lg",
-                      variant: p.highlight ? "primary" : "outline",
-                    }),
-                    "mt-6 w-full",
-                  )}
-                >
-                  {t(`plans.${p.id}.cta`)}
-                </Link>
+                {p.action.type === "link" ? (
+                  <Link
+                    href={p.action.href}
+                    className={cn(
+                      buttonStyles({
+                        size: "lg",
+                        variant: p.highlight ? "primary" : "outline",
+                      }),
+                      "mt-6 w-full",
+                    )}
+                  >
+                    {t(`plans.${p.id}.cta`)}
+                  </Link>
+                ) : (
+                  <Button
+                    size="lg"
+                    variant={p.highlight ? "primary" : "outline"}
+                    className="mt-6 w-full"
+                    loading={isLoading}
+                    onClick={() =>
+                      startCheckout(
+                        (p.action as { type: "checkout"; plan: "pro" | "business" }).plan,
+                      )
+                    }
+                  >
+                    {isLoading ? tBilling("loading") : t(`plans.${p.id}.cta`)}
+                  </Button>
+                )}
 
                 <ul className="mt-6 space-y-3 text-[14px]">
                   {features.map((f) => (
