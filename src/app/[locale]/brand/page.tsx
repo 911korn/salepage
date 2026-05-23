@@ -369,7 +369,10 @@ export default async function BrandPage({
           >
             <ul className="grid gap-3 sm:grid-cols-2">
               {SOCIAL_ASSETS.map((a) => {
-                const url = `/api/v1/brand/social/${a.filename}.png`;
+                const previewUrl = `/api/v1/brand/social/${a.filename}.png`;
+                // ?download=1 makes the response Content-Disposition: attachment,
+                // so the browser saves the file instead of navigating to it inline.
+                const downloadUrl = `${previewUrl}?download=1`;
                 return (
                   <li
                     key={a.filename}
@@ -381,7 +384,7 @@ export default async function BrandPage({
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={url}
+                        src={previewUrl}
                         alt={a.label}
                         className="h-full w-full object-cover"
                       />
@@ -394,7 +397,7 @@ export default async function BrandPage({
                         </p>
                       </div>
                       <a
-                        href={url}
+                        href={downloadUrl}
                         download={`salepage-${a.filename}.png`}
                         className={cn(
                           buttonStyles({ size: "sm", variant: "outline" }),

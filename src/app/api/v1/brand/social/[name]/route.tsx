@@ -51,14 +51,19 @@ const PRESETS: Record<string, Preset> = {
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ name: string }> },
 ) {
   const { name } = await context.params;
-  const preset = PRESETS[name.replace(/\.png$/, "")];
+  const cleanName = name.replace(/\.png$/, "");
+  const preset = PRESETS[cleanName];
   if (!preset) {
     return new Response("not_found", { status: 404 });
   }
+
+  // ?download=1 → force the browser to save as a file rather than open inline
+  const url = new URL(request.url);
+  const wantsDownload = url.searchParams.get("download") === "1";
 
   const { width, height, title, subtitle } = preset;
   const isSquare = width === height;
@@ -186,6 +191,11 @@ export async function GET(
       height,
       headers: {
         "Cache-Control": "public, max-age=3600, s-maxage=86400",
+        ...(wantsDownload
+          ? {
+              "Content-Disposition": `attachment; filename="salepage-${cleanName}.png"`,
+            }
+          : {}),
       },
     },
   );
