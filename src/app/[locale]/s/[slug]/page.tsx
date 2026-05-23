@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft, Bell, ShieldCheck, Star } from "lucide-react";
+import { ArrowLeft, Bell, MessageCircle, Phone, ShieldCheck, Star } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,11 @@ interface ShopView {
   bannerBg: string;
   bannerUrl: string | null;
   announcement: string | null;
+  contact: {
+    phone?: string | null;
+    line?: string | null;
+    facebook?: string | null;
+  };
   products: ProductView[];
 }
 
@@ -90,6 +95,7 @@ export default async function StorefrontPage({ params }: PageProps) {
       bannerBg: DEFAULT_BANNER,
       bannerUrl: dbShop.bannerUrls?.[0] ?? null,
       announcement: dbShop.announcement?.trim() || null,
+      contact: (dbShop.contact as ShopView["contact"] | null) ?? {},
       products: dbShop.products.map((p) => ({
         slug: p.slug,
         name: p.name,
@@ -122,6 +128,7 @@ export default async function StorefrontPage({ params }: PageProps) {
         bannerBg: demo.banners[0] ?? DEFAULT_BANNER,
         bannerUrl: null,
         announcement: null,
+        contact: demo.contact ?? {},
         products: demo.products.map((p) => ({
           slug: p.slug,
           name: p.name,
@@ -225,6 +232,9 @@ export default async function StorefrontPage({ params }: PageProps) {
                 {shop.description}
               </p>
             ) : null}
+
+            <ContactButtons contact={shop.contact} />
+
 
             <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-[color:var(--color-soft)] p-3 sm:grid-cols-3">
               <Stat label={t("products")} value={String(shop.products.length)} />
@@ -432,6 +442,62 @@ function Stat({
         {label}
       </p>
       <p className="font-display text-lg font-bold">{value}</p>
+    </div>
+  );
+}
+
+function ContactButtons({
+  contact,
+}: {
+  contact: { phone?: string | null; line?: string | null; facebook?: string | null };
+}) {
+  const phone = contact.phone?.trim();
+  const line = contact.line?.trim();
+  const facebook = contact.facebook?.trim();
+  if (!phone && !line && !facebook) return null;
+
+  const lineUrl = line
+    ? line.startsWith("http")
+      ? line
+      : `https://line.me/R/ti/p/${line.startsWith("@") ? "%40" + line.slice(1) : line}`
+    : null;
+  const facebookUrl = facebook
+    ? facebook.startsWith("http")
+      ? facebook
+      : `https://m.me/${facebook.replace(/^@/, "")}`
+    : null;
+  const phoneNumber = phone?.replace(/[^\d+]/g, "");
+
+  return (
+    <div className="mt-5 flex flex-wrap gap-2">
+      {lineUrl ? (
+        <a
+          href={lineUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-[13px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+        >
+          <MessageCircle className="size-4" /> แชท LINE
+        </a>
+      ) : null}
+      {phoneNumber ? (
+        <a
+          href={`tel:${phoneNumber}`}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-border)] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-zinc-800 transition-colors hover:bg-[color:var(--color-soft)]"
+        >
+          <Phone className="size-4" /> โทร {phone}
+        </a>
+      ) : null}
+      {facebookUrl ? (
+        <a
+          href={facebookUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-[13px] font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+        >
+          <MessageCircle className="size-4" /> Messenger
+        </a>
+      ) : null}
     </div>
   );
 }
