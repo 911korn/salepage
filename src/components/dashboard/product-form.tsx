@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
+import { ArrowLeft, ImagePlus, Loader2, Save, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter, Link } from "@/i18n/navigation";
@@ -47,9 +47,34 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
   const [compareAtBaht, setCompareAtBaht] = useState<string>(
     initialValues?.compareAtBaht ? String(initialValues.compareAtBaht) : "",
   );
-  const [imageUrlsRaw, setImageUrlsRaw] = useState(
-    (initialValues?.imageUrls ?? []).join("\n"),
-  );
+  const [images, setImages] = useState<string[]>(initialValues?.imageUrls ?? []);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function uploadFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const remaining = 10 - images.length;
+    const slice = Array.from(files).slice(0, remaining);
+    const uploaded: string[] = [];
+    for (const file of slice) {
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const res = await fetch("/api/v1/upload", { method: "POST", body: form });
+        const json = await res.json();
+        if (!res.ok || !json.ok) {
+          toast.error(json.error?.message ?? "Upload failed");
+          continue;
+        }
+        uploaded.push(json.data.url);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Upload failed");
+      }
+    }
+    if (uploaded.length > 0) setImages((cur) => [...cur, ...uploaded]);
+    setUploading(false);
+  }
   const [type, setType] = useState<"PHYSICAL" | "DIGITAL">(
     initialValues?.type ?? "PHYSICAL",
   );
@@ -82,11 +107,7 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
         description: description.trim() || undefined,
         priceBaht: price,
         compareAtBaht: compareAtBaht ? Number(compareAtBaht) : undefined,
-        imageUrls: imageUrlsRaw
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .slice(0, 10),
+        imageUrls: images.slice(0, 10),
         type,
         badge: badge || null,
         stock: stock ? Number(stock) : null,
@@ -208,13 +229,67 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
         </div>
 
         <Field label={t("imagesLabel")} hint={t("imagesHint")}>
-          <textarea
-            value={imageUrlsRaw}
-            onChange={(e) => setImageUrlsRaw(e.target.value)}
-            placeholder={t("imagesPlaceholder")}
-            rows={3}
-            className="w-full resize-y rounded-xl border border-[color:var(--color-border)] bg-white p-3 font-mono text-[13px] outline-none focus:border-[color:var(--color-brand-400)] focus:ring-2 focus:ring-[color:var(--color-brand-100)]"
-          />
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              uploadFiles(e.dataTransfer.files);
+            }}
+            className="rounded-2xl border-2 border-dashed border-[color:var(--color-border)] bg-[color:var(--color-soft)] p-3"
+          >
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {images.map((url, i) => (
+                <div
+                  key={url}
+                  className="group relative aspect-square overflow-hidden rounded-xl ring-1 ring-[color:var(--color-border)]"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`product ${i + 1}`}
+                    className="size-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setImages((cur) => cur.filter((u) => u !== url))
+                    }
+                    className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-black/70 text-white opacity-0 transition-opacity hover:bg-black/90 group-hover:opacity-100"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
+              {images.length < 10 ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-[color:var(--color-border)] bg-white text-zinc-500 hover:border-[color:var(--color-brand-300)] hover:bg-[color:var(--color-brand-50)] disabled:opacity-60"
+                >
+                  {uploading ? (
+                    <Loader2 className="size-5 animate-spin text-[color:var(--color-brand-600)]" />
+                  ) : (
+                    <>
+                      <ImagePlus className="size-5" />
+                      <span className="text-[11px]">เพิ่มรูป</span>
+                    </>
+                  )}
+                </button>
+              ) : null}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="sr-only"
+              onChange={(e) => {
+                uploadFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </div>
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">

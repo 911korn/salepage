@@ -25,6 +25,7 @@ export async function GET() {
       "GET    /api/v1/orders/:token                      (public)",
       "POST   /api/v1/orders/:token/slip                 (public — uploads slip)",
       "PATCH  /api/v1/orders/:token/status               (auth, shop owner)",
+      "POST   /api/v1/upload                             (auth — Vercel Blob)",
       "GET    /api/v1/billing/plans",
       "POST   /api/v1/billing/checkout",
       "POST   /api/v1/billing/portal",

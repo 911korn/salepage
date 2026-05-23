@@ -323,6 +323,27 @@
       "desc": "Open an online store in a few steps — share the link and you're selling.",
       "cta": "Start creating"
     },
+    "analytics": {
+      "title": "Analytics",
+      "subtitle": "Sales and top products in the last 30 days",
+      "last30": "Last 30 days",
+      "revenue": "Revenue (paid + shipping + delivered)",
+      "orders": "Orders",
+      "aov": "Average order value",
+      "topProducts": "Top products",
+      "topProductsHint": "Ranked by units sold in the last 30 days",
+      "noData": "No data in the last 30 days yet"
+    },
+    "customers": {
+      "title": "Customers",
+      "subtitle": "Customers who have ordered from your shop",
+      "name": "Name",
+      "contact": "Contact",
+      "ordersCount": "Orders",
+      "totalSpent": "Total spent",
+      "lastOrder": "Last order",
+      "empty": "No customers yet"
+    },
     "orders": {
       "title": "Orders",
       "filters": {
