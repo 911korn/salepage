@@ -518,6 +518,86 @@
       "googleNotConfigured": "Google sign-in is enabled once admin adds credentials."
     }
   },
+  "legal": {
+    "terms": {
+      "title": "Terms of service",
+      "lastUpdated": "Last updated: May 23, 2026",
+      "intro": "Welcome to SalePage (salepage.in.th) — a platform for building Thai online shops. By using our service you accept the following terms.",
+      "sections": [
+        {
+          "h": "1. Use of service",
+          "p": "SalePage provides a platform for online shops. Users must be 18+ (or have parental consent). You may create multiple shops under one account."
+        },
+        {
+          "h": "2. Fees and billing",
+          "p": "Starter is free forever. Pro ฿299/month and Business ฿790/month, billed via Stripe (includes 7% VAT). Cancel anytime — paid fees are non-refundable. SalePage charges no per-order fee — customers transfer money directly to your bank."
+        },
+        {
+          "h": "3. Shop content",
+          "p": "Shop owners are solely responsible for the goods and services sold in their shop. Illegal goods, IP infringement, and content violating community standards are prohibited. SalePage may suspend non-compliant shops."
+        },
+        {
+          "h": "4. Intellectual property",
+          "p": "The SalePage trademark and platform are owned by CET (Thailand) Co., Ltd. User-generated content (products, images, descriptions) belongs to you — by using the service you grant us a license to store and display it as needed."
+        },
+        {
+          "h": "5. Limitation of liability",
+          "p": "SalePage is a tool; we are not a money intermediary. Transfers between buyer and seller are the parties' direct responsibility. We strive for high uptime but do not guarantee 100%."
+        },
+        {
+          "h": "6. Termination",
+          "p": "You may close your account and shops anytime in /dashboard/settings. SalePage may suspend accounts in cases of severe terms violations."
+        },
+        {
+          "h": "7. Governing law",
+          "p": "These terms are governed by the laws of the Kingdom of Thailand. Any dispute will be heard in Bangkok district courts."
+        },
+        {
+          "h": "8. Contact",
+          "p": "Email hello@salepage.in.th — operated by CET (Thailand) Co., Ltd., registration 0105560145831."
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "lastUpdated": "Last updated: May 23, 2026",
+      "intro": "SalePage takes your privacy seriously and complies with Thailand's Personal Data Protection Act (PDPA).",
+      "sections": [
+        {
+          "h": "1. Data we collect",
+          "p": "Email and name (from Google OAuth or magic-link), shop data (name, PromptPay, address), orders, payment slips (image + parsed fields from SlipOK), and session tokens."
+        },
+        {
+          "h": "2. Purpose",
+          "p": "To operate the platform, verify slips, send order email notifications, improve the service, and comply with the law."
+        },
+        {
+          "h": "3. Data processors",
+          "p": "We use the following providers to process data: Vercel (hosting/CDN), Neon (database, Singapore region), Stripe (subscription billing — shop-owner data only), SlipOK (slip verification — slip image + meta), Resend (email delivery), Google (OAuth sign-in), Cloudflare (DNS)."
+        },
+        {
+          "h": "4. Retention",
+          "p": "Order data is retained 5 years per Thai tax law. Account data is retained for the account lifetime — deleted on request."
+        },
+        {
+          "h": "5. Your rights",
+          "p": "You may access, correct, delete, restrict processing of, or export your data. Email hello@salepage.in.th — we respond within 30 days."
+        },
+        {
+          "h": "6. Cookies",
+          "p": "We use cookies for session persistence and language preference. No tracking/advertising cookies."
+        },
+        {
+          "h": "7. Security",
+          "p": "All traffic over TLS 1.3, no password storage (we use magic-link and Google OAuth), API keys stored in encrypted Vercel env vars."
+        },
+        {
+          "h": "8. Contact",
+          "p": "Data Protection Officer: hello@salepage.in.th — CET (Thailand) Co., Ltd. 0105560145831."
+        }
+      ]
+    }
+  },
   "billing": {
     "loading": "Redirecting to checkout...",
     "errorTitle": "Could not open checkout",
