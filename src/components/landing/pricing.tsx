@@ -150,10 +150,16 @@ export function Pricing() {
           {PLANS.map((p, i) => {
             const features = t.raw(`plans.${p.id}.features`) as string[];
             const isFree = p.monthlyPrice === 0;
+            const yearlyTotal = p.monthlyPrice * 10;
+            // Submagic pattern: when yearly is ON, headline shows the effective
+            // monthly rate (annual total / 12) — it drops because 2 months are
+            // free. Pro ฿399 → ฿333/mo, Business ฿990 → ฿825/mo, etc.
+            const effectiveMonthly = yearly
+              ? Math.round(yearlyTotal / 12)
+              : p.monthlyPrice;
             const monthlyDisplay = isFree
               ? "฿0"
-              : `฿${p.monthlyPrice.toLocaleString()}`;
-            const yearlyTotal = p.monthlyPrice * 10;
+              : `฿${effectiveMonthly.toLocaleString()}`;
             const isLoading = loadingPlan === p.id;
             return (
               <motion.div
