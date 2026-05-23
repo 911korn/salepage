@@ -5,6 +5,13 @@
     "ogTitle": "SalePage — เปิดร้านออนไลน์ใน 30 วินาที",
     "ogDescription": "สร้างร้านขายของออนไลน์ฟรี รับเงินตรง PromptPay พร้อมตรวจสลิปอัตโนมัติ"
   },
+  "cookie": {
+    "title": "เราใช้คุกกี้เพื่อให้ระบบทำงาน",
+    "body": "เฉพาะ session cookie (จำการเข้าสู่ระบบ) และ preference cookie (จำภาษา) ไม่มี tracking/advertising cookie",
+    "readPolicy": "อ่านนโยบายความเป็นส่วนตัว",
+    "accept": "เข้าใจแล้ว",
+    "dismiss": "ปิด"
+  },
   "common": {
     "createFreeShop": "สร้างร้านฟรี",
     "signIn": "เข้าสู่ระบบ",

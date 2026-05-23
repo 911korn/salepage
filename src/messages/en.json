@@ -5,6 +5,13 @@
     "ogTitle": "SalePage — Launch your online store in 30 seconds",
     "ogDescription": "Create an online store free. Get paid directly via PromptPay with built-in AI slip verification."
   },
+  "cookie": {
+    "title": "We use cookies to make the site work",
+    "body": "Only session cookies (to keep you signed in) and a language preference cookie. No tracking or advertising cookies.",
+    "readPolicy": "Read the privacy policy",
+    "accept": "Got it",
+    "dismiss": "Dismiss"
+  },
   "common": {
     "createFreeShop": "Start free",
     "signIn": "Sign in",
