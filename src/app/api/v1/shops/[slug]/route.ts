@@ -41,6 +41,9 @@ const PatchBody = z.object({
     })
     .optional(),
   status: z.enum(["ACTIVE", "PAUSED", "ARCHIVED"]).optional(),
+  announcement: z.string().max(240).optional().nullable(),
+  loyaltyBahtPerPoint: z.number().int().min(0).max(100000).optional(),
+  loyaltyBahtValuePerPoint: z.number().int().min(0).max(1000).optional(),
 });
 
 export async function GET(
@@ -150,6 +153,15 @@ export async function PATCH(
       ...(input.contact !== undefined ? { contact: input.contact } : {}),
       ...(input.policies !== undefined ? { policies: input.policies } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.announcement !== undefined
+        ? { announcement: input.announcement }
+        : {}),
+      ...(input.loyaltyBahtPerPoint !== undefined
+        ? { loyaltyBahtPerPoint: input.loyaltyBahtPerPoint }
+        : {}),
+      ...(input.loyaltyBahtValuePerPoint !== undefined
+        ? { loyaltyBahtValuePerPoint: input.loyaltyBahtValuePerPoint }
+        : {}),
     },
   });
   return ok({ shop: updated });

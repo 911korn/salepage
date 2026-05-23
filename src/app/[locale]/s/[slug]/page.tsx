@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft, ShieldCheck, Star } from "lucide-react";
+import { ArrowLeft, Bell, ShieldCheck, Star } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,7 @@ interface ShopView {
   totalSold: number;
   bannerBg: string;
   bannerUrl: string | null;
+  announcement: string | null;
   products: ProductView[];
 }
 
@@ -57,6 +58,22 @@ export default async function StorefrontPage({ params }: PageProps) {
     },
   });
 
+  const dbReviews = dbShop
+    ? await db.review.findMany({
+        where: { shopId: dbShop.id },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
+          customerName: true,
+          reply: true,
+          createdAt: true,
+        },
+      })
+    : [];
+
   let view: ShopView | null = null;
 
   if (dbShop && dbShop.status === "ACTIVE") {
@@ -72,6 +89,7 @@ export default async function StorefrontPage({ params }: PageProps) {
       totalSold: dbShop.totalSold ?? 0,
       bannerBg: DEFAULT_BANNER,
       bannerUrl: dbShop.bannerUrls?.[0] ?? null,
+      announcement: dbShop.announcement?.trim() || null,
       products: dbShop.products.map((p) => ({
         slug: p.slug,
         name: p.name,
@@ -103,6 +121,7 @@ export default async function StorefrontPage({ params }: PageProps) {
         totalSold: demo.totalSold,
         bannerBg: demo.banners[0] ?? DEFAULT_BANNER,
         bannerUrl: null,
+        announcement: null,
         products: demo.products.map((p) => ({
           slug: p.slug,
           name: p.name,
@@ -157,6 +176,12 @@ export default async function StorefrontPage({ params }: PageProps) {
           }
         />
         <div className="container-page -mt-16 sm:-mt-20">
+          {shop.announcement ? (
+            <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[color:var(--color-brand-100)] bg-[color:var(--color-brand-50)] px-4 py-3 text-[13px] text-[color:var(--color-brand-800)] sm:text-[14px]">
+              <Bell className="mt-0.5 size-4 shrink-0 text-[color:var(--color-brand-600)]" />
+              <p className="leading-relaxed">{shop.announcement}</p>
+            </div>
+          ) : null}
           <div className="rounded-3xl border border-[color:var(--color-border)] bg-white p-5 shadow-sm sm:p-7">
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex items-end gap-4">
@@ -313,6 +338,59 @@ export default async function StorefrontPage({ params }: PageProps) {
               </div>
             )}
           </div>
+
+          {dbReviews.length > 0 ? (
+            <div className="mt-10">
+              <div className="flex items-baseline justify-between">
+                <h2 className="font-display text-xl font-bold sm:text-2xl">
+                  รีวิวล่าสุด
+                </h2>
+                <span className="text-sm text-zinc-500">
+                  {dbReviews.length} รีวิวล่าสุด
+                </span>
+              </div>
+              <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {dbReviews.map((r) => (
+                  <li
+                    key={r.id}
+                    className="rounded-2xl border border-[color:var(--color-border)] bg-white p-4"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">
+                        {r.customerName}
+                      </span>
+                      <span className="inline-flex items-center gap-0.5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={cn(
+                              "size-3.5",
+                              i < r.rating
+                                ? "fill-amber-400 text-amber-400"
+                                : "fill-zinc-200 text-zinc-200",
+                            )}
+                          />
+                        ))}
+                      </span>
+                    </div>
+                    {r.comment ? (
+                      <p className="mt-2 line-clamp-3 text-[13px] leading-relaxed text-zinc-700">
+                        {r.comment}
+                      </p>
+                    ) : null}
+                    {r.reply ? (
+                      <p className="mt-2 rounded-lg bg-[color:var(--color-soft)] px-2.5 py-1.5 text-[12px] text-zinc-700">
+                        <span className="font-semibold text-[color:var(--color-brand-700)]">
+                          ร้านตอบ:
+                        </span>{" "}
+                        {r.reply}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <footer className="mt-16 pb-10">
             <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white p-5 text-center">

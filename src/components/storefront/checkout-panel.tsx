@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Minus, Plus, ShoppingBag, Sparkles } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { Minus, Plus, ShoppingBag, Sparkles, Ticket } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
@@ -32,10 +32,84 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
 
+  const [couponCode, setCouponCode] = useState("");
+  const [couponApplied, setCouponApplied] = useState<{
+    code: string;
+    discountBaht: number;
+  } | null>(null);
+  const [couponChecking, setCouponChecking] = useState(false);
+
+  const [loyalty, setLoyalty] = useState<{
+    points: number;
+    bahtValuePerPoint: number;
+  } | null>(null);
+  const [redeemPoints, setRedeemPoints] = useState(0);
+
   const subtotal = product.priceBaht * qty;
   const shipping = 0; // v1: shop sets per-product shipping later
-  const total = subtotal + shipping;
+  const couponDiscount = couponApplied?.discountBaht ?? 0;
+  const pointsDiscount =
+    redeemPoints * (loyalty?.bahtValuePerPoint ?? 0);
+  const total = Math.max(0, subtotal + shipping - couponDiscount - pointsDiscount);
   const needsAddress = product.type === "PHYSICAL";
+
+  // Look up loyalty wallet when phone has 9+ digits
+  useEffect(() => {
+    const cleanPhone = phone.replace(/[^\d]/g, "");
+    if (cleanPhone.length < 9) {
+      setLoyalty(null);
+      setRedeemPoints(0);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/v1/shops/${shopSlug}/loyalty/${cleanPhone}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled || !json.ok) return;
+        if (json.data.points > 0 && json.data.config.bahtValuePerPoint > 0) {
+          setLoyalty({
+            points: json.data.points,
+            bahtValuePerPoint: json.data.config.bahtValuePerPoint,
+          });
+        } else {
+          setLoyalty(null);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [phone, shopSlug]);
+
+  async function applyCoupon() {
+    if (!couponCode.trim()) return;
+    setCouponChecking(true);
+    try {
+      const res = await fetch(`/api/v1/shops/${shopSlug}/coupons/redeem`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          code: couponCode.trim(),
+          subtotalSatang: subtotal * 100,
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        toast.error(json.error?.message ?? "ใช้คูปองไม่ได้");
+        setCouponApplied(null);
+        return;
+      }
+      setCouponApplied({
+        code: json.data.code,
+        discountBaht: Math.round(json.data.discountSatang / 100),
+      });
+      toast.success(
+        `ใช้คูปอง ${json.data.code.toUpperCase()} แล้ว — ลด ฿${Math.round(json.data.discountSatang / 100).toLocaleString()}`,
+      );
+    } finally {
+      setCouponChecking(false);
+    }
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,6 +131,8 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
             customerEmail: email.trim() || undefined,
             customerAddress: needsAddress ? address.trim() : undefined,
             notes: notes.trim() || undefined,
+            couponCode: couponApplied?.code,
+            redeemPoints: redeemPoints > 0 ? redeemPoints : undefined,
           }),
         });
         const json = await res.json();
@@ -170,10 +246,99 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
         </Field>
       </div>
 
+      {/* Coupon */}
+      <div className="mt-5">
+        <label className="mb-1 block text-[13px] font-medium">
+          <Ticket className="mr-1 inline-block size-3.5 -translate-y-0.5 text-[color:var(--color-brand-600)]" />
+          รหัสคูปอง (ถ้ามี)
+        </label>
+        {couponApplied ? (
+          <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-[13px] text-emerald-700 ring-1 ring-emerald-200">
+            <span className="font-mono font-semibold uppercase">
+              {couponApplied.code} · -฿
+              {couponApplied.discountBaht.toLocaleString()}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setCouponApplied(null);
+                setCouponCode("");
+              }}
+              className="text-[11px] font-medium text-emerald-700 underline"
+            >
+              เอาออก
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              value={couponCode}
+              onChange={(e) =>
+                setCouponCode(e.target.value.replace(/[^A-Za-z0-9_-]/g, ""))
+              }
+              placeholder="WELCOME10"
+              className="font-mono uppercase"
+              maxLength={40}
+            />
+            <button
+              type="button"
+              onClick={applyCoupon}
+              disabled={couponChecking || !couponCode.trim()}
+              className={cn(
+                "shrink-0 rounded-xl border border-[color:var(--color-border)] bg-white px-3 text-[13px] font-medium",
+                couponChecking || !couponCode.trim()
+                  ? "text-zinc-300"
+                  : "text-[color:var(--color-brand-700)] hover:bg-[color:var(--color-brand-50)]",
+              )}
+            >
+              {couponChecking ? "..." : "ใช้"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Loyalty points redemption */}
+      {loyalty && loyalty.points > 0 ? (
+        <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2.5 text-[13px] ring-1 ring-amber-200">
+          <p className="font-medium text-amber-800">
+            คุณมี {loyalty.points.toLocaleString()} คะแนนสะสม
+          </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <input
+              type="range"
+              min={0}
+              max={Math.min(
+                loyalty.points,
+                Math.floor((subtotal - couponDiscount) / loyalty.bahtValuePerPoint),
+              )}
+              value={redeemPoints}
+              onChange={(e) => setRedeemPoints(Number(e.target.value))}
+              className="flex-1 accent-amber-600"
+            />
+            <span className="w-20 text-right text-[12px] font-semibold text-amber-800">
+              ใช้ {redeemPoints} = ฿
+              {(redeemPoints * loyalty.bahtValuePerPoint).toLocaleString()}
+            </span>
+          </div>
+        </div>
+      ) : null}
+
       <dl className="mt-5 space-y-1.5 rounded-2xl bg-[color:var(--color-soft)] px-4 py-3 text-sm">
         <Row label={t("subtotal")} value={`฿${subtotal.toLocaleString()}`} />
         {shipping > 0 ? (
           <Row label={t("shipping")} value={`฿${shipping.toLocaleString()}`} />
+        ) : null}
+        {couponDiscount > 0 ? (
+          <Row
+            label={`คูปอง ${couponApplied?.code.toUpperCase() ?? ""}`}
+            value={`-฿${couponDiscount.toLocaleString()}`}
+          />
+        ) : null}
+        {pointsDiscount > 0 ? (
+          <Row
+            label={`คะแนน ${redeemPoints}`}
+            value={`-฿${pointsDiscount.toLocaleString()}`}
+          />
         ) : null}
         <Row
           label={t("total")}

@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { TrackingPanel } from "@/components/storefront/tracking-panel";
+import { ReviewForm } from "@/components/storefront/review-form";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { generatePromptPay } from "@/lib/promptpay";
@@ -60,6 +61,18 @@ export default async function OrderTrackingPage({ params }: PageProps) {
     priceSatang: number;
     image?: string;
   }>;
+
+  const canReview =
+    order.status === OrderStatus.SHIPPING ||
+    order.status === OrderStatus.DELIVERED;
+  let alreadyReviewed = false;
+  if (canReview) {
+    const existing = await db.review.findFirst({
+      where: { orderId: order.id },
+      select: { id: true },
+    });
+    alreadyReviewed = !!existing;
+  }
 
   return (
     <div className="min-h-screen bg-[color:var(--color-soft)]">
@@ -163,6 +176,14 @@ export default async function OrderTrackingPage({ params }: PageProps) {
               </div>
             </dl>
           </section>
+
+          {canReview && !alreadyReviewed ? (
+            <ReviewForm
+              shopSlug={order.shop.slug}
+              orderToken={order.publicToken}
+              productSlug={items[0]?.productSlug ?? null}
+            />
+          ) : null}
 
           {/* Customer info */}
           <section className="rounded-3xl border border-[color:var(--color-border)] bg-white p-5 text-sm sm:p-6">

@@ -80,6 +80,49 @@ export async function PATCH(request: Request, ctx: Ctx) {
     include: { shop: { select: { name: true, contact: true } } },
   });
 
+  // Award loyalty points on the first transition into PAID (only once — guard
+  // by checking we transitioned FROM PENDING). 1 point per Shop.loyaltyBahtPerPoint THB spent.
+  if (status === "PAID" && order.status === OrderStatus.PENDING && updated.customerPhone) {
+    const cleanPhone = updated.customerPhone.replace(/[^\d]/g, "");
+    if (cleanPhone.length >= 9) {
+      const shopConfig = await db.shop.findUnique({
+        where: { id: order.shop.id },
+        select: { loyaltyBahtPerPoint: true },
+      });
+      const bahtPerPoint = shopConfig?.loyaltyBahtPerPoint ?? 100;
+      if (bahtPerPoint > 0) {
+        const totalBaht = Math.floor(updated.totalSatang / 100);
+        const points = Math.floor(totalBaht / bahtPerPoint);
+        if (points > 0) {
+          await db.customerLoyalty.upsert({
+            where: {
+              shopId_customerPhone: {
+                shopId: order.shop.id,
+                customerPhone: cleanPhone,
+              },
+            },
+            create: {
+              shopId: order.shop.id,
+              customerPhone: cleanPhone,
+              customerName: updated.customerName,
+              points,
+              totalSpentSatang: updated.totalSatang,
+            },
+            update: {
+              points: { increment: points },
+              totalSpentSatang: { increment: updated.totalSatang },
+              customerName: updated.customerName,
+            },
+          });
+          await db.order.update({
+            where: { id: order.id },
+            data: { pointsEarned: points },
+          });
+        }
+      }
+    }
+  }
+
   // Fire shipping notification email when transitioning to SHIPPING
   if (status === "SHIPPING" && updated.customerEmail) {
     const items = updated.items as Array<{

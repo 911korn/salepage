@@ -10,6 +10,7 @@ export {
   ProductType,
   ProductStatus,
   OrderStatus,
+  CouponType,
 } from "@/generated/prisma";
 
 function makeClient() {

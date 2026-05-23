@@ -19,6 +19,8 @@ const Body = z.object({
   customerAddress: z.string().max(500).optional(),
   notes: z.string().max(500).optional(),
   shippingSatang: z.number().int().nonnegative().max(100_000).default(0),
+  couponCode: z.string().min(1).max(40).optional().nullable(),
+  redeemPoints: z.number().int().min(0).optional().default(0),
 });
 
 /**
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
       status: true,
       promptpayId: true,
       contact: true,
+      loyaltyBahtValuePerPoint: true,
       owner: { select: { email: true } },
     },
   });
@@ -86,7 +89,62 @@ export async function POST(request: Request) {
       image: p.imageUrls[0],
     });
   }
-  const totalSatang = subtotalSatang + input.shippingSatang;
+  // Apply coupon (server-side re-validation, never trust client discount)
+  let couponId: string | null = null;
+  let couponDiscountSatang = 0;
+  if (input.couponCode) {
+    const coupon = await db.coupon.findUnique({
+      where: {
+        shopId_code: { shopId: shop.id, code: input.couponCode.toLowerCase() },
+      },
+    });
+    if (
+      coupon &&
+      coupon.active &&
+      (!coupon.expiresAt || coupon.expiresAt.getTime() >= Date.now()) &&
+      (coupon.maxRedemptions === null || coupon.redeemedCount < coupon.maxRedemptions) &&
+      (coupon.minOrderSatang === null || subtotalSatang >= coupon.minOrderSatang)
+    ) {
+      if (coupon.type === "PERCENT" && coupon.percent !== null) {
+        couponDiscountSatang = Math.floor((subtotalSatang * coupon.percent) / 100);
+      } else if (coupon.type === "FIXED" && coupon.amountSatang !== null) {
+        couponDiscountSatang = Math.min(coupon.amountSatang, subtotalSatang);
+      }
+      couponId = coupon.id;
+    }
+  }
+
+  // Apply loyalty point redemption (1 point = shop.loyaltyBahtValuePerPoint THB)
+  let pointsRedeemed = 0;
+  let pointsDiscountSatang = 0;
+  if (
+    input.redeemPoints &&
+    input.redeemPoints > 0 &&
+    input.customerPhone &&
+    shop.loyaltyBahtValuePerPoint > 0
+  ) {
+    const cleanPhone = input.customerPhone.replace(/[^\d]/g, "");
+    if (cleanPhone.length >= 9) {
+      const wallet = await db.customerLoyalty.findUnique({
+        where: {
+          shopId_customerPhone: { shopId: shop.id, customerPhone: cleanPhone },
+        },
+      });
+      const available = wallet?.points ?? 0;
+      const wanted = Math.min(input.redeemPoints, available);
+      const maxPointsByOrder = Math.floor(
+        (subtotalSatang - couponDiscountSatang) /
+          (shop.loyaltyBahtValuePerPoint * 100),
+      );
+      pointsRedeemed = Math.max(0, Math.min(wanted, maxPointsByOrder));
+      pointsDiscountSatang = pointsRedeemed * shop.loyaltyBahtValuePerPoint * 100;
+    }
+  }
+
+  const totalSatang = Math.max(
+    0,
+    subtotalSatang + input.shippingSatang - couponDiscountSatang - pointsDiscountSatang,
+  );
 
   // Generate PromptPay QR if shop has receiver set
   let qr: Awaited<ReturnType<typeof generatePromptPay>> | null = null;
@@ -117,8 +175,28 @@ export async function POST(request: Request) {
       status: OrderStatus.PENDING,
       paymentMethod: "promptpay",
       notes: input.notes,
+      couponId,
+      couponDiscountSatang,
+      pointsRedeemed,
     },
   });
+
+  // Atomic side-effects for coupon + point redemption
+  if (couponId) {
+    await db.coupon.update({
+      where: { id: couponId },
+      data: { redeemedCount: { increment: 1 } },
+    });
+  }
+  if (pointsRedeemed > 0 && input.customerPhone) {
+    const cleanPhone = input.customerPhone.replace(/[^\d]/g, "");
+    await db.customerLoyalty.update({
+      where: {
+        shopId_customerPhone: { shopId: shop.id, customerPhone: cleanPhone },
+      },
+      data: { points: { decrement: pointsRedeemed } },
+    });
+  }
 
   // Fire emails in the background — don't await + don't fail the order on email error.
   const ref = buildOrderRef(order.createdAt, order.id);
