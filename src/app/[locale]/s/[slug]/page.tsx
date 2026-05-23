@@ -5,8 +5,10 @@ import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import { db, ProductStatus } from "@/lib/db";
+import { db, PlanKey, ProductStatus } from "@/lib/db";
+import { getEffectivePlan } from "@/lib/plan";
 import { getShopBySlug as getDemoShop } from "@/lib/demo-data";
+import { LogoMark } from "@/components/ui/logo";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
@@ -62,6 +64,11 @@ export default async function StorefrontPage({ params }: PageProps) {
       },
     },
   });
+
+  // Watermark shows for FREE-tier shops only. Demo shops + paid tiers hide it.
+  // Per pricing copy: "มีโลโก้ SalePage บนหน้าเว็บ" (Free) → "ไม่มีโลโก้" (paid).
+  const ownerPlan = dbShop ? await getEffectivePlan(dbShop.ownerId) : null;
+  const showWatermark = ownerPlan === PlanKey.FREE;
 
   const dbReviews = dbShop
     ? await db.review.findMany({
@@ -418,6 +425,22 @@ export default async function StorefrontPage({ params }: PageProps) {
           </footer>
         </div>
       </div>
+
+      {showWatermark ? (
+        <Link
+          href="/"
+          aria-label="Powered by SalePage"
+          className="group fixed bottom-4 right-4 z-40 inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-border)] bg-white/95 px-3 py-1.5 text-[11px] font-medium text-zinc-700 shadow-lg backdrop-blur transition-all hover:-translate-y-0.5 hover:border-[color:var(--color-brand-300)] hover:text-[color:var(--color-brand-700)]"
+        >
+          <LogoMark className="size-4" />
+          <span>
+            สร้างด้วย{" "}
+            <span className="font-semibold text-[color:var(--color-brand-700)]">
+              SalePage
+            </span>
+          </span>
+        </Link>
+      ) : null}
     </div>
   );
 }
