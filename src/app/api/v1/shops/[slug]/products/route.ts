@@ -86,15 +86,18 @@ const Body = z.object({
   stock: z.number().int().nonnegative().max(99999).optional(),
 });
 
+// Collapse non-[a-z0-9] runs to hyphens, trim, clamp to 60 chars. Fallback to
+// "p-<random>" when the source name is non-ASCII (Thai-only, emoji-only, etc.)
 function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^ -]+/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60) ||
-    "p-" + Math.random().toString(36).slice(2, 10);
+  return (
+    name
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) ||
+    "p-" + Math.random().toString(36).slice(2, 10)
+  );
 }
 
 export async function POST(

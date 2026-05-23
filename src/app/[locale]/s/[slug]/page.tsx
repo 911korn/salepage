@@ -168,16 +168,17 @@ export default async function StorefrontPage({ params }: PageProps) {
           <footer className="mt-16 pb-10">
             <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white p-5 text-center">
               <p className="text-sm text-zinc-600">
-                {t.rich("poweredBy", {
-                  brand: () => (
-                    <Link
-                      href="/"
-                      className="font-semibold text-[color:var(--color-brand-700)] hover:underline"
-                    >
-                      SalePage
-                    </Link>
-                  ),
-                })}
+                {/* `t.rich` with a function renderer crashes when this page
+                    renders server-side, because functions can't be serialized
+                    across the RSC boundary. Plain string + JSX is safer. */}
+                ร้านนี้ใช้แพลตฟอร์ม{" "}
+                <Link
+                  href="/"
+                  className="font-semibold text-[color:var(--color-brand-700)] hover:underline"
+                >
+                  SalePage
+                </Link>
+                {" "}— สร้างร้านของคุณฟรี ใช้เวลา 30 วินาที
               </p>
             </div>
           </footer>

@@ -48,11 +48,14 @@ const THEME_PRESETS = [
 
 const STEPS = 3;
 
+// Collapse anything outside [a-z0-9] into a single hyphen, trim ends, clamp to
+// 40 chars. (Earlier version used `[^ -]+` which was a buggy character class
+// meaning "not space and not hyphen" — it stripped every letter the user
+// typed and made the slug input look broken. Fixed 2026-05-23.)
 function slugify(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFKD")
-    .replace(/[^ -]+/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
@@ -67,9 +70,17 @@ export function CreateShopWizard() {
   const [pending, startTransition] = useTransition();
 
   const [name, setName] = useState("");
-  const [slugDraft, setSlugDraft] = useState("");
-  const slugManuallyEdited = useMemo(() => slugDraft !== slugify(name), [name, slugDraft]);
-  const effectiveSlug = slugManuallyEdited ? slugDraft : slugify(name);
+  // The slug input is "lenient" — we let the user type anything they want
+  // (including Thai) so the field always echoes their keystrokes. The
+  // `effectiveSlug` used by the API is computed by slugifying it on read.
+  //
+  // Earlier we ran `slugify` inside the onChange handler, which silently
+  // dropped any non-ASCII the user typed → the input looked broken on Thai
+  // keyboards. Storing raw input + slugifying on read fixes that.
+  const [slugInputRaw, setSlugInputRaw] = useState("");
+  const [slugDirty, setSlugDirty] = useState(false);
+  const slugDisplay = slugDirty ? slugInputRaw : slugify(name);
+  const effectiveSlug = slugify(slugDirty ? slugInputRaw : name);
 
   const [category, setCategory] = useState<CategoryKey | null>(null);
   const [themeColor, setThemeColor] = useState(THEME_PRESETS[0].color);
@@ -165,12 +176,13 @@ export function CreateShopWizard() {
           <Step1
             t={t}
             name={name}
-            slug={effectiveSlug}
-            onName={(v) => {
-              setName(v);
-              if (!slugManuallyEdited) setSlugDraft(slugify(v));
+            slugDisplay={slugDisplay}
+            slugPreview={effectiveSlug}
+            onName={setName}
+            onSlug={(v) => {
+              setSlugInputRaw(v);
+              setSlugDirty(true);
             }}
-            onSlug={setSlugDraft}
           />
         ) : null}
         {step === 2 ? (
@@ -231,16 +243,22 @@ export function CreateShopWizard() {
 function Step1({
   t,
   name,
-  slug,
+  slugDisplay,
+  slugPreview,
   onName,
   onSlug,
 }: {
   t: ReturnType<typeof useTranslations<"dashboard.createShop">>;
   name: string;
-  slug: string;
+  /** What to display in the slug input field (raw user keystrokes). */
+  slugDisplay: string;
+  /** Normalized URL-safe slug shown as preview below. */
+  slugPreview: string;
   onName: (v: string) => void;
   onSlug: (v: string) => void;
 }) {
+  const needsNormalization =
+    slugDisplay.length > 0 && slugDisplay !== slugPreview;
   return (
     <>
       <div>
@@ -268,13 +286,23 @@ function Step1({
         </label>
         <Input
           prefix={<span className="text-xs">salepage.in.th/</span>}
-          value={slug}
-          onChange={(e) => onSlug(slugify(e.target.value))}
+          value={slugDisplay}
+          onChange={(e) => onSlug(e.target.value)}
           placeholder="my-shop"
           className="h-12"
-          maxLength={40}
+          maxLength={60}
         />
-        <p className="mt-1.5 text-xs text-zinc-500">{t("slugHint")}</p>
+        {needsNormalization ? (
+          <p className="mt-1.5 text-xs text-amber-700">
+            → จะกลายเป็น{" "}
+            <code className="font-mono text-[11px] font-semibold">
+              salepage.in.th/{slugPreview || "?"}
+            </code>{" "}
+            (รองรับเฉพาะ a-z, 0-9, ขีดกลาง)
+          </p>
+        ) : (
+          <p className="mt-1.5 text-xs text-zinc-500">{t("slugHint")}</p>
+        )}
       </div>
     </>
   );

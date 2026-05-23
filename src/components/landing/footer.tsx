@@ -5,7 +5,13 @@ import { LogoMark, Wordmark } from "@/components/ui/logo";
 export async function Footer() {
   const t = await getTranslations("footer");
 
-  const cols: { titleKey: string; links: { href: string; labelKey: string }[] }[] = [
+  // `external: true` means render as a raw <a href> (skip next-intl Link,
+  // which would prepend the locale prefix for the non-default locale and
+  // break /api/* URLs which are not under [locale]).
+  const cols: {
+    titleKey: string;
+    links: { href: string; labelKey: string; external?: boolean }[];
+  }[] = [
     {
       titleKey: "colProduct",
       links: [
@@ -18,10 +24,8 @@ export async function Footer() {
     {
       titleKey: "colDevs",
       links: [
-        { href: "/api/v1/health", labelKey: "footer.linkApiV1" },
+        { href: "/api/v1/health", labelKey: "footer.linkApiV1", external: true },
         { href: "/docs", labelKey: "footer.linkDocs" },
-        { href: "/docs/promptpay", labelKey: "footer.linkPromptpayApi" },
-        { href: "/docs/slip", labelKey: "footer.linkSlipApi" },
       ],
     },
     {
@@ -58,16 +62,27 @@ export async function Footer() {
                 {t(col.titleKey)}
               </p>
               <ul className="mt-4 space-y-3">
-                {col.links.map((l) => (
-                  <li key={l.href}>
-                    <Link
-                      href={l.href}
-                      className="text-sm text-zinc-700 hover:text-[color:var(--color-brand-700)]"
-                    >
-                      {tRoot(l.labelKey)}
-                    </Link>
-                  </li>
-                ))}
+                {col.links.map((l) =>
+                  l.external ? (
+                    <li key={l.href}>
+                      <a
+                        href={l.href}
+                        className="text-sm text-zinc-700 hover:text-[color:var(--color-brand-700)]"
+                      >
+                        {tRoot(l.labelKey)}
+                      </a>
+                    </li>
+                  ) : (
+                    <li key={l.href}>
+                      <Link
+                        href={l.href}
+                        className="text-sm text-zinc-700 hover:text-[color:var(--color-brand-700)]"
+                      >
+                        {tRoot(l.labelKey)}
+                      </Link>
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
           ))}
