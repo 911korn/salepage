@@ -353,8 +353,13 @@
     "common": {
       "open": "Open shop",
       "viewShop": "View storefront",
+      "viewShopShort": "View",
       "copyLink": "Copy link",
       "linkCopied": "Link copied",
+      "openMenu": "Open shop menu",
+      "closeMenu": "Close menu",
+      "mobileNav": "Mobile shop management",
+      "manageShop": "Manage shop",
       "menuMain": "Main",
       "menuTools": "Tools",
       "signOut": "Sign out",

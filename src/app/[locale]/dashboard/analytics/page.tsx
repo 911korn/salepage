@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { resolveDashboardShop } from "@/lib/dashboard-routing";
 import type { Locale } from "@/i18n/routing";
 
 const REVENUE_STATUSES: OrderStatus[] = [
@@ -15,15 +16,19 @@ const REVENUE_STATUSES: OrderStatus[] = [
 
 export default async function AnalyticsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: Locale }>;
+  searchParams: Promise<{ shop?: string | string[] }>;
 }) {
   const { locale } = await params;
+  const { shop: shopParam } = await searchParams;
   setRequestLocale(locale);
 
   const { shops } = await requireDashboardSession();
   if (shops.length === 0) redirect("/dashboard/create-shop");
-  const activeShop = shops[0];
+  const activeShop = resolveDashboardShop(shops, shopParam);
+  if (!activeShop) redirect("/dashboard/create-shop");
 
   const since = new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000);
   since.setHours(0, 0, 0, 0);

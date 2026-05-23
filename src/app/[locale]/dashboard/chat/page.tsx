@@ -6,6 +6,7 @@ import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { db } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { resolveDashboardShop } from "@/lib/dashboard-routing";
 import { hasBusinessPlan } from "@/lib/plan";
 import { ChatInbox } from "@/components/dashboard/chat-inbox";
 import { LineConfigForm } from "@/components/dashboard/line-config-form";
@@ -13,14 +14,17 @@ import type { Locale } from "@/i18n/routing";
 
 export default async function ChatPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: Locale }>;
+  searchParams: Promise<{ shop?: string | string[] }>;
 }) {
   const { locale } = await params;
+  const { shop: shopParam } = await searchParams;
   setRequestLocale(locale);
 
   const { user, shops } = await requireDashboardSession();
-  const activeShop = shops[0];
+  const activeShop = resolveDashboardShop(shops, shopParam);
   if (!activeShop) return null;
 
   const eligible = await hasBusinessPlan(user.id);

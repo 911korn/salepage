@@ -353,8 +353,13 @@
     "common": {
       "open": "เปิดร้าน",
       "viewShop": "ดูหน้าร้าน",
+      "viewShopShort": "ดูร้าน",
       "copyLink": "คัดลอกลิงก์",
       "linkCopied": "คัดลอกลิงก์แล้ว",
+      "openMenu": "เปิดเมนูจัดการร้าน",
+      "closeMenu": "ปิดเมนู",
+      "mobileNav": "เมนูจัดการร้านบนมือถือ",
+      "manageShop": "จัดการร้าน",
       "menuMain": "หลัก",
       "menuTools": "เครื่องมือ",
       "signOut": "ออกจากระบบ",

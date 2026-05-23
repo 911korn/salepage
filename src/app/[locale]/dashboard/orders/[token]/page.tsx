@@ -7,6 +7,7 @@ import { OrderActions } from "@/components/dashboard/order-actions";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { dashboardHref } from "@/lib/dashboard-routing";
 import { buildOrderRef } from "@/lib/orders";
 import { buttonStyles } from "@/components/ui/button";
 import type { Locale } from "@/i18n/routing";
@@ -47,7 +48,7 @@ export default async function OrderDetailPage({
       <header className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link
-            href="/dashboard/orders"
+            href={dashboardHref("/dashboard/orders", order.shop.slug)}
             className="grid size-9 place-items-center rounded-lg border border-[color:var(--color-border)] bg-white hover:bg-[color:var(--color-soft)]"
           >
             <ArrowLeft className="size-4" />

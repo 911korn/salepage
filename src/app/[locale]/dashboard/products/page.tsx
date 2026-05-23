@@ -7,20 +7,25 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { db, ProductBadge, ProductStatus, ProductType } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { dashboardHref, resolveDashboardShop } from "@/lib/dashboard-routing";
 import { CsvActions } from "@/components/dashboard/csv-actions";
 import type { Locale } from "@/i18n/routing";
 
 export default async function ProductsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: Locale }>;
+  searchParams: Promise<{ shop?: string | string[] }>;
 }) {
   const { locale } = await params;
+  const { shop: shopParam } = await searchParams;
   setRequestLocale(locale);
 
   const { shops } = await requireDashboardSession();
   if (shops.length === 0) redirect("/dashboard/create-shop");
-  const activeShop = shops[0];
+  const activeShop = resolveDashboardShop(shops, shopParam);
+  if (!activeShop) redirect("/dashboard/create-shop");
 
   const products = await db.product.findMany({
     where: { shopId: activeShop.id },
@@ -44,7 +49,7 @@ export default async function ProductsPage({
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           <CsvActions shopSlug={activeShop.slug} />
           <Link
-            href="/dashboard/products/new"
+            href={dashboardHref("/dashboard/products/new", activeShop.slug)}
             className={cn(buttonStyles({ size: "md" }), "flex-1 sm:flex-none")}
           >
             <Plus className="size-4" /> {t("addNew")}
@@ -64,7 +69,7 @@ export default async function ProductsPage({
             {t("empty.desc")}
           </p>
           <Link
-            href="/dashboard/products/new"
+            href={dashboardHref("/dashboard/products/new", activeShop.slug)}
             className={cn(buttonStyles({ size: "lg" }), "mt-6")}
           >
             <Plus className="size-4" /> {t("empty.cta")}
@@ -75,7 +80,10 @@ export default async function ProductsPage({
           {products.map((p) => (
             <li key={p.id}>
               <Link
-                href={`/dashboard/products/${p.slug}/edit`}
+                href={dashboardHref(
+                  `/dashboard/products/${p.slug}/edit`,
+                  activeShop.slug,
+                )}
                 className="group block overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-white transition-all hover:-translate-y-0.5 hover:border-[color:var(--color-brand-200)] hover:shadow-md"
               >
                 <div className="relative aspect-square w-full bg-[color:var(--color-soft)]">

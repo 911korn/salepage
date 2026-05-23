@@ -70,7 +70,7 @@ export function CsvActions({ shopSlug }: Props) {
         href={`/api/v1/shops/${shopSlug}/products/export`}
         className={cn(
           buttonStyles({ size: "sm", variant: "outline" }),
-          "flex-1 gap-1.5 sm:flex-none",
+          "min-h-11 flex-1 gap-1.5 sm:min-h-9 sm:flex-none",
         )}
       >
         <Download className="size-3.5" /> Export CSV
@@ -81,7 +81,7 @@ export function CsvActions({ shopSlug }: Props) {
         disabled={uploading}
         className={cn(
           buttonStyles({ size: "sm", variant: "outline" }),
-          "flex-1 gap-1.5 sm:flex-none",
+          "min-h-11 flex-1 gap-1.5 sm:min-h-9 sm:flex-none",
         )}
       >
         <Upload className="size-3.5" /> {uploading ? "กำลังนำเข้า..." : "Import CSV"}

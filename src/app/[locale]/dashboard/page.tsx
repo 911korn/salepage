@@ -17,9 +17,15 @@ import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { dashboardHref, resolveDashboardShop } from "@/lib/dashboard-routing";
 import { storefrontPath } from "@/lib/storefront-url";
 
-export default async function DashboardOverviewPage() {
+export default async function DashboardOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ shop?: string | string[] }>;
+}) {
+  const { shop: shopParam } = await searchParams;
   const { shops } = await requireDashboardSession();
 
   // No shop yet → redirect to create-shop wizard.
@@ -27,7 +33,8 @@ export default async function DashboardOverviewPage() {
     redirect("/dashboard/create-shop");
   }
 
-  const activeShop = shops[0];
+  const activeShop = resolveDashboardShop(shops, shopParam);
+  if (!activeShop) redirect("/dashboard/create-shop");
   const t = await getTranslations("dashboard.overview");
   const tCommon = await getTranslations("dashboard.common");
   const tNav = await getTranslations("dashboard.nav");
@@ -108,13 +115,33 @@ export default async function DashboardOverviewPage() {
           {t("quickTools")}
         </h2>
         <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-          <QuickTool href="/dashboard/analytics" icon={ChartBar} label={tNav("analytics")} />
-          <QuickTool href="/dashboard/chat" icon={MessageCircle} label={tNav("chat")} />
-          <QuickTool href="/dashboard/coupons" icon={Ticket} label={tNav("coupons")} />
-          <QuickTool href="/dashboard/customers" icon={Users} label={tNav("customers")} />
-          <QuickTool href="/dashboard/reviews" icon={Star} label={tNav("reviews")} />
           <QuickTool
-            href="/dashboard/announcements"
+            href={dashboardHref("/dashboard/analytics", activeShop.slug)}
+            icon={ChartBar}
+            label={tNav("analytics")}
+          />
+          <QuickTool
+            href={dashboardHref("/dashboard/chat", activeShop.slug)}
+            icon={MessageCircle}
+            label={tNav("chat")}
+          />
+          <QuickTool
+            href={dashboardHref("/dashboard/coupons", activeShop.slug)}
+            icon={Ticket}
+            label={tNav("coupons")}
+          />
+          <QuickTool
+            href={dashboardHref("/dashboard/customers", activeShop.slug)}
+            icon={Users}
+            label={tNav("customers")}
+          />
+          <QuickTool
+            href={dashboardHref("/dashboard/reviews", activeShop.slug)}
+            icon={Star}
+            label={tNav("reviews")}
+          />
+          <QuickTool
+            href={dashboardHref("/dashboard/announcements", activeShop.slug)}
             icon={Bell}
             label={tNav("announcements")}
           />
@@ -128,7 +155,7 @@ export default async function DashboardOverviewPage() {
             {t("recentOrders")}
           </h2>
           <Link
-            href="/dashboard/orders"
+            href={dashboardHref("/dashboard/orders", activeShop.slug)}
             className="text-[13px] font-medium text-[color:var(--color-brand-700)] hover:underline"
           >
             {t("viewAll")} →

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus, type Prisma } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { dashboardHref, resolveDashboardShop } from "@/lib/dashboard-routing";
 import { buildOrderRef } from "@/lib/orders";
 import type { Locale } from "@/i18n/routing";
 
@@ -23,15 +24,16 @@ export default async function OrdersDashboardPage({
   searchParams,
 }: {
   params: Promise<{ locale: Locale }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; shop?: string | string[] }>;
 }) {
   const { locale } = await params;
-  const { status: filterParam } = await searchParams;
+  const { status: filterParam, shop: shopParam } = await searchParams;
   setRequestLocale(locale);
 
   const { shops } = await requireDashboardSession();
   if (shops.length === 0) redirect("/dashboard/create-shop");
-  const activeShop = shops[0];
+  const activeShop = resolveDashboardShop(shops, shopParam);
+  if (!activeShop) redirect("/dashboard/create-shop");
 
   const filter = FILTERS.find((f) => f.key === filterParam) ?? FILTERS[0];
   const where: Prisma.OrderWhereInput = { shopId: activeShop.id };
@@ -75,11 +77,9 @@ export default async function OrdersDashboardPage({
           return (
             <Link
               key={f.key}
-              href={
-                f.key === "all"
-                  ? "/dashboard/orders"
-                  : `/dashboard/orders?status=${f.key}`
-              }
+              href={dashboardHref("/dashboard/orders", activeShop.slug, {
+                status: f.key === "all" ? null : f.key,
+              })}
               className={cn(
                 "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors",
                 filter.key === f.key
@@ -140,7 +140,10 @@ export default async function OrdersDashboardPage({
                 <tr key={o.id} className="hover:bg-[color:var(--color-soft)]">
                   <td className="px-4 py-3">
                     <Link
-                      href={`/dashboard/orders/${o.publicToken}`}
+                      href={dashboardHref(
+                        `/dashboard/orders/${o.publicToken}`,
+                        activeShop.slug,
+                      )}
                       className="font-mono text-[12px] font-semibold text-[color:var(--color-brand-700)] hover:underline"
                     >
                       {buildOrderRef(o.createdAt, o.id)}
@@ -170,7 +173,10 @@ export default async function OrdersDashboardPage({
             {orders.map((o) => (
               <li key={o.id}>
                 <Link
-                  href={`/dashboard/orders/${o.publicToken}`}
+                  href={dashboardHref(
+                    `/dashboard/orders/${o.publicToken}`,
+                    activeShop.slug,
+                  )}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-[color:var(--color-soft)]"
                 >
                   <div className="min-w-0 flex-1">

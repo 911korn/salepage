@@ -2,6 +2,7 @@ import { Ticket } from "lucide-react";
 import { setRequestLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { resolveDashboardShop } from "@/lib/dashboard-routing";
 import {
   CouponsManager,
   type CouponView,
@@ -10,14 +11,17 @@ import type { Locale } from "@/i18n/routing";
 
 export default async function CouponsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: Locale }>;
+  searchParams: Promise<{ shop?: string | string[] }>;
 }) {
   const { locale } = await params;
+  const { shop: shopParam } = await searchParams;
   setRequestLocale(locale);
 
   const { shops } = await requireDashboardSession();
-  const activeShop = shops[0];
+  const activeShop = resolveDashboardShop(shops, shopParam);
   if (!activeShop) return null;
 
   const coupons = await db.coupon.findMany({

@@ -2,6 +2,7 @@ import { Star } from "lucide-react";
 import { setRequestLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { resolveDashboardShop } from "@/lib/dashboard-routing";
 import {
   ReviewsManager,
   type ReviewView,
@@ -10,14 +11,17 @@ import type { Locale } from "@/i18n/routing";
 
 export default async function ReviewsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: Locale }>;
+  searchParams: Promise<{ shop?: string | string[] }>;
 }) {
   const { locale } = await params;
+  const { shop: shopParam } = await searchParams;
   setRequestLocale(locale);
 
   const { shops } = await requireDashboardSession();
-  const activeShop = shops[0];
+  const activeShop = resolveDashboardShop(shops, shopParam);
   if (!activeShop) return null;
 
   const [reviews, agg] = await Promise.all([

@@ -3,19 +3,24 @@ import { setRequestLocale } from "next-intl/server";
 import { ProductForm } from "@/components/dashboard/product-form";
 import { db, type ProductBadge, type ProductStatus, type ProductType } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { resolveDashboardShop } from "@/lib/dashboard-routing";
 import type { Locale } from "@/i18n/routing";
 
 export default async function EditProductPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: Locale; productSlug: string }>;
+  searchParams: Promise<{ shop?: string | string[] }>;
 }) {
   const { locale, productSlug } = await params;
+  const { shop: shopParam } = await searchParams;
   setRequestLocale(locale);
 
   const { shops } = await requireDashboardSession();
   if (shops.length === 0) redirect("/dashboard/create-shop");
-  const shop = shops[0];
+  const shop = resolveDashboardShop(shops, shopParam);
+  if (!shop) redirect("/dashboard/create-shop");
 
   const product = await db.product.findUnique({
     where: { shopId_slug: { shopId: shop.id, slug: productSlug } },
