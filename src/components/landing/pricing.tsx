@@ -48,7 +48,10 @@ export function Pricing() {
     plan: PaidPlan,
     method: "card" | "promptpay",
   ) {
-    const key = `${plan}-${method}-${period}`;
+    // PromptPay is annual-only — Stripe handles monthly via card subscription.
+    // The toggle still drives the card flow but PromptPay always pays a year.
+    const effectivePeriod: Period = method === "promptpay" ? "year" : period;
+    const key = `${plan}-${method}-${effectivePeriod}`;
     setLoadingKey(key);
     try {
       const url =
@@ -58,7 +61,7 @@ export function Pricing() {
       const res = await fetch(url, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ plan, period, locale }),
+        body: JSON.stringify({ plan, period: effectivePeriod, locale }),
       });
       const json = await res.json();
       if (!res.ok || !json.ok) {
@@ -206,19 +209,25 @@ export function Pricing() {
                         ? tBilling("loading")
                         : t(`plans.${p.id}.cta`)}
                     </Button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        startCheckout(p.id as PaidPlan, "promptpay")
-                      }
-                      disabled={loadingKey === `${p.id}-promptpay-${period}`}
-                      className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-[color:var(--color-border)] bg-white px-3 py-2 text-[12px] font-medium text-zinc-700 transition-colors hover:border-[color:var(--color-brand-300)] hover:bg-[color:var(--color-brand-50)] disabled:opacity-50"
-                    >
-                      <QrCode className="size-3.5 text-[color:var(--color-brand-600)]" />
-                      {loadingKey === `${p.id}-promptpay-${period}`
-                        ? tBilling("loading")
-                        : `${t("toggle." + (period === "year" ? "yearly" : "monthly"))} ผ่าน PromptPay`}
-                    </button>
+                    {period === "year" ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          startCheckout(p.id as PaidPlan, "promptpay")
+                        }
+                        disabled={loadingKey === `${p.id}-promptpay-year`}
+                        className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-[color:var(--color-border)] bg-white px-3 py-2 text-[12px] font-medium text-zinc-700 transition-colors hover:border-[color:var(--color-brand-300)] hover:bg-[color:var(--color-brand-50)] disabled:opacity-50"
+                      >
+                        <QrCode className="size-3.5 text-[color:var(--color-brand-600)]" />
+                        {loadingKey === `${p.id}-promptpay-year`
+                          ? tBilling("loading")
+                          : "จ่ายด้วย PromptPay"}
+                      </button>
+                    ) : (
+                      <p className="mt-2 text-center text-[11px] text-zinc-500">
+                        💡 ใช้ PromptPay ได้เมื่อเลือกรายปี
+                      </p>
+                    )}
                   </>
                 )}
 

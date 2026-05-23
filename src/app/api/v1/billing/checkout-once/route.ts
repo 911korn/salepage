@@ -8,9 +8,13 @@ import { getStripe, getSiteUrl, stripeLocale } from "@/lib/stripe";
 // Renewal is by re-paying; the webhook stitches the chunks together into a
 // rolling Subscription record.
 
+// PromptPay one-time payment supports YEAR only by design — monthly recurring
+// belongs to the Stripe card subscription flow (mode:subscription on
+// /api/v1/billing/checkout). Mixing the two would create two parallel renewal
+// cycles which is confusing for the customer and risky for our quota counters.
 const Body = z.object({
   plan: z.enum(["starter", "pro", "business", "agency"]),
-  period: z.enum(["month", "year"]).default("year"),
+  period: z.literal("year").default("year"),
   email: z.string().email().optional(),
   locale: z.enum(["th", "en"]).optional().default("th"),
   shopSlug: z.string().optional(),
@@ -49,12 +53,12 @@ export async function POST(request: Request) {
     const base = getSiteUrl();
     const localePrefix = locale === "th" ? "" : `/${locale}`;
 
-    // Annual = 10x monthly (2 months free)
-    const monthly = MONTHLY_THB[plan];
-    const amountTHB = period === "year" ? monthly * 10 : monthly;
+    // Annual only: 10× monthly (2 months free). period is locked to "year"
+    // by the zod schema above.
+    void period;
+    const amountTHB = MONTHLY_THB[plan] * 10;
     const amountSatang = amountTHB * 100;
-    const periodLabel =
-      period === "year" ? "1 ปี (ประหยัด 2 เดือน)" : "1 เดือน";
+    const periodLabel = "1 ปี (ประหยัด 2 เดือน)";
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
