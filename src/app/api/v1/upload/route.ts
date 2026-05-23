@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob";
+import { del, put } from "@vercel/blob";
 import { ok, fail } from "@/lib/api";
 import { auth } from "@/lib/auth";
 
@@ -103,4 +103,66 @@ export async function POST(request: Request) {
     },
     { status: 201 },
   );
+}
+
+/**
+ * DELETE /api/v1/upload — delete uploaded product images owned by this user.
+ *
+ * Accepts JSON `{ url }` or `{ urls }`. Only blobs under `u/<userId>/...`
+ * can be deleted, so a merchant cannot delete another account's files even
+ * if they know the public Blob URL.
+ */
+export async function DELETE(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return fail(
+      "blob_not_configured",
+      "Image upload not configured on this deployment",
+      503,
+    );
+  }
+
+  const body = (await request.json().catch(() => null)) as
+    | { url?: unknown; urls?: unknown }
+    | null;
+  const requested = Array.isArray(body?.urls)
+    ? body.urls
+    : body?.url
+      ? [body.url]
+      : [];
+
+  const urls = requested
+    .filter((value): value is string => typeof value === "string")
+    .slice(0, 20);
+  if (urls.length === 0) {
+    return fail("missing_url", "Provide url or urls", 400);
+  }
+
+  const pathnames = urls.map((url) =>
+    getOwnedUploadPathname(url, session.user.id),
+  );
+  if (pathnames.some((pathname) => !pathname)) {
+    return fail("forbidden", "Can only delete your own uploaded images", 403);
+  }
+
+  await del(pathnames as string[]);
+  return ok({ deleted: pathnames.length });
+}
+
+function getOwnedUploadPathname(value: string, userId: string) {
+  let pathname = value.trim();
+  try {
+    const parsed = new URL(pathname);
+    pathname = parsed.pathname;
+  } catch {
+    // Accept pathnames from API clients in addition to full Blob URLs.
+  }
+
+  pathname = decodeURIComponent(pathname)
+    .replace(/^\/+/, "")
+    .split(/[?#]/)[0];
+
+  return pathname.startsWith(`u/${userId}/`) ? pathname : null;
 }

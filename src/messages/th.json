@@ -514,9 +514,15 @@
         "priceLabel": "ราคาขาย (บาท)",
         "compareAtLabel": "ราคาเต็ม / ราคาก่อนลด (บาท)",
         "compareAtHint": "ใส่เพื่อให้แสดงเป็นราคาลดในหน้าร้าน",
-        "imagesLabel": "URL รูปสินค้า",
-        "imagesHint": "ใส่ URL ของรูป — 1 ลิงก์ต่อบรรทัด (สูงสุด 10 รูป)",
+        "imagesLabel": "รูปสินค้า",
+        "imagesHint": "เลือกหรือลากรูปจากเครื่องได้สูงสุด 10 รูป ระบบจะย่อและบีบอัดให้อัตโนมัติก่อนอัปโหลด",
         "imagesPlaceholder": "https://example.com/image.jpg",
+        "addImage": "เพิ่มรูป",
+        "removeImage": "ลบรูปที่ {n}",
+        "removeImageShort": "ลบ",
+        "imageRemoved": "เอารูปออกแล้ว กดบันทึกเพื่ออัปเดตหน้าร้าน",
+        "uploadingProgress": "อัปโหลด {done}/{total}",
+        "uploadComplete": "อัปโหลดรูปแล้ว {n} รูป",
         "typeLabel": "ประเภทสินค้า",
         "typePhysical": "สินค้าจริง (ส่งของ)",
         "typeDigital": "สินค้าดิจิทัล (ไม่ส่งของ)",
@@ -541,7 +547,12 @@
           "nameRequired": "ต้องใส่ชื่อสินค้า",
           "priceRequired": "ต้องใส่ราคา",
           "createFailed": "เพิ่มสินค้าไม่สำเร็จ",
-          "updateFailed": "แก้ไขสินค้าไม่สำเร็จ"
+          "updateFailed": "แก้ไขสินค้าไม่สำเร็จ",
+          "uploadFailed": "อัปโหลดรูปไม่สำเร็จ",
+          "deleteImageFailed": "ลบไฟล์รูปออกจากระบบไม่สำเร็จ",
+          "imageTooLarge": "รูปยังใหญ่เกินไปหลังบีบอัด",
+          "badImageType": "ไฟล์นี้ไม่ใช่รูปภาพ",
+          "maxImages": "ใส่รูปสินค้าได้สูงสุด 10 รูป"
         }
       }
     },

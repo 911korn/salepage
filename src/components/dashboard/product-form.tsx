@@ -7,10 +7,15 @@ import { toast } from "sonner";
 import { useRouter, Link } from "@/i18n/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 
 type Mode = "create" | "edit";
+
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 1600;
+const IMAGE_UPLOAD_CONCURRENCY = 3;
+const OPTIMIZED_IMAGE_TYPE = "image/webp";
+const OPTIMIZED_IMAGE_QUALITY = 0.82;
 
 interface ProductFormValues {
   name: string;
@@ -49,31 +54,128 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
   );
   const [images, setImages] = useState<string[]>(initialValues?.imageUrls ?? []);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialImageUrlsRef = useRef(initialValues?.imageUrls ?? []);
+  const uploadedThisSessionRef = useRef(new Set<string>());
 
   async function uploadFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
-    setUploading(true);
+    if (uploading) return;
+
     const remaining = 10 - images.length;
-    const slice = Array.from(files).slice(0, remaining);
-    const uploaded: string[] = [];
-    for (const file of slice) {
-      const form = new FormData();
-      form.append("file", file);
-      try {
-        const res = await fetch("/api/v1/upload", { method: "POST", body: form });
-        const json = await res.json();
-        if (!res.ok || !json.ok) {
-          toast.error(json.error?.message ?? "Upload failed");
-          continue;
-        }
-        uploaded.push(json.data.url);
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Upload failed");
-      }
+    if (remaining <= 0) {
+      toast.error(t("errors.maxImages"));
+      return;
     }
-    if (uploaded.length > 0) setImages((cur) => [...cur, ...uploaded]);
+
+    const selected = Array.from(files)
+      .filter((file) => {
+        if (!file.type.startsWith("image/")) {
+          toast.error(t("errors.badImageType"), { description: file.name });
+          return false;
+        }
+        return true;
+      })
+      .slice(0, remaining);
+
+    if (selected.length === 0) return;
+
+    setUploading(true);
+    setUploadProgress({ done: 0, total: selected.length });
+    const uploaded: Array<string | null> = Array.from(
+      { length: selected.length },
+      () => null,
+    );
+
+    async function uploadOne(file: File, index: number) {
+      const optimized = await optimizeProductImage(file);
+      if (optimized.size > MAX_UPLOAD_BYTES) {
+        toast.error(t("errors.imageTooLarge"), { description: file.name });
+        return;
+      }
+
+      const form = new FormData();
+      form.append("file", optimized);
+      const res = await fetch("/api/v1/upload", { method: "POST", body: form });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        toast.error(json.error?.message ?? t("errors.uploadFailed"), {
+          description: file.name,
+        });
+        return;
+      }
+
+      uploaded[index] = json.data.url;
+      uploadedThisSessionRef.current.add(json.data.url);
+    }
+
+    let nextIndex = 0;
+    const workerCount = Math.min(IMAGE_UPLOAD_CONCURRENCY, selected.length);
+    await Promise.all(
+      Array.from({ length: workerCount }, async () => {
+        while (nextIndex < selected.length) {
+          const index = nextIndex++;
+          const file = selected[index];
+          try {
+            await uploadOne(file, index);
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : t("errors.uploadFailed"), {
+              description: file.name,
+            });
+          } finally {
+            setUploadProgress((current) =>
+              current
+                ? {
+                    done: Math.min(current.done + 1, current.total),
+                    total: current.total,
+                  }
+                : current,
+            );
+          }
+        }
+      }),
+    );
+
+    const uploadedUrls = uploaded.filter((url): url is string => Boolean(url));
+    if (uploadedUrls.length > 0) {
+      setImages((cur) => [...cur, ...uploadedUrls].slice(0, 10));
+      toast.success(t("uploadComplete", { n: uploadedUrls.length }));
+    }
+
+    setUploadProgress(null);
     setUploading(false);
+  }
+
+  function removeImageAt(index: number) {
+    const url = images[index];
+    if (!url) return;
+
+    setImages((cur) => cur.filter((_, i) => i !== index));
+    toast.success(t("imageRemoved"));
+
+    if (uploadedThisSessionRef.current.has(url)) {
+      uploadedThisSessionRef.current.delete(url);
+      void deleteUploadedImages([url]).catch(() => {
+        toast.error(t("errors.deleteImageFailed"));
+      });
+    }
+  }
+
+  function cleanupRemovedInitialImages(nextImages: string[]) {
+    if (mode !== "edit") return;
+
+    const removed = initialImageUrlsRef.current.filter(
+      (url) => !nextImages.includes(url),
+    );
+    if (removed.length === 0) return;
+
+    void deleteUploadedImages(removed).catch(() => {
+      toast.error(t("errors.deleteImageFailed"));
+    });
   }
   const [type, setType] = useState<"PHYSICAL" | "DIGITAL">(
     initialValues?.type ?? "PHYSICAL",
@@ -110,7 +212,7 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
         imageUrls: images.slice(0, 10),
         type,
         badge: badge || null,
-        stock: stock ? Number(stock) : null,
+        ...(stock ? { stock: Number(stock) } : mode === "edit" ? { stock: null } : {}),
         ...(mode === "edit" ? { status } : {}),
       };
       try {
@@ -131,6 +233,8 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
           );
           return;
         }
+        cleanupRemovedInitialImages(images);
+        uploadedThisSessionRef.current.clear();
         toast.success(mode === "create" ? t("submitNew") : t("submit"));
         router.push("/dashboard/products");
         router.refresh();
@@ -240,8 +344,8 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               {images.map((url, i) => (
                 <div
-                  key={url}
-                  className="group relative aspect-square overflow-hidden rounded-xl ring-1 ring-[color:var(--color-border)]"
+                  key={`${url}-${i}`}
+                  className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-[color:var(--color-border)]"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -251,12 +355,12 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
                   />
                   <button
                     type="button"
-                    onClick={() =>
-                      setImages((cur) => cur.filter((u) => u !== url))
-                    }
-                    className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-black/70 text-white opacity-0 transition-opacity hover:bg-black/90 group-hover:opacity-100"
+                    aria-label={t("removeImage", { n: i + 1 })}
+                    onClick={() => removeImageAt(i)}
+                    className="absolute inset-x-1 bottom-1 flex min-h-9 items-center justify-center gap-1 rounded-lg bg-white/95 px-2 text-xs font-semibold text-red-600 shadow-sm ring-1 ring-red-100 transition-colors hover:bg-red-50 active:bg-red-100"
                   >
-                    <X className="size-3" />
+                    <X className="size-3.5" />
+                    <span>{t("removeImageShort")}</span>
                   </button>
                 </div>
               ))}
@@ -268,11 +372,18 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
                   className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-[color:var(--color-border)] bg-white text-zinc-500 hover:border-[color:var(--color-brand-300)] hover:bg-[color:var(--color-brand-50)] disabled:opacity-60"
                 >
                   {uploading ? (
-                    <Loader2 className="size-5 animate-spin text-[color:var(--color-brand-600)]" />
+                    <>
+                      <Loader2 className="size-5 animate-spin text-[color:var(--color-brand-600)]" />
+                      {uploadProgress ? (
+                        <span className="text-[11px]">
+                          {t("uploadingProgress", uploadProgress)}
+                        </span>
+                      ) : null}
+                    </>
                   ) : (
                     <>
                       <ImagePlus className="size-5" />
-                      <span className="text-[11px]">เพิ่มรูป</span>
+                      <span className="text-[11px]">{t("addImage")}</span>
                     </>
                   )}
                 </button>
@@ -281,7 +392,7 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/avif"
               multiple
               className="sr-only"
               onChange={(e) => {
@@ -400,6 +511,131 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
   );
 }
 
+async function optimizeProductImage(file: File): Promise<File> {
+  if (file.size <= 500 * 1024) return file;
+
+  let image: {
+    source: CanvasImageSource;
+    width: number;
+    height: number;
+    cleanup: () => void;
+  } | null = null;
+
+  try {
+    image = await loadImageSource(file);
+    const scale = Math.min(
+      1,
+      MAX_IMAGE_DIMENSION / Math.max(image.width, image.height),
+    );
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d", { alpha: true });
+    if (!context) return file;
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image.source, 0, 0, width, height);
+
+    const blob = await canvasToBlob(canvas);
+    if (!blob) return file;
+
+    const shouldUseOptimized =
+      blob.size < file.size || file.size > MAX_UPLOAD_BYTES || scale < 1;
+
+    if (!shouldUseOptimized) return file;
+
+    return new File([blob], optimizedFileName(file.name), {
+      type: OPTIMIZED_IMAGE_TYPE,
+      lastModified: Date.now(),
+    });
+  } catch {
+    return file;
+  } finally {
+    image?.cleanup();
+  }
+}
+
+async function loadImageSource(file: File) {
+  if ("createImageBitmap" in window) {
+    try {
+      const bitmap = await createImageBitmap(file, {
+        imageOrientation: "from-image",
+      } as ImageBitmapOptions);
+      return {
+        source: bitmap,
+        width: bitmap.width,
+        height: bitmap.height,
+        cleanup: () => bitmap.close(),
+      };
+    } catch {
+      // Fall through to the image element path for browsers/codecs without support.
+    }
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Could not read image"));
+      img.src = objectUrl;
+    });
+
+    return {
+      source: image,
+      width: image.naturalWidth || image.width,
+      height: image.naturalHeight || image.height,
+      cleanup: () => URL.revokeObjectURL(objectUrl),
+    };
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl);
+    throw error;
+  }
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, OPTIMIZED_IMAGE_TYPE, OPTIMIZED_IMAGE_QUALITY);
+  });
+}
+
+function optimizedFileName(name: string) {
+  const base = name.replace(/\.[^.]+$/, "") || "product-image";
+  return `${base}.webp`;
+}
+
+async function deleteUploadedImages(urls: string[]) {
+  const ownedBlobUrls = urls.filter(isManagedUploadUrl);
+  if (ownedBlobUrls.length === 0) return;
+
+  const res = await fetch("/api/v1/upload", {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ urls: ownedBlobUrls }),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.ok) {
+    throw new Error(json?.error?.message ?? "Could not delete image");
+  }
+}
+
+function isManagedUploadUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.hostname.endsWith(".public.blob.vercel-storage.com") &&
+      parsed.pathname.startsWith("/u/")
+    );
+  } catch {
+    return url.startsWith("u/");
+  }
+}
+
 function Field({
   label,
   hint,
@@ -442,6 +678,3 @@ function ToggleBtn({
     </button>
   );
 }
-
-// suppress unused export warning if Badge isn't used here yet
-void Badge;

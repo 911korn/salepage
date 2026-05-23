@@ -514,9 +514,15 @@
         "priceLabel": "Price (THB)",
         "compareAtLabel": "Compare-at / list price (THB)",
         "compareAtHint": "Enter to show the price as discounted in the storefront",
-        "imagesLabel": "Image URLs",
-        "imagesHint": "1 URL per line, up to 10 images",
+        "imagesLabel": "Product images",
+        "imagesHint": "Choose or drop up to 10 images. We resize and compress them before upload.",
         "imagesPlaceholder": "https://example.com/image.jpg",
+        "addImage": "Add image",
+        "removeImage": "Remove image {n}",
+        "removeImageShort": "Remove",
+        "imageRemoved": "Image removed. Save to update your storefront.",
+        "uploadingProgress": "Uploading {done}/{total}",
+        "uploadComplete": "Uploaded {n} images",
         "typeLabel": "Product type",
         "typePhysical": "Physical (ship)",
         "typeDigital": "Digital (no shipping)",
@@ -541,7 +547,12 @@
           "nameRequired": "Product name is required",
           "priceRequired": "Price is required",
           "createFailed": "Could not create product",
-          "updateFailed": "Could not update product"
+          "updateFailed": "Could not update product",
+          "uploadFailed": "Could not upload image",
+          "deleteImageFailed": "Could not delete the image file",
+          "imageTooLarge": "Image is still too large after compression",
+          "badImageType": "This file is not an image",
+          "maxImages": "You can add up to 10 product images"
         }
       }
     },
