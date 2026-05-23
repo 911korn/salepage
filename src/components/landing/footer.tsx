@@ -29,6 +29,7 @@ export async function Footer() {
       links: [
         { href: "/about", labelKey: "footer.linkAbout" },
         { href: "/contact", labelKey: "footer.linkContact" },
+        { href: "/brand", labelKey: "footer.linkBrand" },
         { href: "/terms", labelKey: "footer.linkTerms" },
         { href: "/privacy", labelKey: "footer.linkPrivacy" },
       ],

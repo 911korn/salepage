@@ -1,0 +1,20 @@
+<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SalePage logo mark">
+  <title>SalePage</title>
+  <defs>
+    <linearGradient id="sp-grad" x1="6" y1="6" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="55%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#9f1239"/>
+    </linearGradient>
+    <linearGradient id="sp-fold" x1="14" y1="6" x2="6" y2="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffe4e6"/>
+      <stop offset="100%" stop-color="#fda4af"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 6 L34 6 A2 2 0 0 1 36 8 L36 34 A2 2 0 0 1 34 36 L6 36 A2 2 0 0 1 4 34 L4 16 Z" fill="url(#sp-grad)"/>
+  <path d="M14 6 L4 16 L14 16 Z" fill="url(#sp-fold)"/>
+  <circle cx="10" cy="13" r="1.4" fill="#9f1239" opacity="0.85"/>
+  <path d="M25 15.5 H19.5 C17.6 15.5 16 17.1 16 19 C16 20.9 17.6 22.5 19.5 22.5 H23.5 C25.4 22.5 27 24.1 27 26 C27 27.9 25.4 29.5 23.5 29.5 H17.5"
+        stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="17.5" cy="29.5" r="1.6" fill="white"/>
+</svg>
