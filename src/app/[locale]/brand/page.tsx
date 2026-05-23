@@ -60,6 +60,53 @@ const ASSETS = [
   { label: "Lockup · On dark", path: "/brand/salepage-lockup-white.svg" },
 ];
 
+interface SocialAsset {
+  label: string;
+  dimension: string;
+  filename: string;
+  aspect: string;
+}
+
+// PNGs rendered server-side via /api/v1/brand/social/[name] (ImageResponse)
+const SOCIAL_ASSETS: SocialAsset[] = [
+  {
+    label: "Profile (Universal Square)",
+    dimension: "1024 × 1024",
+    filename: "profile-square",
+    aspect: "1 / 1",
+  },
+  {
+    label: "LINE OA · Square",
+    dimension: "1024 × 1024",
+    filename: "line-square",
+    aspect: "1 / 1",
+  },
+  {
+    label: "Facebook Cover",
+    dimension: "1640 × 624",
+    filename: "fb-cover",
+    aspect: "1640 / 624",
+  },
+  {
+    label: "Twitter / X Header",
+    dimension: "1500 × 500",
+    filename: "x-header",
+    aspect: "3 / 1",
+  },
+  {
+    label: "LinkedIn Banner",
+    dimension: "1584 × 396",
+    filename: "linkedin-banner",
+    aspect: "4 / 1",
+  },
+  {
+    label: "YouTube Channel Art",
+    dimension: "2560 × 1440",
+    filename: "youtube-art",
+    aspect: "16 / 9",
+  },
+];
+
 export default async function BrandPage({
   params,
 }: {
@@ -313,6 +360,57 @@ export default async function BrandPage({
                 </li>
               ))}
             </ul>
+          </Section>
+
+          {/* Social media assets — server-rendered PNG covers + profile pics */}
+          <Section
+            title="Social media assets"
+            desc="Profile pic + cover/banner สำหรับทุก platform — gen เป็น PNG ออกมาที่ขนาดมาตรฐานพร้อมใช้"
+          >
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {SOCIAL_ASSETS.map((a) => {
+                const url = `/api/v1/brand/social/${a.filename}.png`;
+                return (
+                  <li
+                    key={a.filename}
+                    className="overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-white"
+                  >
+                    <div
+                      className="relative w-full overflow-hidden bg-[color:var(--color-soft)]"
+                      style={{ aspectRatio: a.aspect }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={a.label}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{a.label}</p>
+                        <p className="font-mono text-[10px] text-zinc-500">
+                          {a.dimension} px · PNG
+                        </p>
+                      </div>
+                      <a
+                        href={url}
+                        download={`salepage-${a.filename}.png`}
+                        className={cn(
+                          buttonStyles({ size: "sm", variant: "outline" }),
+                          "gap-1.5 shrink-0",
+                        )}
+                      >
+                        <Download className="size-3.5" /> ดาวน์โหลด
+                      </a>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-4 text-[12px] text-zinc-500">
+              ทุกภาพสร้างสดผ่าน <code className="rounded bg-zinc-100 px-1 font-mono">/api/v1/brand/social/[name].png</code> — fork ไปแก้ดีไซน์ได้ที่ <code className="rounded bg-zinc-100 px-1 font-mono">src/app/api/v1/brand/social/[name]/route.ts</code>
+            </p>
           </Section>
 
           {/* Contact */}
