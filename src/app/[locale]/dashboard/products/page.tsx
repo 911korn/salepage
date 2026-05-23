@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { db, ProductBadge, ProductStatus, ProductType } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { CsvActions } from "@/components/dashboard/csv-actions";
 import type { Locale } from "@/i18n/routing";
 
 export default async function ProductsPage({
@@ -40,12 +41,15 @@ export default async function ProductsPage({
             {t("subtitle", { n: products.length })}
           </p>
         </div>
-        <Link
-          href="/dashboard/products/new"
-          className={cn(buttonStyles({ size: "md" }))}
-        >
-          <Plus className="size-4" /> {t("addNew")}
-        </Link>
+        <div className="flex items-center gap-2">
+          <CsvActions shopSlug={activeShop.slug} />
+          <Link
+            href="/dashboard/products/new"
+            className={cn(buttonStyles({ size: "md" }))}
+          >
+            <Plus className="size-4" /> {t("addNew")}
+          </Link>
+        </div>
       </header>
 
       {products.length === 0 ? (
