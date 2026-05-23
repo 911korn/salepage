@@ -276,7 +276,9 @@
     "badgeHot": "HOT",
     "badgeNew": "NEW",
     "badgeSale": "SALE",
-    "poweredBy": "This shop runs on {brand} — start your own free in 30 seconds"
+    "poweredBy": "This shop runs on {brand} — start your own free in 30 seconds",
+    "emptyTitle": "No products yet",
+    "emptyDesc": "The shop owner is still adding products — check back soon."
   },
   "dashboard": {
     "common": {

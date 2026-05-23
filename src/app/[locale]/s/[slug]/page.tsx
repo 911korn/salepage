@@ -5,21 +5,124 @@ import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import { getShopBySlug } from "@/lib/demo-data";
+import { db, ProductStatus } from "@/lib/db";
+import { getShopBySlug as getDemoShop } from "@/lib/demo-data";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
   params: Promise<{ slug: string; locale: Locale }>;
 }
 
+interface ProductView {
+  slug: string;
+  name: string;
+  priceBaht: number;
+  compareAtBaht: number | null;
+  imageUrl: string | null;
+  imageBg: string | null;
+  badge: "HOT" | "NEW" | "SALE" | null;
+  type: "physical" | "digital";
+  sold: number;
+}
+
+interface ShopView {
+  slug: string;
+  name: string;
+  description: string;
+  logoText: string;
+  category: string;
+  themeColor: string;
+  verified: boolean;
+  rating: number;
+  totalSold: number;
+  bannerBg: string;
+  bannerUrl: string | null;
+  products: ProductView[];
+}
+
+const DEFAULT_BANNER =
+  "linear-gradient(135deg,#fff1f2 0%,#fecdd3 50%,#fda4af 100%)";
+
 export default async function StorefrontPage({ params }: PageProps) {
   const { slug, locale } = await params;
   setRequestLocale(locale);
-  const shop = getShopBySlug(slug);
-  if (!shop) notFound();
+
+  const dbShop = await db.shop.findUnique({
+    where: { slug },
+    include: {
+      products: {
+        where: { status: { not: ProductStatus.HIDDEN } },
+        orderBy: [{ sold: "desc" }, { createdAt: "desc" }],
+      },
+    },
+  });
+
+  let view: ShopView | null = null;
+
+  if (dbShop && dbShop.status === "ACTIVE") {
+    view = {
+      slug: dbShop.slug,
+      name: dbShop.name,
+      description: dbShop.description ?? "",
+      logoText: dbShop.logoText ?? dbShop.name.slice(0, 1).toUpperCase(),
+      category: dbShop.category ?? "",
+      themeColor: dbShop.themeColor,
+      verified: dbShop.verified,
+      rating: dbShop.rating ?? 0,
+      totalSold: dbShop.totalSold ?? 0,
+      bannerBg: DEFAULT_BANNER,
+      bannerUrl: dbShop.bannerUrls?.[0] ?? null,
+      products: dbShop.products.map((p) => ({
+        slug: p.slug,
+        name: p.name,
+        priceBaht: Math.round(p.priceSatang / 100),
+        compareAtBaht: p.compareAtSatang
+          ? Math.round(p.compareAtSatang / 100)
+          : null,
+        imageUrl: p.imageUrls?.[0] ?? null,
+        imageBg: null,
+        badge: p.badge,
+        type: p.type === "DIGITAL" ? "digital" : "physical",
+        sold: p.sold,
+      })),
+    };
+  }
+
+  if (!view) {
+    const demo = getDemoShop(slug);
+    if (demo) {
+      view = {
+        slug: demo.slug,
+        name: demo.name,
+        description: demo.description,
+        logoText: demo.logo,
+        category: demo.category,
+        themeColor: demo.themeColor,
+        verified: demo.verified,
+        rating: demo.rating,
+        totalSold: demo.totalSold,
+        bannerBg: demo.banners[0] ?? DEFAULT_BANNER,
+        bannerUrl: null,
+        products: demo.products.map((p) => ({
+          slug: p.slug,
+          name: p.name,
+          priceBaht: p.price,
+          compareAtBaht: p.compareAt ?? null,
+          imageUrl: null,
+          imageBg: p.image,
+          badge: p.badge ?? null,
+          type: p.type,
+          sold: p.sold,
+        })),
+      };
+    }
+  }
+
+  if (!view) notFound();
 
   const t = await getTranslations("shop");
   const tCommon = await getTranslations("common");
+  const shop = view;
 
   return (
     <div className="min-h-screen bg-[color:var(--color-soft)]">
@@ -43,7 +146,15 @@ export default async function StorefrontPage({ params }: PageProps) {
       <div className="relative">
         <div
           className="h-44 sm:h-56"
-          style={{ background: shop.banners[0] }}
+          style={
+            shop.bannerUrl
+              ? {
+                  backgroundImage: `url(${shop.bannerUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }
+              : { background: shop.bannerBg }
+          }
         />
         <div className="container-page -mt-16 sm:-mt-20">
           <div className="rounded-3xl border border-[color:var(--color-border)] bg-white p-5 shadow-sm sm:p-7">
@@ -53,7 +164,7 @@ export default async function StorefrontPage({ params }: PageProps) {
                   className="grid size-20 place-items-center rounded-2xl border-4 border-white font-display text-3xl font-bold text-white shadow-lg sm:size-24 sm:text-4xl"
                   style={{ background: shop.themeColor }}
                 >
-                  {shop.logo}
+                  {shop.logoText}
                 </div>
                 <div className="pb-1">
                   <div className="flex items-center gap-1.5">
@@ -64,30 +175,45 @@ export default async function StorefrontPage({ params }: PageProps) {
                       <ShieldCheck className="size-5 text-[color:var(--color-brand-600)]" />
                     ) : null}
                   </div>
-                  <p className="mt-1 text-sm text-zinc-600">{shop.category}</p>
+                  {shop.category ? (
+                    <p className="mt-1 text-sm text-zinc-600">{shop.category}</p>
+                  ) : null}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="success">{tCommon("open")}</Badge>
-                <Badge tone="soft-brand">
-                  <Star className="size-3 fill-current" /> {shop.rating}
-                </Badge>
-                <Badge tone="neutral">
-                  {t("sold")} {shop.totalSold.toLocaleString()}+
-                </Badge>
+                {shop.rating > 0 ? (
+                  <Badge tone="soft-brand">
+                    <Star className="size-3 fill-current" /> {shop.rating}
+                  </Badge>
+                ) : null}
+                {shop.totalSold > 0 ? (
+                  <Badge tone="neutral">
+                    {t("sold")} {shop.totalSold.toLocaleString()}+
+                  </Badge>
+                ) : null}
               </div>
             </div>
 
-            <p className="mt-5 text-[15px] leading-relaxed text-zinc-700">
-              {shop.description}
-            </p>
+            {shop.description ? (
+              <p className="mt-5 text-[15px] leading-relaxed text-zinc-700">
+                {shop.description}
+              </p>
+            ) : null}
 
             <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-[color:var(--color-soft)] p-3 sm:grid-cols-3">
-              <Stat label={t("products")} value={String(shop.productCount)} />
-              <Stat label={t("rating")} value={`${shop.rating} / 5`} />
+              <Stat label={t("products")} value={String(shop.products.length)} />
+              <Stat
+                label={t("rating")}
+                value={shop.rating > 0 ? `${shop.rating} / 5` : "—"}
+              />
               <Stat
                 label={t("sold")}
-                value={`${shop.totalSold.toLocaleString()}+`}
+                value={
+                  shop.totalSold > 0
+                    ? `${shop.totalSold.toLocaleString()}+`
+                    : "—"
+                }
                 className="col-span-2 sm:col-span-1"
               />
             </div>
@@ -103,74 +229,94 @@ export default async function StorefrontPage({ params }: PageProps) {
               </span>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-              {shop.products.map((p) => (
-                <Link
-                  key={p.slug}
-                  href={`/s/${shop.slug}/${p.slug}`}
-                  className="group block overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-white transition-all hover:-translate-y-0.5 hover:border-[color:var(--color-brand-200)] hover:shadow-lg hover:shadow-rose-100/60"
-                >
-                  <div
-                    className="relative aspect-square w-full"
-                    style={{ background: p.image }}
+            {shop.products.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white px-6 py-14 text-center">
+                <p className="font-display text-base font-semibold">
+                  {t("emptyTitle")}
+                </p>
+                <p className="mt-1.5 text-[13px] text-zinc-500">
+                  {t("emptyDesc")}
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+                {shop.products.map((p) => (
+                  <Link
+                    key={p.slug}
+                    href={`/s/${shop.slug}/${p.slug}`}
+                    className="group block overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-white transition-all hover:-translate-y-0.5 hover:border-[color:var(--color-brand-200)] hover:shadow-lg hover:shadow-rose-100/60"
                   >
-                    {p.compareAt ? (
-                      <span className="absolute left-2 top-2 rounded-md bg-black/80 px-2 py-1 text-[10px] font-bold text-white">
-                        -{Math.round(((p.compareAt - p.price) / p.compareAt) * 100)}%
-                      </span>
-                    ) : null}
-                    {p.badge ? (
-                      <span
-                        className={cn(
-                          "absolute right-2 top-2 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white",
-                          p.badge === "HOT" && "bg-orange-500",
-                          p.badge === "NEW" && "bg-emerald-500",
-                          p.badge === "SALE" && "bg-[color:var(--color-brand-600)]",
-                        )}
-                      >
-                        {p.badge === "HOT" ? t("badgeHot") : p.badge === "NEW" ? t("badgeNew") : t("badgeSale")}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="p-3 sm:p-4">
-                    <p className="line-clamp-2 min-h-[2.5rem] text-[13px] font-medium text-zinc-800 sm:text-[14px]">
-                      {p.name}
-                    </p>
-                    <div className="mt-2 flex items-baseline gap-1.5">
-                      <span className="text-base font-bold text-[color:var(--color-brand-700)]">
-                        ฿{p.price.toLocaleString()}
-                      </span>
-                      {p.compareAt ? (
-                        <span className="text-[11px] text-zinc-400 line-through">
-                          ฿{p.compareAt.toLocaleString()}
+                    <div
+                      className="relative aspect-square w-full"
+                      style={
+                        p.imageUrl
+                          ? {
+                              backgroundImage: `url(${p.imageUrl})`,
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                            }
+                          : {
+                              background:
+                                p.imageBg ??
+                                "linear-gradient(135deg,var(--color-brand-100),var(--color-brand-300))",
+                            }
+                      }
+                    >
+                      {p.compareAtBaht ? (
+                        <span className="absolute left-2 top-2 rounded-md bg-black/80 px-2 py-1 text-[10px] font-bold text-white">
+                          -{Math.round(((p.compareAtBaht - p.priceBaht) / p.compareAtBaht) * 100)}%
+                        </span>
+                      ) : null}
+                      {p.badge ? (
+                        <span
+                          className={cn(
+                            "absolute right-2 top-2 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white",
+                            p.badge === "HOT" && "bg-orange-500",
+                            p.badge === "NEW" && "bg-emerald-500",
+                            p.badge === "SALE" && "bg-[color:var(--color-brand-600)]",
+                          )}
+                        >
+                          {p.badge === "HOT" ? t("badgeHot") : p.badge === "NEW" ? t("badgeNew") : t("badgeSale")}
                         </span>
                       ) : null}
                     </div>
-                    <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-500">
-                      <span
-                        className={cn(
-                          "rounded-full border px-1.5 py-0.5",
-                          p.type === "digital"
-                            ? "border-violet-200 bg-violet-50 text-violet-700"
-                            : "border-zinc-200 bg-zinc-50",
-                        )}
-                      >
-                        {p.type === "digital" ? t("digital") : t("physical")}
-                      </span>
-                      <span>{t("soldCount", { n: p.sold.toLocaleString() })}</span>
+                    <div className="p-3 sm:p-4">
+                      <p className="line-clamp-2 min-h-[2.5rem] text-[13px] font-medium text-zinc-800 sm:text-[14px]">
+                        {p.name}
+                      </p>
+                      <div className="mt-2 flex items-baseline gap-1.5">
+                        <span className="text-base font-bold text-[color:var(--color-brand-700)]">
+                          ฿{p.priceBaht.toLocaleString()}
+                        </span>
+                        {p.compareAtBaht ? (
+                          <span className="text-[11px] text-zinc-400 line-through">
+                            ฿{p.compareAtBaht.toLocaleString()}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-500">
+                        <span
+                          className={cn(
+                            "rounded-full border px-1.5 py-0.5",
+                            p.type === "digital"
+                              ? "border-violet-200 bg-violet-50 text-violet-700"
+                              : "border-zinc-200 bg-zinc-50",
+                          )}
+                        >
+                          {p.type === "digital" ? t("digital") : t("physical")}
+                        </span>
+                        <span>{t("soldCount", { n: p.sold.toLocaleString() })}</span>
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           <footer className="mt-16 pb-10">
             <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white p-5 text-center">
               <p className="text-sm text-zinc-600">
-                {/* `t.rich` with a function renderer crashes when this page
-                    renders server-side, because functions can't be serialized
-                    across the RSC boundary. Plain string + JSX is safer. */}
                 ร้านนี้ใช้แพลตฟอร์ม{" "}
                 <Link
                   href="/"
