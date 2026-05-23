@@ -56,7 +56,7 @@ export function PromptPayDemo() {
     ewallet: t("idTypeEwallet"),
   };
 
-  const [id, setId] = useState("0812345678");
+  const [id, setId] = useState("0863273566");
   const [amount, setAmount] = useState("290");
   const [qr, setQr] = useState<QrResponse["data"] | null>(null);
   const [error, setError] = useState<string | null>(null);
