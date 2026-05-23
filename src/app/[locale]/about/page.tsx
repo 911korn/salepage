@@ -8,7 +8,7 @@ import type { Locale } from "@/i18n/routing";
 export const metadata: Metadata = {
   title: "About · SalePage",
   description:
-    "SalePage is a Thai e-commerce platform built by CET (Thailand) Co., Ltd. — direct PromptPay payments, AI slip verification, no per-order fee.",
+    "SalePage is a Thai e-commerce platform built by BANPUEN 911 — direct PromptPay payments, AI slip verification, no per-order fee.",
 };
 
 export default async function AboutPage({
@@ -53,12 +53,11 @@ export default async function AboutPage({
               ผู้สร้าง
             </h2>
             <p>
-              พัฒนาและให้บริการโดย <strong>CET (Thailand) Co., Ltd.</strong>{" "}
-              บริษัทเทคโนโลยีไทยที่อยู่เบื้องหลังผลิตภัณฑ์ SaaS
+              พัฒนาและให้บริการโดย <strong>BANPUEN 911</strong>{" "}
+              ทีมเทคโนโลยีไทยที่อยู่เบื้องหลังผลิตภัณฑ์ SaaS
               และเครื่องมือสำหรับธุรกิจออนไลน์ในประเทศไทยหลายตัว
             </p>
             <ul className="text-[15px] text-zinc-700">
-              <li>เลขทะเบียนนิติบุคคล: 0105560145831</li>
               <li>สำนักงาน: กรุงเทพมหานคร ประเทศไทย</li>
               <li>ติดต่อทั่วไป: hello@salepage.in.th</li>
               <li>ติดต่อนักพัฒนา: dev@salepage.in.th</li>

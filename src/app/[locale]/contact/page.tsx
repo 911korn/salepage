@@ -101,9 +101,9 @@ export default async function ContactPage({
 
           <div className="mt-10 rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white p-5 text-[14px] leading-relaxed text-zinc-600">
             <p>
-              <strong>บริษัท CET (Thailand) Co., Ltd.</strong>
+              <strong>บริษัท BANPUEN 911</strong>
               <br />
-              เลขทะเบียน 0105560145831 · กรุงเทพมหานคร ประเทศไทย
+              กรุงเทพมหานคร ประเทศไทย
             </p>
             <p className="mt-3">
               สำหรับคำขอใช้สิทธิ์ตาม PDPA (เข้าถึง / ลบ / ส่งออกข้อมูล) ส่งมาที่ hello@salepage.in.th — ตอบภายใน 30 วันตามที่กฎหมายกำหนด
