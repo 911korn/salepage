@@ -269,6 +269,58 @@
       "desc": "เปิดร้านออนไลน์ในไม่กี่ขั้นตอน — แชร์ลิงก์ขายได้ทันที",
       "cta": "เริ่มสร้างร้าน"
     },
+    "products": {
+      "title": "สินค้าทั้งหมด",
+      "subtitle": "{n} รายการ",
+      "addNew": "เพิ่มสินค้าใหม่",
+      "empty": {
+        "title": "ยังไม่มีสินค้า",
+        "desc": "เพิ่มสินค้าแรกของร้านเพื่อเริ่มขาย",
+        "cta": "เพิ่มสินค้าแรก"
+      },
+      "form": {
+        "createTitle": "เพิ่มสินค้าใหม่",
+        "editTitle": "แก้ไขสินค้า",
+        "nameLabel": "ชื่อสินค้า",
+        "namePlaceholder": "เช่น ทองหยิบเซต 9 ชิ้น",
+        "slugLabel": "ลิงก์สินค้า (URL)",
+        "slugHint": "ใช้เพื่อสร้าง URL — เปล่าได้ ระบบจะตั้งให้",
+        "descLabel": "รายละเอียดสินค้า",
+        "descPlaceholder": "อธิบายสินค้า คุณสมบัติ ขนาด รสชาติ ฯลฯ",
+        "priceLabel": "ราคาขาย (บาท)",
+        "compareAtLabel": "ราคาเต็ม / ราคาก่อนลด (บาท)",
+        "compareAtHint": "ใส่เพื่อให้แสดงเป็นราคาลดในหน้าร้าน",
+        "imagesLabel": "URL รูปสินค้า",
+        "imagesHint": "ใส่ URL ของรูป — 1 ลิงก์ต่อบรรทัด (สูงสุด 10 รูป)",
+        "imagesPlaceholder": "https://example.com/image.jpg",
+        "typeLabel": "ประเภทสินค้า",
+        "typePhysical": "สินค้าจริง (ส่งของ)",
+        "typeDigital": "สินค้าดิจิทัล (ไม่ส่งของ)",
+        "badgeLabel": "ป้ายกำกับ",
+        "badgeNone": "ไม่มี",
+        "badgeHot": "🔥 HOT",
+        "badgeNew": "✨ NEW",
+        "badgeSale": "💸 SALE",
+        "stockLabel": "สต๊อก",
+        "stockHint": "เว้นว่าง = ไม่จำกัด",
+        "statusLabel": "สถานะ",
+        "statusActive": "เปิดขาย",
+        "statusHidden": "ซ่อน",
+        "statusSoldOut": "หมดสต๊อก",
+        "submit": "บันทึก",
+        "submitNew": "เพิ่มสินค้า",
+        "cancel": "ยกเลิก",
+        "delete": "ลบสินค้า",
+        "deleteConfirm": "ลบสินค้านี้ออกถาวร?",
+        "deleted": "ลบสินค้าแล้ว",
+        "errors": {
+          "nameRequired": "ต้องใส่ชื่อสินค้า",
+          "priceRequired": "ต้องใส่ราคา",
+          "createFailed": "เพิ่มสินค้าไม่สำเร็จ",
+          "updateFailed": "แก้ไขสินค้าไม่สำเร็จ"
+        }
+      }
+    },
     "createShop": {
       "title": "สร้างร้านใหม่",
       "step": "ขั้นที่ {n}/{total}",

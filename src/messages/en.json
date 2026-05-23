@@ -269,6 +269,58 @@
       "desc": "Open an online store in a few steps — share the link and you're selling.",
       "cta": "Start creating"
     },
+    "products": {
+      "title": "All products",
+      "subtitle": "{n} items",
+      "addNew": "Add new product",
+      "empty": {
+        "title": "No products yet",
+        "desc": "Add your first product to start selling",
+        "cta": "Add first product"
+      },
+      "form": {
+        "createTitle": "Add new product",
+        "editTitle": "Edit product",
+        "nameLabel": "Product name",
+        "namePlaceholder": "e.g. Thong Yip set of 9",
+        "slugLabel": "Product link (URL)",
+        "slugHint": "Used to build the URL — leave blank to auto-generate",
+        "descLabel": "Description",
+        "descPlaceholder": "Describe the product, features, size, flavor, etc.",
+        "priceLabel": "Price (THB)",
+        "compareAtLabel": "Compare-at / list price (THB)",
+        "compareAtHint": "Enter to show the price as discounted in the storefront",
+        "imagesLabel": "Image URLs",
+        "imagesHint": "1 URL per line, up to 10 images",
+        "imagesPlaceholder": "https://example.com/image.jpg",
+        "typeLabel": "Product type",
+        "typePhysical": "Physical (ship)",
+        "typeDigital": "Digital (no shipping)",
+        "badgeLabel": "Badge",
+        "badgeNone": "None",
+        "badgeHot": "🔥 HOT",
+        "badgeNew": "✨ NEW",
+        "badgeSale": "💸 SALE",
+        "stockLabel": "Stock",
+        "stockHint": "Leave blank for unlimited",
+        "statusLabel": "Status",
+        "statusActive": "Active",
+        "statusHidden": "Hidden",
+        "statusSoldOut": "Sold out",
+        "submit": "Save",
+        "submitNew": "Add product",
+        "cancel": "Cancel",
+        "delete": "Delete product",
+        "deleteConfirm": "Permanently delete this product?",
+        "deleted": "Product deleted",
+        "errors": {
+          "nameRequired": "Product name is required",
+          "priceRequired": "Price is required",
+          "createFailed": "Could not create product",
+          "updateFailed": "Could not update product"
+        }
+      }
+    },
     "createShop": {
       "title": "Create a new shop",
       "step": "Step {n}/{total}",
