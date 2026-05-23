@@ -12,6 +12,7 @@ import { LogoMark } from "@/components/ui/logo";
 import { MaintenancePage } from "@/components/maintenance-page";
 import { viewerCanBypassMaintenance, viewerIsAdmin } from "@/lib/admin";
 import { getPlatformSetting } from "@/lib/platform-settings";
+import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
@@ -196,7 +197,7 @@ export default async function StorefrontPage({ params }: PageProps) {
             <ArrowLeft className="size-4" /> {t("back")}
           </Link>
           <p className="font-mono text-xs text-zinc-500">
-            salepage.in.th/{shop.slug}
+            {storefrontLabel(shop.slug)}
           </p>
           <Link href="/signup" className={cn(buttonStyles({ size: "sm" }))}>
             {t("createOwn")}
@@ -313,7 +314,7 @@ export default async function StorefrontPage({ params }: PageProps) {
                 {shop.products.map((p) => (
                   <Link
                     key={p.slug}
-                    href={`/s/${shop.slug}/${p.slug}`}
+                    href={storefrontPath(shop.slug, p.slug)}
                     className="group block overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-white transition-all hover:-translate-y-0.5 hover:border-[color:var(--color-brand-200)] hover:shadow-lg hover:shadow-rose-100/60"
                   >
                     <div

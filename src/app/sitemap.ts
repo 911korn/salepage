@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
+import { storefrontPath } from "@/lib/storefront-url";
 
 const SITE = "https://salepage.in.th";
 
@@ -47,13 +48,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
     shopUrls = shops.flatMap((s) => [
       {
-        url: `${SITE}/s/${s.slug}`,
+        url: `${SITE}${storefrontPath(s.slug)}`,
         lastModified: s.updatedAt,
         changeFrequency: "daily" as const,
         priority: 0.7,
       },
       ...s.products.map((p) => ({
-        url: `${SITE}/s/${s.slug}/${p.slug}`,
+        url: `${SITE}${storefrontPath(s.slug, p.slug)}`,
         lastModified: p.updatedAt,
         changeFrequency: "daily" as const,
         priority: 0.6,

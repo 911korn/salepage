@@ -6,7 +6,6 @@ import {
   Bell,
   Building2,
   CreditCard,
-  FileClock,
   Gauge,
   LogOut,
   Menu,
@@ -79,11 +78,6 @@ export function AdminShell({ viewer, children }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Close mobile drawer when route changes.
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
-
   // Lock body scroll while drawer is open.
   useEffect(() => {
     if (mobileOpen) {
@@ -148,7 +142,7 @@ export function AdminShell({ viewer, children }: Props) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 px-4 pt-20 pb-12 sm:px-6 lg:px-8 lg:pt-8">
+      <main className="min-w-0 flex-1 px-4 pt-20 pb-12 sm:px-6 lg:px-8 lg:pt-8">
         {children}
       </main>
     </div>
@@ -210,6 +204,7 @@ function SidebarInner({
                   <li key={link.href}>
                     <Link
                       href={link.href}
+                      onClick={onClose}
                       className={cn(
                         "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
                         active

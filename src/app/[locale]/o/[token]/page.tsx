@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { generatePromptPay } from "@/lib/promptpay";
 import { buildOrderRef } from "@/lib/orders";
+import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
@@ -79,7 +80,7 @@ export default async function OrderTrackingPage({ params }: PageProps) {
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
         <div className="container-page flex h-14 items-center justify-between">
           <Link
-            href={`/s/${order.shop.slug}`}
+            href={storefrontPath(order.shop.slug)}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)]"
           >
             <ArrowLeft className="size-4" /> {order.shop.name}
@@ -208,7 +209,7 @@ export default async function OrderTrackingPage({ params }: PageProps) {
 
           {/* Shop link */}
           <Link
-            href={`/s/${order.shop.slug}`}
+            href={storefrontPath(order.shop.slug)}
             className={cn(
               "flex items-center gap-3 rounded-2xl border border-[color:var(--color-border)] bg-white p-4 transition-colors hover:bg-[color:var(--color-soft)]",
             )}
@@ -227,7 +228,7 @@ export default async function OrderTrackingPage({ params }: PageProps) {
                 ) : null}
               </div>
               <p className="text-[11px] text-zinc-500">
-                salepage.in.th/{order.shop.slug}
+                {storefrontLabel(order.shop.slug)}
               </p>
             </div>
           </Link>

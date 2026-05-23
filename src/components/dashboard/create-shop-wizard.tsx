@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
+import { storefrontLabel } from "@/lib/storefront-url";
 
 type CategoryKey =
   | "fashion"
@@ -133,7 +134,7 @@ export function CreateShopWizard() {
         }
         toast.success(t("successTitle"), {
           description: t("successDesc", {
-            url: `salepage.in.th/${json.data.shop.slug}`,
+            url: storefrontLabel(json.data.shop.slug),
           }),
         });
         router.push("/dashboard");
@@ -296,7 +297,7 @@ function Step1({
           <p className="mt-1.5 text-xs text-amber-700">
             → จะกลายเป็น{" "}
             <code className="font-mono text-[11px] font-semibold">
-              salepage.in.th/{slugPreview || "?"}
+              {storefrontLabel(slugPreview || "?")}
             </code>{" "}
             (รองรับเฉพาะ a-z, 0-9, ขีดกลาง)
           </p>

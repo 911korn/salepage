@@ -3,6 +3,7 @@ import { ok, fail, parseJson } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { db, ShopStatus } from "@/lib/db";
 import { generateSlug } from "@/lib/dashboard";
+import { isReservedShopSlug } from "@/lib/storefront-url";
 
 const ALLOWED_CATEGORIES = [
   "fashion",
@@ -68,6 +69,13 @@ export async function POST(request: Request) {
   const input = parsed.data;
 
   const slug = input.slug ?? generateSlug(input.name);
+  if (isReservedShopSlug(slug)) {
+    return fail(
+      "slug_reserved",
+      "ลิงก์ร้านนี้ชนกับหน้าระบบ กรุณาใช้ชื่ออื่น",
+      409,
+    );
+  }
 
   // Slug must be unique. Retry with a -N suffix up to 3 times.
   let finalSlug = slug;

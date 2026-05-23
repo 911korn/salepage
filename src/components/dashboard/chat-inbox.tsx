@@ -46,12 +46,8 @@ export function ChatInbox({ shopSlug, initialConversations }: Props) {
 
   // Load full thread when a conversation is selected
   useEffect(() => {
-    if (!selectedId) {
-      setDetail(null);
-      return;
-    }
+    if (!selectedId) return;
     let cancelled = false;
-    setDetail(null);
     fetch(`/api/v1/shops/${shopSlug}/conversations/${selectedId}`)
       .then((r) => r.json())
       .then((json) => {
@@ -160,7 +156,10 @@ export function ChatInbox({ shopSlug, initialConversations }: Props) {
             <li key={c.id}>
               <button
                 type="button"
-                onClick={() => setSelectedId(c.id)}
+                onClick={() => {
+                  setDetail(null);
+                  setSelectedId(c.id);
+                }}
                 className={cn(
                   "flex w-full items-start gap-3 border-b border-[color:var(--color-border)] px-4 py-3 text-left transition-colors last:border-b-0",
                   active

@@ -68,17 +68,21 @@ export function PromptPayDemo() {
 
   useEffect(() => {
     if (!idType) {
-      setQr(null);
-      setError(digits.length === 0 ? null : t("errors.invalidId"));
+      queueMicrotask(() => {
+        setQr(null);
+        setError(digits.length === 0 ? null : t("errors.invalidId"));
+      });
       return;
     }
     const parsedAmount = amount ? Number(amount.replace(/,/g, "")) : undefined;
     if (parsedAmount !== undefined && (!Number.isFinite(parsedAmount) || parsedAmount < 0)) {
-      setError(t("errors.invalidAmount"));
+      queueMicrotask(() => setError(t("errors.invalidAmount")));
       return;
     }
-    setError(null);
-    setLoading(true);
+    queueMicrotask(() => {
+      setError(null);
+      setLoading(true);
+    });
     const ctrl = new AbortController();
     const debounce = setTimeout(() => {
       startTransition(async () => {

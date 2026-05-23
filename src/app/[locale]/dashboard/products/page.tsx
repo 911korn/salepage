@@ -32,8 +32,8 @@ export default async function ProductsPage({
 
   return (
     <div className="mx-auto max-w-6xl">
-      <header className="flex items-baseline justify-between">
-        <div>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
+        <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
             {t("title")}
           </h1>
@@ -41,11 +41,11 @@ export default async function ProductsPage({
             {t("subtitle", { n: products.length })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           <CsvActions shopSlug={activeShop.slug} />
           <Link
             href="/dashboard/products/new"
-            className={cn(buttonStyles({ size: "md" }))}
+            className={cn(buttonStyles({ size: "md" }), "flex-1 sm:flex-none")}
           >
             <Plus className="size-4" /> {t("addNew")}
           </Link>

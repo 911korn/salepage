@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { LogoMark, Wordmark } from "@/components/ui/logo";
+import { storefrontPath } from "@/lib/storefront-url";
 
 export async function Footer() {
   const t = await getTranslations("footer");
@@ -18,7 +19,7 @@ export async function Footer() {
         { href: "#features", labelKey: "nav.features" },
         { href: "#promptpay", labelKey: "nav.promptpay" },
         { href: "#pricing", labelKey: "nav.pricing" },
-        { href: "/s/siam-snack", labelKey: "footer.linkExample" },
+        { href: storefrontPath("siam-snack"), labelKey: "footer.linkExample" },
       ],
     },
     {

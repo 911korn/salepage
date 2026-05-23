@@ -71,7 +71,7 @@ export function LineConfigForm({ shopId, shopSlug, initial }: Props) {
               <li>
                 3. ใน Messaging API tab → ตั้ง Webhook URL เป็น URL ข้างล่างนี้ → Verify → เปิด Use webhook
               </li>
-              <li>4. ปิด "Auto-reply messages" และ "Greeting messages" เพื่อไม่ให้ชนกัน</li>
+              <li>4. ปิด &quot;Auto-reply messages&quot; และ &quot;Greeting messages&quot; เพื่อไม่ให้ชนกัน</li>
             </ol>
           </div>
         </div>

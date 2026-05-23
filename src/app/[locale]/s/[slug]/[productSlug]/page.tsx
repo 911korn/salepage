@@ -7,6 +7,7 @@ import { CheckoutPanel } from "@/components/storefront/checkout-panel";
 import { cn } from "@/lib/cn";
 import { db, ProductStatus } from "@/lib/db";
 import { getProduct as getDemoProduct, getShopBySlug as getDemoShop } from "@/lib/demo-data";
+import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
@@ -130,13 +131,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
         <div className="container-page flex h-14 items-center justify-between">
           <Link
-            href={`/s/${shopView.slug}`}
+            href={storefrontPath(shopView.slug)}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)]"
           >
             <ArrowLeft className="size-4" /> {shopView.name}
           </Link>
           <p className="font-mono text-xs text-zinc-500">
-            salepage.in.th/{shopView.slug}/{product.slug}
+            {storefrontLabel(shopView.slug, product.slug)}
           </p>
           <span />
         </div>
@@ -202,7 +203,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             <div className="rounded-3xl border border-[color:var(--color-border)] bg-white p-6 shadow-sm sm:p-7">
               <div className="flex items-center gap-2">
                 <Link
-                  href={`/s/${shopView.slug}`}
+                  href={storefrontPath(shopView.slug)}
                   className="flex items-center gap-2 text-sm text-zinc-600 hover:text-[color:var(--color-fg)]"
                 >
                   <span

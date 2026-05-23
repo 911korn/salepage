@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { DEMO_SHOPS } from "@/lib/demo-data";
+import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
 
 export function StorefrontPreview() {
   const t = useTranslations("preview");
@@ -52,7 +53,7 @@ export function StorefrontPreview() {
                       ) : null}
                     </div>
                     <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
-                      <span>salepage.in.th/{shop.slug}</span>
+                      <span>{storefrontLabel(shop.slug)}</span>
                       <span>·</span>
                       <span className="inline-flex items-center gap-0.5">
                         <Star className="size-3 fill-amber-400 text-amber-400" />
@@ -62,7 +63,7 @@ export function StorefrontPreview() {
                   </div>
                 </div>
                 <Link
-                  href={`/s/${shop.slug}`}
+                  href={storefrontPath(shop.slug)}
                   className={cn(buttonStyles({ size: "md" }), "w-full sm:w-auto")}
                 >
                   <Eye className="size-4" /> {t("openShop")}
@@ -109,7 +110,7 @@ export function StorefrontPreview() {
               </div>
 
               <Link
-                href={`/s/${shop.slug}`}
+                href={storefrontPath(shop.slug)}
                 className="mt-5 flex items-center justify-center gap-1.5 text-sm font-medium text-[color:var(--color-brand-700)] hover:underline"
               >
                 {t("viewAll")} ({shop.productCount})

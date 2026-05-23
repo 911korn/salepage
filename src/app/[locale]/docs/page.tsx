@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import NextLink from "next/link";
 import { setRequestLocale } from "next-intl/server";
 import { ArrowLeft, Code2, ExternalLink } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -115,12 +116,13 @@ export default async function DocsPage({
           </p>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            <a
+            <NextLink
               href="/api/v1/health"
+              prefetch={false}
               className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-border)] bg-white px-3 py-1.5 text-sm font-medium hover:border-[color:var(--color-brand-300)]"
             >
               <ExternalLink className="size-3.5" /> /api/v1/health (live)
-            </a>
+            </NextLink>
           </div>
 
           <div className="mt-10 space-y-8">

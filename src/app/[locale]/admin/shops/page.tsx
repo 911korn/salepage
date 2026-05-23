@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/admin/page-header";
 import { db, ShopStatus } from "@/lib/db";
+import { storefrontLabel } from "@/lib/storefront-url";
 
 const PAGE_SIZE = 50;
 
@@ -84,19 +85,19 @@ export default async function AdminShopsPage({ searchParams }: Props) {
       {/* Filters */}
       <form
         method="get"
-        className="grid grid-cols-2 gap-2 rounded-2xl border border-zinc-200 bg-white p-3 sm:grid-cols-5"
+        className="grid grid-cols-1 gap-2 rounded-2xl border border-zinc-200 bg-white p-3 sm:grid-cols-5"
       >
         <Input
           name="q"
           defaultValue={q}
           placeholder="slug, name, owner"
           prefix={<Search className="size-4" />}
-          className="h-10 col-span-2 sm:col-span-2"
+          className="h-10 sm:col-span-2"
         />
         <select
           name="status"
           defaultValue={status ?? ""}
-          className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm"
+          className="h-10 min-w-0 rounded-xl border border-zinc-200 bg-white px-3 text-sm"
         >
           <option value="">All status</option>
           {Object.values(ShopStatus).map((s) => (
@@ -108,7 +109,7 @@ export default async function AdminShopsPage({ searchParams }: Props) {
         <select
           name="featured"
           defaultValue={sp.featured ?? ""}
-          className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm"
+          className="h-10 min-w-0 rounded-xl border border-zinc-200 bg-white px-3 text-sm"
         >
           <option value="">All featured</option>
           <option value="true">Featured</option>
@@ -117,7 +118,7 @@ export default async function AdminShopsPage({ searchParams }: Props) {
         <select
           name="suspended"
           defaultValue={sp.suspended ?? ""}
-          className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm"
+          className="h-10 min-w-0 rounded-xl border border-zinc-200 bg-white px-3 text-sm"
         >
           <option value="">All</option>
           <option value="false">Active</option>
@@ -125,7 +126,7 @@ export default async function AdminShopsPage({ searchParams }: Props) {
         </select>
         <button
           type="submit"
-          className="col-span-2 h-10 rounded-xl bg-[color:var(--color-brand-600)] px-4 text-sm font-medium text-white hover:bg-[color:var(--color-brand-700)] sm:col-span-5"
+          className="h-10 rounded-xl bg-[color:var(--color-brand-600)] px-4 text-sm font-medium text-white hover:bg-[color:var(--color-brand-700)] sm:col-span-5"
         >
           ค้นหา
         </button>
@@ -169,7 +170,7 @@ export default async function AdminShopsPage({ searchParams }: Props) {
                       <span className="min-w-0">
                         <span className="block truncate font-medium">{s.name}</span>
                         <span className="block truncate font-mono text-[11px] text-zinc-500">
-                          /s/{s.slug}
+                          {storefrontLabel(s.slug)}
                         </span>
                       </span>
                     </Link>
@@ -238,7 +239,7 @@ export default async function AdminShopsPage({ searchParams }: Props) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{s.name}</p>
                     <p className="truncate font-mono text-[11px] text-zinc-500">
-                      /s/{s.slug} · {s.owner.email}
+                      {storefrontLabel(s.slug)} · {s.owner.email}
                     </p>
                   </div>
                 </div>

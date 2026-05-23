@@ -57,8 +57,10 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
   useEffect(() => {
     const cleanPhone = phone.replace(/[^\d]/g, "");
     if (cleanPhone.length < 9) {
-      setLoyalty(null);
-      setRedeemPoints(0);
+      queueMicrotask(() => {
+        setLoyalty(null);
+        setRedeemPoints(0);
+      });
       return;
     }
     let cancelled = false;

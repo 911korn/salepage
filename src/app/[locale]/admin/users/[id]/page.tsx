@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { UserActions } from "@/components/admin/user-actions";
 import { requireAdmin } from "@/lib/admin";
 import { db, OrderStatus, PlanKey, UserRole } from "@/lib/db";
+import { storefrontLabel } from "@/lib/storefront-url";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -203,7 +204,7 @@ export default async function AdminUserDetailPage({ params }: Props) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{s.name}</p>
                     <p className="truncate text-[11px] text-zinc-500">
-                      /s/{s.slug}
+                      {storefrontLabel(s.slug)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">

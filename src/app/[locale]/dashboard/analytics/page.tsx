@@ -25,7 +25,7 @@ export default async function AnalyticsPage({
   if (shops.length === 0) redirect("/dashboard/create-shop");
   const activeShop = shops[0];
 
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const since = new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000);
   since.setHours(0, 0, 0, 0);
 
   const [orders, productSales] = await Promise.all([

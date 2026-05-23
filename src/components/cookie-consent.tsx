@@ -18,7 +18,7 @@ export function CookieConsent() {
     const has = document.cookie
       .split(";")
       .some((c) => c.trim().startsWith(`${COOKIE_NAME}=`));
-    if (!has) setShown(true);
+    if (!has) queueMicrotask(() => setShown(true));
   }, []);
 
   if (!shown) return null;

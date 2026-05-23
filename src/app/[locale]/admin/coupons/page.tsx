@@ -61,6 +61,7 @@ export default async function AdminCouponsPage({ searchParams }: Props) {
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const nowMs = new Date().getTime();
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
@@ -137,7 +138,7 @@ export default async function AdminCouponsPage({ searchParams }: Props) {
                   {!c.active ? (
                     <Badge tone="warning" className="text-[10px]">disabled</Badge>
                   ) : null}
-                  {c.expiresAt && c.expiresAt.getTime() < Date.now() ? (
+                  {c.expiresAt && c.expiresAt.getTime() < nowMs ? (
                     <Badge tone="neutral" className="text-[10px]">expired</Badge>
                   ) : null}
                 </p>

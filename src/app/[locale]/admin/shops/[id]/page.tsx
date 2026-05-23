@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/admin/page-header";
 import { ShopActions } from "@/components/admin/shop-actions";
 import { db, OrderStatus } from "@/lib/db";
+import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -69,10 +70,10 @@ export default async function AdminShopDetailPage({ params }: Props) {
 
       <PageHeader
         title={shop.name}
-        description={`/s/${shop.slug} · owner ${shop.owner.email}`}
+        description={`${storefrontLabel(shop.slug)} · owner ${shop.owner.email}`}
         actions={
           <a
-            href={`/s/${shop.slug}`}
+            href={storefrontPath(shop.slug)}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-[12px] font-medium text-zinc-700 hover:bg-zinc-50"
@@ -94,7 +95,9 @@ export default async function AdminShopDetailPage({ params }: Props) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-display text-xl font-bold">{shop.name}</p>
-              <p className="font-mono text-[12px] text-zinc-500">/s/{shop.slug}</p>
+              <p className="font-mono text-[12px] text-zinc-500">
+                {storefrontLabel(shop.slug)}
+              </p>
               {shop.description ? (
                 <p className="mt-2 text-sm text-zinc-600">{shop.description}</p>
               ) : null}

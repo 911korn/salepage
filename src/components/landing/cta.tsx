@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { storefrontPath } from "@/lib/storefront-url";
 
 export function FinalCta() {
   const t = useTranslations("finalCta");
@@ -45,7 +46,7 @@ export function FinalCta() {
               <ArrowRight className="size-5" />
             </Link>
             <Link
-              href="/s/siam-snack"
+              href={storefrontPath("siam-snack")}
               className="text-sm font-medium text-rose-50 underline-offset-4 hover:underline"
             >
               {t("secondary")}

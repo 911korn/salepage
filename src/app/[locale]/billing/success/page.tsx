@@ -39,7 +39,7 @@ export default async function CheckoutSuccessPage({
       customerEmail = session.customer_details?.email ?? null;
       const sub = session.subscription;
       if (sub && typeof sub !== "string" && sub.trial_end) {
-        const now = Math.floor(Date.now() / 1000);
+        const now = Math.floor(new Date().getTime() / 1000);
         trialDays = Math.max(0, Math.round((sub.trial_end - now) / 86400));
       }
     } catch {

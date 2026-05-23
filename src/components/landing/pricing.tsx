@@ -9,6 +9,7 @@ import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { storefrontPath } from "@/lib/storefront-url";
 
 type PlanId = "free" | "starter" | "pro" | "business" | "agency";
 type PaidPlan = Exclude<PlanId, "free">;
@@ -99,7 +100,7 @@ export function Pricing() {
         toast.error(json.error?.message ?? "เปิดหน้าซื้อไม่สำเร็จ");
         return;
       }
-      window.location.href = json.data.url;
+      window.location.assign(json.data.url);
     } finally {
       setLoadingPack(null);
       setShopPicker(null);
@@ -128,7 +129,7 @@ export function Pricing() {
         });
         return;
       }
-      window.location.href = json.data.url;
+      window.location.assign(json.data.url);
     } catch (e) {
       toast.error(tBilling("errorTitle"), {
         description: e instanceof Error ? e.message : "network error",
@@ -417,7 +418,7 @@ export function Pricing() {
                       <span>
                         <span className="block font-medium">{s.name}</span>
                         <span className="block font-mono text-[11px] text-zinc-500">
-                          /s/{s.slug}
+                          {storefrontPath(s.slug)}
                         </span>
                       </span>
                       <span className="text-[11px] text-[color:var(--color-brand-700)]">

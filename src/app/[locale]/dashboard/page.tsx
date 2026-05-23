@@ -13,11 +13,11 @@ import {
   Wallet,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { storefrontPath } from "@/lib/storefront-url";
 
 export default async function DashboardOverviewPage() {
   const { shops } = await requireDashboardSession();
@@ -144,7 +144,7 @@ export default async function DashboardOverviewPage() {
             </p>
             <p className="mt-1 text-[13px] text-zinc-500">{t("noOrdersDesc")}</p>
             <Link
-              href={`/s/${activeShop.slug}`}
+              href={storefrontPath(activeShop.slug)}
               target="_blank"
               className={cn(buttonStyles({ size: "sm", variant: "outline" }), "mt-4")}
             >

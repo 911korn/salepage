@@ -159,6 +159,7 @@ async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult
 }
 
 async function verifyViaEasySlip(_input: SlipVerifyInput): Promise<SlipVerifyResult> {
+  void _input;
   // Stub — to be implemented once the team picks Easyslip as primary.
   return {
     verified: false,

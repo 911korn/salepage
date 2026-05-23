@@ -15,6 +15,7 @@ import { Link } from "@/i18n/navigation";
 import { buttonStyles } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
+import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
 
 interface TickerOrder {
   id: string;
@@ -97,7 +98,7 @@ export function Hero() {
                 <ArrowRight className="size-5" />
               </Link>
               <Link
-                href="/s/siam-snack"
+                href={storefrontPath("siam-snack")}
                 className={cn(
                   buttonStyles({ variant: "outline", size: "xl" }),
                   "w-full sm:w-auto",
@@ -159,7 +160,9 @@ function HeroVisual() {
                   <p className="font-display text-base font-bold">สยามสแน็ค</p>
                   <ShieldCheck className="size-4 text-[color:var(--color-brand-600)]" />
                 </div>
-                <p className="text-xs text-zinc-500">salepage.in.th/siam-snack</p>
+                <p className="text-xs text-zinc-500">
+                  {storefrontLabel("siam-snack")}
+                </p>
               </div>
             </div>
             <Badge tone="success" className="hidden sm:inline-flex">
