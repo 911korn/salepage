@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, QrCode, ShieldCheck, Sparkles, Wallet } from "lucide-react";
+import { Check, Heart, Sparkles, ShieldCheck, Wallet } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -38,30 +38,28 @@ const CREDIT_PACKS = [
 
 export function Pricing() {
   const t = useTranslations("pricing");
-  const tCommon = useTranslations("common");
   const tBilling = useTranslations("billing");
   const locale = useLocale() as "th" | "en";
-  const [period, setPeriod] = useState<Period>("year");
-  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  // Default ON (yearly) so the discount is the first thing users see, à la Submagic.
+  const [yearly, setYearly] = useState(true);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  async function startCheckout(
-    plan: PaidPlan,
-    method: "card" | "promptpay",
-  ) {
-    // PromptPay is annual-only — Stripe handles monthly via card subscription.
-    // The toggle still drives the card flow but PromptPay always pays a year.
-    const effectivePeriod: Period = method === "promptpay" ? "year" : period;
-    const key = `${plan}-${method}-${effectivePeriod}`;
-    setLoadingKey(key);
+  const period: Period = yearly ? "year" : "month";
+
+  async function startCheckout(plan: PaidPlan) {
+    setLoadingPlan(plan);
     try {
+      // Yearly → mode:payment one-time (Stripe shows Card + PromptPay on the
+      // hosted page; webhook extends Subscription by 365d).
+      // Monthly → mode:subscription Card auto-renew.
       const url =
-        method === "card"
-          ? "/api/v1/billing/checkout"
-          : "/api/v1/billing/checkout-once";
+        period === "year"
+          ? "/api/v1/billing/checkout-once"
+          : "/api/v1/billing/checkout";
       const res = await fetch(url, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ plan, period: effectivePeriod, locale }),
+        body: JSON.stringify({ plan, period, locale }),
       });
       const json = await res.json();
       if (!res.ok || !json.ok) {
@@ -76,23 +74,8 @@ export function Pricing() {
         description: e instanceof Error ? e.message : "network error",
       });
     } finally {
-      setLoadingKey(null);
+      setLoadingPlan(null);
     }
-  }
-
-  function priceDisplay(plan: PlanConfig) {
-    if (plan.monthlyPrice === 0) return { primary: "฿0", suffix: t("lifetime") };
-    if (period === "year") {
-      const yearly = plan.monthlyPrice * 10;
-      return {
-        primary: `฿${yearly.toLocaleString()}`,
-        suffix: t("perYear"),
-      };
-    }
-    return {
-      primary: `฿${plan.monthlyPrice.toLocaleString()}`,
-      suffix: t("perMonth"),
-    };
   }
 
   return (
@@ -113,31 +96,50 @@ export function Pricing() {
           </p>
         </div>
 
-        {/* Monthly/Yearly toggle — default yearly so users see the savings */}
-        <div className="mt-8 flex justify-center">
-          <div
-            role="tablist"
-            aria-label="Billing period"
-            className="inline-flex rounded-full border border-[color:var(--color-border)] bg-white p-1 shadow-sm"
+        {/* iOS-style yearly toggle — default ON so the 17% saving is the first read */}
+        <div className="mt-10 flex items-center justify-center gap-3">
+          <span className="text-[15px] font-semibold text-zinc-900">
+            {t("toggle.saveBadge")}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={yearly}
+            onClick={() => setYearly((v) => !v)}
+            className={cn(
+              "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors",
+              yearly
+                ? "bg-[color:var(--color-brand-600)]"
+                : "bg-zinc-200",
+            )}
           >
-            <PeriodTab
-              active={period === "month"}
-              onClick={() => setPeriod("month")}
-              label={t("toggle.monthly")}
+            <span className="sr-only">Toggle annual billing</span>
+            <span
+              className={cn(
+                "inline-block size-5 transform rounded-full bg-white shadow-md transition-transform",
+                yearly ? "translate-x-6" : "translate-x-1",
+              )}
             />
-            <PeriodTab
-              active={period === "year"}
-              onClick={() => setPeriod("year")}
-              label={t("toggle.yearly")}
-              badge={t("toggle.saveBadge")}
-            />
-          </div>
+          </button>
+          <span
+            className={cn(
+              "text-[13px] transition-colors",
+              yearly ? "text-zinc-500" : "font-semibold text-zinc-900",
+            )}
+          >
+            {t("toggle.monthly")}
+          </span>
         </div>
 
         <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-5 lg:gap-3">
           {PLANS.map((p, i) => {
             const features = t.raw(`plans.${p.id}.features`) as string[];
-            const price = priceDisplay(p);
+            const isFree = p.monthlyPrice === 0;
+            const monthlyDisplay = isFree
+              ? "฿0"
+              : `฿${p.monthlyPrice.toLocaleString()}`;
+            const yearlyTotal = p.monthlyPrice * 10;
+            const isLoading = loadingPlan === p.id;
             return (
               <motion.div
                 key={p.id}
@@ -147,45 +149,57 @@ export function Pricing() {
                 className={cn(
                   "relative flex flex-col rounded-3xl border bg-white p-5 transition-shadow",
                   p.highlight
-                    ? "border-[color:var(--color-brand-300)] shadow-xl shadow-rose-100/60 lg:scale-[1.04] lg:z-10"
+                    ? "border-2 border-[color:var(--color-brand-500)] shadow-xl shadow-rose-100/60 lg:scale-[1.04] lg:z-10"
                     : "border-[color:var(--color-border)] shadow-sm",
                 )}
               >
                 {p.highlight ? (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[color:var(--color-brand-600)] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-md">
-                    {t("popular")}
+                  <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-[color:var(--color-brand-600)] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-md">
+                    <Heart className="size-3 fill-current" /> {t("popular")}
                   </span>
                 ) : null}
 
                 <div>
-                  <h3 className="font-display text-lg font-bold">
+                  <h3 className="font-display text-lg font-bold uppercase tracking-wide">
                     {t(`plans.${p.id}.name`)}
                   </h3>
-                  <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-[12.5px] text-zinc-600">
+                  <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-[12.5px] leading-snug text-zinc-600">
                     {t(`plans.${p.id}.desc`)}
                   </p>
                 </div>
 
-                <div className="mt-4 flex items-baseline gap-1.5">
-                  <span
-                    className={cn(
-                      "font-display text-3xl font-bold sm:text-[2rem]",
-                      p.highlight && "text-[color:var(--color-brand-600)]",
-                    )}
-                  >
-                    {price.primary}
-                  </span>
-                  <span className="text-[12px] text-zinc-500">
-                    {price.suffix}
-                  </span>
+                {/* Headline price — always per-month equivalent */}
+                <div className="mt-4">
+                  <div className="flex items-baseline gap-1.5">
+                    <span
+                      className={cn(
+                        "font-display text-3xl font-bold sm:text-[2rem]",
+                        p.highlight && "text-[color:var(--color-brand-600)]",
+                      )}
+                    >
+                      {monthlyDisplay}
+                    </span>
+                    <span className="text-[12px] text-zinc-500">
+                      {isFree ? t("lifetime") : t("perMonth")}
+                    </span>
+                  </div>
+                  {/* Billing-cadence subline */}
+                  {!isFree ? (
+                    <p className="mt-1 text-[11.5px] text-zinc-500">
+                      {yearly
+                        ? `ชำระรายปี ฿${yearlyTotal.toLocaleString()}`
+                        : "ชำระรายเดือน auto-renew"}
+                    </p>
+                  ) : null}
+                  {/* Save badge — only on yearly */}
+                  {!isFree && yearly ? (
+                    <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-emerald-700">
+                      ประหยัด ฿{(p.monthlyPrice * 2).toLocaleString()}/ปี
+                    </span>
+                  ) : null}
                 </div>
-                {p.monthlyPrice > 0 && period === "year" ? (
-                  <p className="-mt-1 text-[11px] text-emerald-700">
-                    ≈ ฿{p.monthlyPrice.toLocaleString()}{t("perMonth")} ·{" "}
-                    {t("toggle.saveBadge")}
-                  </p>
-                ) : null}
 
+                {/* One CTA per card */}
                 {p.id === "free" ? (
                   <Link
                     href="/signup"
@@ -197,39 +211,27 @@ export function Pricing() {
                     {t(`plans.${p.id}.cta`)}
                   </Link>
                 ) : (
-                  <>
-                    <Button
-                      size="md"
-                      variant={p.highlight ? "primary" : "outline"}
-                      className="mt-5 w-full"
-                      loading={loadingKey === `${p.id}-card-${period}`}
-                      onClick={() => startCheckout(p.id as PaidPlan, "card")}
-                    >
-                      {loadingKey === `${p.id}-card-${period}`
-                        ? tBilling("loading")
-                        : t(`plans.${p.id}.cta`)}
-                    </Button>
-                    {period === "year" ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          startCheckout(p.id as PaidPlan, "promptpay")
-                        }
-                        disabled={loadingKey === `${p.id}-promptpay-year`}
-                        className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-[color:var(--color-border)] bg-white px-3 py-2 text-[12px] font-medium text-zinc-700 transition-colors hover:border-[color:var(--color-brand-300)] hover:bg-[color:var(--color-brand-50)] disabled:opacity-50"
-                      >
-                        <QrCode className="size-3.5 text-[color:var(--color-brand-600)]" />
-                        {loadingKey === `${p.id}-promptpay-year`
-                          ? tBilling("loading")
-                          : "จ่ายด้วย PromptPay"}
-                      </button>
-                    ) : (
-                      <p className="mt-2 text-center text-[11px] text-zinc-500">
-                        💡 ใช้ PromptPay ได้เมื่อเลือกรายปี
-                      </p>
-                    )}
-                  </>
+                  <Button
+                    size="md"
+                    variant={p.highlight ? "primary" : "outline"}
+                    className="mt-5 w-full"
+                    loading={isLoading}
+                    onClick={() => startCheckout(p.id as PaidPlan)}
+                  >
+                    {isLoading
+                      ? tBilling("loading")
+                      : t(`plans.${p.id}.cta`)}
+                  </Button>
                 )}
+
+                {/* Payment method hint */}
+                {!isFree ? (
+                  <p className="mt-2 text-center text-[10.5px] text-zinc-400">
+                    {yearly
+                      ? "Card หรือ PromptPay"
+                      : "บัตรเครดิตเท่านั้น (auto-renew)"}
+                  </p>
+                ) : null}
 
                 <ul className="mt-5 flex-1 space-y-2 text-[12.5px]">
                   {features.map((f) => (
@@ -265,10 +267,7 @@ export function Pricing() {
         {/* AI slip credit packs */}
         <section className="mt-16">
           <div className="mx-auto max-w-2xl text-center">
-            <Badge tone="soft-brand">
-              <QrCode className="size-3.5" /> {t("credits.title")}
-            </Badge>
-            <h3 className="font-display mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+            <h3 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
               {t("credits.title")}
             </h3>
             <p className="mt-3 text-balance text-[15px] leading-relaxed text-zinc-600">
@@ -302,47 +301,6 @@ export function Pricing() {
         </section>
       </div>
     </section>
-  );
-}
-
-function PeriodTab({
-  active,
-  onClick,
-  label,
-  badge,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  badge?: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={cn(
-        "relative rounded-full px-5 py-1.5 text-sm font-medium transition-colors",
-        active
-          ? "bg-[color:var(--color-brand-600)] text-white shadow-sm"
-          : "text-zinc-700 hover:text-[color:var(--color-fg)]",
-      )}
-    >
-      {label}
-      {badge ? (
-        <span
-          className={cn(
-            "ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-            active
-              ? "bg-white/20 text-white"
-              : "bg-emerald-100 text-emerald-700",
-          )}
-        >
-          {badge}
-        </span>
-      ) : null}
-    </button>
   );
 }
 
