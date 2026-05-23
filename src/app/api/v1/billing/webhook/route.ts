@@ -94,27 +94,27 @@ async function onCheckoutCompleted(
   session: Stripe.Checkout.Session,
   stripe: Stripe,
 ) {
+  // mode:payment one-time PromptPay/card flow doesn't always have a
+  // Stripe customer object — fall back to the customer_details on the session.
   const customerId =
     typeof session.customer === "string"
       ? session.customer
       : session.customer?.id;
   const email = session.customer_details?.email ?? session.customer_email;
-  if (!customerId || !email) return;
+  if (!email) return;
 
-  // Upsert user by email, link stripeCustomerId
+  // Upsert user by email, link stripeCustomerId if present
   const user = await db.user.upsert({
     where: { email },
     create: {
       email,
       name: session.customer_details?.name ?? undefined,
-      stripeCustomerId: customerId,
+      ...(customerId ? { stripeCustomerId: customerId } : {}),
     },
-    update: {
-      stripeCustomerId: customerId,
-    },
+    update: customerId ? { stripeCustomerId: customerId } : {},
   });
 
-  // If a subscription is on the session, persist its initial state.
+  // (A) Standard recurring subscription
   if (session.subscription) {
     const subId =
       typeof session.subscription === "string"
@@ -122,7 +122,63 @@ async function onCheckoutCompleted(
         : session.subscription.id;
     const subscription = await stripe.subscriptions.retrieve(subId);
     await upsertSubscription(user.id, subscription);
+    return;
   }
+
+  // (B) One-time payment (PromptPay or card via /api/v1/billing/checkout-once)
+  if (session.mode === "payment" && session.metadata?.oneTime === "true") {
+    await extendOneTimeSubscription(user.id, customerId, session);
+  }
+}
+
+async function extendOneTimeSubscription(
+  userId: string,
+  customerId: string | undefined,
+  session: Stripe.Checkout.Session,
+) {
+  const planMeta = session.metadata?.plan;
+  const periodMeta = session.metadata?.period ?? "month";
+  const planKey =
+    planMeta === "business" ? PlanKey.BUSINESS : PlanKey.PRO;
+  const days = periodMeta === "year" ? 365 : 30;
+
+  // Roll the existing currentPeriodEnd forward if it's still active; otherwise
+  // start fresh from now.
+  const existing = await db.subscription.findUnique({ where: { userId } });
+  const now = new Date();
+  const baseTime =
+    existing?.currentPeriodEnd && existing.currentPeriodEnd > now
+      ? existing.currentPeriodEnd
+      : now;
+  const newPeriodEnd = new Date(
+    baseTime.getTime() + days * 24 * 60 * 60 * 1000,
+  );
+
+  // Use session id as the "stripeSubscriptionId" since one-time payments
+  // don't create a Stripe Subscription object. Prefixed so it's unmistakable.
+  const fauxSubId = `onetime_${session.id}`;
+  const fauxCustomerId = customerId ?? `onetime_email_${session.customer_email ?? "unknown"}`;
+
+  await db.subscription.upsert({
+    where: { userId },
+    create: {
+      userId,
+      stripeSubscriptionId: fauxSubId,
+      stripeCustomerId: fauxCustomerId,
+      plan: planKey,
+      status: SubscriptionStatus.ACTIVE,
+      currentPeriodEnd: newPeriodEnd,
+      cancelAtPeriodEnd: true, // one-time → won't auto-renew
+    },
+    update: {
+      // Don't overwrite the original stripeSubscriptionId if user had a real
+      // recurring sub before — just extend the active window.
+      plan: planKey,
+      status: SubscriptionStatus.ACTIVE,
+      currentPeriodEnd: newPeriodEnd,
+      cancelAtPeriodEnd: true,
+    },
+  });
 }
 
 async function onSubscriptionChanged(subscription: Stripe.Subscription) {

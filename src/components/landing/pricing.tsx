@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Sparkles } from "lucide-react";
+import { Check, QrCode, Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -59,6 +59,34 @@ export function Pricing() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ plan, locale }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        toast.error(tBilling("errorTitle"), {
+          description: json.error?.message ?? `HTTP ${res.status}`,
+        });
+        return;
+      }
+      window.location.href = json.data.url;
+    } catch (e) {
+      toast.error(tBilling("errorTitle"), {
+        description: e instanceof Error ? e.message : "network error",
+      });
+    } finally {
+      setLoadingPlan(null);
+    }
+  }
+
+  async function startOneTime(
+    plan: "pro" | "business",
+    period: "month" | "year",
+  ) {
+    setLoadingPlan(`${plan}-once-${period}`);
+    try {
+      const res = await fetch("/api/v1/billing/checkout-once", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ plan, period, locale }),
       });
       const json = await res.json();
       if (!res.ok || !json.ok) {
@@ -155,19 +183,28 @@ export function Pricing() {
                     {t(`plans.${p.id}.cta`)}
                   </Link>
                 ) : (
-                  <Button
-                    size="lg"
-                    variant={p.highlight ? "primary" : "outline"}
-                    className="mt-6 w-full"
-                    loading={isLoading}
-                    onClick={() =>
-                      startCheckout(
-                        (p.action as { type: "checkout"; plan: "pro" | "business" }).plan,
-                      )
-                    }
-                  >
-                    {isLoading ? tBilling("loading") : t(`plans.${p.id}.cta`)}
-                  </Button>
+                  <>
+                    <Button
+                      size="lg"
+                      variant={p.highlight ? "primary" : "outline"}
+                      className="mt-6 w-full"
+                      loading={isLoading}
+                      onClick={() =>
+                        startCheckout(
+                          (p.action as { type: "checkout"; plan: "pro" | "business" }).plan,
+                        )
+                      }
+                    >
+                      {isLoading ? tBilling("loading") : t(`plans.${p.id}.cta`)}
+                    </Button>
+                    <PromptPayButtons
+                      plan={(p.action as { plan: "pro" | "business" }).plan}
+                      monthlyPrice={p.price}
+                      onPick={startOneTime}
+                      loading={loadingPlan}
+                      tBilling={tBilling}
+                    />
+                  </>
                 )}
 
                 <ul className="mt-6 space-y-3 text-[14px]">
@@ -193,5 +230,58 @@ export function Pricing() {
         <p className="mt-8 text-center text-sm text-zinc-500">{t("footnote")}</p>
       </div>
     </section>
+  );
+}
+
+function PromptPayButtons({
+  plan,
+  monthlyPrice,
+  onPick,
+  loading,
+  tBilling,
+}: {
+  plan: "pro" | "business";
+  monthlyPrice: string;
+  onPick: (plan: "pro" | "business", period: "month" | "year") => void;
+  loading: string | null;
+  tBilling: (key: string) => string;
+}) {
+  const numeric = Number(monthlyPrice.replace(/[^\d]/g, "")) || 0;
+  const yearly = numeric * 10;
+  const yearLabel = `฿${yearly.toLocaleString()}`;
+  const isLoading = (period: "month" | "year") =>
+    loading === `${plan}-once-${period}`;
+
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        onClick={() => onPick(plan, "month")}
+        disabled={isLoading("month") || isLoading("year")}
+        className="flex flex-col items-center gap-0.5 rounded-xl border border-[color:var(--color-border)] bg-white px-3 py-2 text-[12px] font-medium text-zinc-700 transition-colors hover:border-[color:var(--color-brand-300)] hover:bg-[color:var(--color-brand-50)] disabled:opacity-50"
+      >
+        <span className="inline-flex items-center gap-1">
+          <QrCode className="size-3.5 text-[color:var(--color-brand-600)]" />
+          PromptPay 1 เดือน
+        </span>
+        <span className="font-display text-[11px] font-bold text-zinc-900">
+          {isLoading("month") ? tBilling("loading") : monthlyPrice}
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => onPick(plan, "year")}
+        disabled={isLoading("month") || isLoading("year")}
+        className="flex flex-col items-center gap-0.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] font-medium text-emerald-800 transition-colors hover:border-emerald-300 hover:bg-emerald-100 disabled:opacity-50"
+      >
+        <span className="inline-flex items-center gap-1">
+          <QrCode className="size-3.5" />
+          1 ปี · ประหยัด 2 เดือน
+        </span>
+        <span className="font-display text-[11px] font-bold">
+          {isLoading("year") ? tBilling("loading") : yearLabel}
+        </span>
+      </button>
+    </div>
   );
 }
