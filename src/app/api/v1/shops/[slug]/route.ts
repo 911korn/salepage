@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { hasBusinessPlan } from "@/lib/plan";
 import { getShopBySlug as getDemoShop } from "@/lib/demo-data";
 
 const CATEGORIES = [
@@ -44,6 +45,11 @@ const PatchBody = z.object({
   announcement: z.string().max(240).optional().nullable(),
   loyaltyBahtPerPoint: z.number().int().min(0).max(100000).optional(),
   loyaltyBahtValuePerPoint: z.number().int().min(0).max(1000).optional(),
+  // LINE Messaging API (Business+ only — gated below)
+  lineChannelId: z.string().max(64).optional().nullable(),
+  lineChannelSecret: z.string().max(128).optional().nullable(),
+  lineChannelAccessToken: z.string().max(500).optional().nullable(),
+  lineWebhookEnabled: z.boolean().optional(),
 });
 
 export async function GET(
@@ -135,6 +141,23 @@ export async function PATCH(
   if (!parsed.ok) return parsed.response;
   const input = parsed.data;
 
+  // Plan gate: LINE Messaging API is Business+ only
+  const touchingLine =
+    input.lineChannelId !== undefined ||
+    input.lineChannelSecret !== undefined ||
+    input.lineChannelAccessToken !== undefined ||
+    input.lineWebhookEnabled !== undefined;
+  if (touchingLine) {
+    const ok2 = await hasBusinessPlan(session.user.id);
+    if (!ok2) {
+      return fail(
+        "plan_required",
+        "ฟีเจอร์ LINE Messaging Inbox ต้องอัปเกรดเป็นแพ็กเกจ Business ขึ้นไป",
+        402,
+      );
+    }
+  }
+
   const updated = await db.shop.update({
     where: { id: shop.id },
     data: {
@@ -161,6 +184,18 @@ export async function PATCH(
         : {}),
       ...(input.loyaltyBahtValuePerPoint !== undefined
         ? { loyaltyBahtValuePerPoint: input.loyaltyBahtValuePerPoint }
+        : {}),
+      ...(input.lineChannelId !== undefined
+        ? { lineChannelId: input.lineChannelId }
+        : {}),
+      ...(input.lineChannelSecret !== undefined
+        ? { lineChannelSecret: input.lineChannelSecret }
+        : {}),
+      ...(input.lineChannelAccessToken !== undefined
+        ? { lineChannelAccessToken: input.lineChannelAccessToken }
+        : {}),
+      ...(input.lineWebhookEnabled !== undefined
+        ? { lineWebhookEnabled: input.lineWebhookEnabled }
         : {}),
     },
   });

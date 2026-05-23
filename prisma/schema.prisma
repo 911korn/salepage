@@ -109,17 +109,27 @@ model Shop {
   loyaltyBahtPerPoint     Int @default(100)
   loyaltyBahtValuePerPoint Int @default(1)
 
+  // LINE Messaging API integration (Business+ tier only — gated in code).
+  // When all three credential fields are set AND lineWebhookEnabled=true, the
+  // /api/v1/line/webhook/:shopId endpoint routes inbound LINE messages into
+  // Conversation/ConversationMessage and the dashboard /chat inbox is live.
+  lineChannelId          String?
+  lineChannelSecret      String?
+  lineChannelAccessToken String? @db.Text
+  lineWebhookEnabled     Boolean @default(false)
+
   rating     Float @default(0)
   totalSold  Int   @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products  Product[]
-  orders    Order[]
-  reviews   Review[]
-  coupons   Coupon[]
-  loyalty   CustomerLoyalty[]
+  products      Product[]
+  orders        Order[]
+  reviews       Review[]
+  coupons       Coupon[]
+  loyalty       CustomerLoyalty[]
+  conversations Conversation[]
 
   @@index([ownerId])
 }
@@ -351,6 +361,47 @@ model Coupon {
 enum CouponType {
   PERCENT
   FIXED
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LINE Messaging API inbox (Business+ feature)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Conversation {
+  id                 String   @id @default(cuid())
+  shopId             String
+  shop               Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerLineUserId String   // 33-char LINE userId starting with U
+  customerName       String?  // displayName from LINE profile
+  customerAvatar     String?  // pictureUrl from LINE profile
+  lastMessageAt      DateTime @default(now())
+  lastMessageText    String?  @db.Text
+  unreadCount        Int      @default(0)
+  createdAt          DateTime @default(now())
+
+  messages ConversationMessage[]
+
+  @@unique([shopId, customerLineUserId])
+  @@index([shopId, lastMessageAt])
+}
+
+model ConversationMessage {
+  id             String                       @id @default(cuid())
+  conversationId String
+  conversation   Conversation                 @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      ConversationMessageDirection
+  text           String?                      @db.Text
+  imageUrl       String?
+  // LINE message ID for inbound de-dup (LINE sometimes retries webhook delivery)
+  lineMessageId  String?                      @unique
+  createdAt      DateTime                     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+enum ConversationMessageDirection {
+  INBOUND
+  OUTBOUND
 }
 
 // Per-shop loyalty wallet, identified by phone (anonymous-friendly).
