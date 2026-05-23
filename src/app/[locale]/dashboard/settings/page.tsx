@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { SettingsForm } from "@/components/dashboard/settings-form";
+import { SlipCreditsCard } from "@/components/dashboard/slip-credits-card";
 import { db } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { getShopSlipCapacity } from "@/lib/slip-credits";
 import type { Locale } from "@/i18n/routing";
 
 export default async function SettingsPage({
@@ -13,7 +15,7 @@ export default async function SettingsPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const { shops } = await requireDashboardSession();
+  const { user, shops } = await requireDashboardSession();
   if (shops.length === 0) redirect("/dashboard/create-shop");
   const activeShop = shops[0];
 
@@ -24,15 +26,19 @@ export default async function SettingsPage({
   if (!shop) redirect("/dashboard/create-shop");
 
   const t = await getTranslations("dashboard.settings");
+  const capacity = await getShopSlipCapacity(shop.id, user.id);
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <header className="mb-6">
+    <div className="mx-auto max-w-3xl space-y-6">
+      <header>
         <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
           {t("title")}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">{t("subtitle")}</p>
       </header>
+
+      <SlipCreditsCard shopSlug={shop.slug} capacity={capacity} />
+
       <SettingsForm
         shop={{
           slug: shop.slug,

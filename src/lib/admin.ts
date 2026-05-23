@@ -155,3 +155,20 @@ export async function viewerIsAdmin(): Promise<boolean> {
   if (ADMIN_ROLES.has(user.role)) return true;
   return isFailsafeAdmin(user.email) || isFailsafeSuperAdmin(user.email);
 }
+
+/// True if the viewer should bypass maintenance mode. Used by storefront +
+/// /api/v1/orders. Lets admins keep verifying the site works during downtime.
+export async function viewerCanBypassMaintenance(
+  allowedRoles: string[],
+): Promise<boolean> {
+  const session = await auth();
+  if (!session?.user?.id) return false;
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { email: true, role: true, suspended: true },
+  });
+  if (!user || user.suspended) return false;
+  if (allowedRoles.includes(user.role)) return true;
+  // Failsafe admins always bypass — same reasoning as requireAdmin().
+  return isFailsafeAdmin(user.email) || isFailsafeSuperAdmin(user.email);
+}

@@ -4,6 +4,7 @@ import { db, OrderStatus } from "@/lib/db";
 import { verifySlip } from "@/lib/slip-verify";
 import { sendOrderPaid, sendPaymentReceivedAlert } from "@/lib/email";
 import { buildOrderRef } from "@/lib/orders";
+import { tryConsumeSlip } from "@/lib/slip-credits";
 
 interface Ctx {
   params: Promise<{ token: string }>;
@@ -46,6 +47,7 @@ export async function POST(request: Request, ctx: Ctx) {
           name: true,
           promptpayId: true,
           contact: true,
+          ownerId: true,
           owner: { select: { email: true } },
         },
       },
@@ -62,6 +64,20 @@ export async function POST(request: Request, ctx: Ctx) {
       slipRef: order.slipRef,
       reason: "already_settled",
     });
+  }
+
+  // Reserve a slip-verify call against the shop's plan quota / credit wallet
+  // BEFORE hitting the SlipOK API (SlipOK charges per call regardless of
+  // verification outcome). If exhausted, return 402 so the customer's UI can
+  // surface a "ติดต่อร้าน — โควต้าหมด" hint.
+  const consume = await tryConsumeSlip(order.shop.id, order.shop.ownerId);
+  if (!consume.ok) {
+    return fail(
+      "slip_quota_exhausted",
+      "ร้านนี้ใช้โควต้าเช็คสลิปเดือนนี้หมดแล้ว เจ้าของร้านต้องเติมเครดิตก่อน",
+      402,
+      { remaining: consume.remaining },
+    );
   }
 
   const result = await verifySlip({

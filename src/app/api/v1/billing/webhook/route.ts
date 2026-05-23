@@ -29,20 +29,37 @@ export async function POST(request: Request) {
   }
 
   // Audit log — store every event we receive. Idempotent thanks to event.id PK.
+  // If the row already existed AND processedAt is set, treat as duplicate and
+  // skip handler (Stripe occasionally re-delivers). Critical for the
+  // slip-credits and one-time-extend flows where running twice would
+  // double-credit / double-extend.
+  let alreadyProcessed = false;
   try {
-    await db.stripeEvent.upsert({
+    const existing = await db.stripeEvent.findUnique({
       where: { id: event.id },
-      create: {
-        id: event.id,
-        type: event.type,
-        livemode: event.livemode,
-        // Stripe.Event isn't shaped as InputJsonValue; safe to round-trip via JSON.
-        payload: JSON.parse(JSON.stringify(event)),
-      },
-      update: {}, // never overwrite an already-recorded event
+      select: { processedAt: true },
     });
+    if (existing?.processedAt) {
+      alreadyProcessed = true;
+    } else {
+      await db.stripeEvent.upsert({
+        where: { id: event.id },
+        create: {
+          id: event.id,
+          type: event.type,
+          livemode: event.livemode,
+          // Stripe.Event isn't shaped as InputJsonValue; safe to round-trip via JSON.
+          payload: JSON.parse(JSON.stringify(event)),
+        },
+        update: {}, // first-time row; never overwrite an already-recorded event
+      });
+    }
   } catch (e) {
     console.error("[stripe-webhook] failed to persist event log:", e);
+  }
+
+  if (alreadyProcessed) {
+    return NextResponse.json({ ok: true, received: true, duplicate: true });
   }
 
   try {
@@ -94,6 +111,17 @@ async function onCheckoutCompleted(
   session: Stripe.Checkout.Session,
   stripe: Stripe,
 ) {
+  // (C) AI slip credit top-up — independent of user.subscription. Handled
+  // first because it doesn't need to upsert User (the buyer always exists
+  // before reaching the checkout — we authed them server-side).
+  if (
+    session.mode === "payment" &&
+    session.metadata?.type === "slip-credits"
+  ) {
+    await creditSlipPack(session);
+    return;
+  }
+
   // mode:payment one-time PromptPay/card flow doesn't always have a
   // Stripe customer object — fall back to the customer_details on the session.
   const customerId =
@@ -129,6 +157,31 @@ async function onCheckoutCompleted(
   if (session.mode === "payment" && session.metadata?.oneTime === "true") {
     await extendOneTimeSubscription(user.id, customerId, session);
   }
+}
+
+/// Increment shop.slipCredits by the pack amount on slip-credit checkout
+/// completion. Webhook is idempotent — the same checkout.session.completed
+/// event arriving twice would only credit once because Stripe's event log
+/// upsert in handleEvent() short-circuits duplicates BEFORE we reach here.
+async function creditSlipPack(session: Stripe.Checkout.Session) {
+  const shopId = session.metadata?.shopId;
+  const slips = Number(session.metadata?.slips ?? "0");
+  if (!shopId || !Number.isFinite(slips) || slips <= 0) {
+    console.warn(
+      "[stripe-webhook] slip-credits session missing metadata:",
+      session.id,
+      session.metadata,
+    );
+    return;
+  }
+  const updated = await db.shop.update({
+    where: { id: shopId },
+    data: { slipCredits: { increment: slips } },
+    select: { id: true, slug: true, slipCredits: true },
+  });
+  console.log(
+    `[stripe-webhook] credited ${slips} slips to ${updated.slug} → total ${updated.slipCredits}`,
+  );
 }
 
 async function extendOneTimeSubscription(

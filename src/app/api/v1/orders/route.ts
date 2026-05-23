@@ -4,6 +4,8 @@ import { db, OrderStatus, ProductStatus } from "@/lib/db";
 import { generateOrderToken, buildOrderRef } from "@/lib/orders";
 import { generatePromptPay } from "@/lib/promptpay";
 import { sendOrderCreated, sendNewOrderAlert } from "@/lib/email";
+import { getPlatformSetting } from "@/lib/platform-settings";
+import { viewerCanBypassMaintenance } from "@/lib/admin";
 
 const Item = z.object({
   productSlug: z.string().min(1),
@@ -33,6 +35,16 @@ const Body = z.object({
  * the customer can pick something else.
  */
 export async function POST(request: Request) {
+  // Block new orders under maintenance mode (admins still pass through, so
+  // the operator can validate the order flow end-to-end before unlocking).
+  const maintenance = await getPlatformSetting("maintenance_mode");
+  if (maintenance.enabled) {
+    const canBypass = await viewerCanBypassMaintenance(maintenance.allowedRoles);
+    if (!canBypass) {
+      return fail("maintenance_mode", maintenance.message, 503);
+    }
+  }
+
   const parsed = await parseJson(request, Body);
   if (!parsed.ok) return parsed.response;
   const input = parsed.data;

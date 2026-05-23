@@ -28,13 +28,15 @@ const PLANS: PlanConfig[] = [
   { id: "agency", monthlyPrice: 2990, highlight: false },
 ];
 
+// Keep keys + slips + price-baht in sync with src/lib/slip-credits.ts SLIP_PACKS.
 const CREDIT_PACKS = [
-  { slips: 50, priceBaht: 49 },
-  { slips: 150, priceBaht: 129 },
-  { slips: 500, priceBaht: 399 },
-  { slips: 1500, priceBaht: 990 },
-  { slips: 5000, priceBaht: 2900 },
-];
+  { key: "p50", slips: 50, priceBaht: 49 },
+  { key: "p150", slips: 150, priceBaht: 129 },
+  { key: "p500", slips: 500, priceBaht: 399 },
+  { key: "p1500", slips: 1500, priceBaht: 990 },
+  { key: "p5000", slips: 5000, priceBaht: 2900 },
+] as const;
+type CreditPackKey = (typeof CREDIT_PACKS)[number]["key"];
 
 export function Pricing() {
   const t = useTranslations("pricing");
@@ -43,8 +45,66 @@ export function Pricing() {
   // Default ON (yearly) so the discount is the first thing users see, à la Submagic.
   const [yearly, setYearly] = useState(true);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [loadingPack, setLoadingPack] = useState<CreditPackKey | null>(null);
+  const [shopPicker, setShopPicker] = useState<{
+    pack: CreditPackKey;
+    shops: { slug: string; name: string }[];
+  } | null>(null);
 
   const period: Period = yearly ? "year" : "month";
+
+  async function startCreditCheckout(pack: CreditPackKey, shopSlug?: string) {
+    setLoadingPack(pack);
+    try {
+      if (!shopSlug) {
+        // Resolve the buyer's shops first.
+        const shopsRes = await fetch("/api/v1/shops");
+        if (shopsRes.status === 401) {
+          window.location.href = `/signin?callbackUrl=${encodeURIComponent("/#pricing")}`;
+          return;
+        }
+        const shopsJson = (await shopsRes.json()) as {
+          ok: boolean;
+          data?: { shops: { slug: string; name: string }[] };
+        };
+        const shops = shopsJson.data?.shops ?? [];
+        if (shops.length === 0) {
+          toast.error("สร้างร้านก่อน แล้วจึงซื้อ slip credits ได้");
+          window.location.href = "/dashboard/create-shop";
+          return;
+        }
+        if (shops.length > 1) {
+          // Open picker — user clicks a shop, picker callback re-enters
+          // this function with shopSlug set.
+          setShopPicker({
+            pack,
+            shops: shops.map((s) => ({ slug: s.slug, name: s.name })),
+          });
+          return;
+        }
+        shopSlug = shops[0].slug;
+      }
+
+      const res = await fetch("/api/v1/billing/checkout-credits", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ pack, shopSlug, locale }),
+      });
+      const json = (await res.json()) as {
+        ok: boolean;
+        data?: { url?: string };
+        error?: { message?: string };
+      };
+      if (!res.ok || !json.ok || !json.data?.url) {
+        toast.error(json.error?.message ?? "เปิดหน้าซื้อไม่สำเร็จ");
+        return;
+      }
+      window.location.href = json.data.url;
+    } finally {
+      setLoadingPack(null);
+      setShopPicker(null);
+    }
+  }
 
   async function startCheckout(plan: PaidPlan) {
     setLoadingPlan(plan);
@@ -296,30 +356,88 @@ export function Pricing() {
             </p>
           </div>
           <div className="mt-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {CREDIT_PACKS.map((pack) => (
-              <div
-                key={pack.slips}
-                className="rounded-2xl border border-[color:var(--color-border)] bg-white p-4 text-center"
-              >
-                <p className="font-display text-xl font-bold">
-                  {pack.slips.toLocaleString()}
-                </p>
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500">
-                  สลิป
-                </p>
-                <p className="font-display mt-2 text-lg font-bold text-[color:var(--color-brand-700)]">
-                  ฿{pack.priceBaht.toLocaleString()}
-                </p>
-                <p className="mt-0.5 text-[11px] text-zinc-500">
-                  ฿{(pack.priceBaht / pack.slips).toFixed(2)}/สลิป
-                </p>
-              </div>
-            ))}
+            {CREDIT_PACKS.map((pack) => {
+              const loading = loadingPack === pack.key;
+              return (
+                <div
+                  key={pack.key}
+                  className="flex flex-col rounded-2xl border border-[color:var(--color-border)] bg-white p-4 text-center"
+                >
+                  <p className="font-display text-xl font-bold">
+                    {pack.slips.toLocaleString()}
+                  </p>
+                  <p className="text-[11px] uppercase tracking-wider text-zinc-500">
+                    สลิป
+                  </p>
+                  <p className="font-display mt-2 text-lg font-bold text-[color:var(--color-brand-700)]">
+                    ฿{pack.priceBaht.toLocaleString()}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-zinc-500">
+                    ฿{(pack.priceBaht / pack.slips).toFixed(2)}/สลิป
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3 w-full"
+                    loading={loading}
+                    onClick={() => startCreditCheckout(pack.key)}
+                  >
+                    ซื้อ
+                  </Button>
+                </div>
+              );
+            })}
           </div>
           <p className="mt-4 text-center text-[12px] text-zinc-500">
             {t("credits.footnote")}
           </p>
         </section>
+
+        {/* Shop-picker modal — only shown when the buyer has 2+ shops */}
+        {shopPicker ? (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+              <h4 className="font-display text-lg font-bold">
+                เติมเครดิตให้ร้านไหน?
+              </h4>
+              <p className="mt-1 text-[12px] text-zinc-600">
+                เลือกร้านที่อยากเติม{" "}
+                {CREDIT_PACKS.find((p) => p.key === shopPicker.pack)?.slips.toLocaleString()}{" "}
+                สลิป
+              </p>
+              <ul className="mt-3 space-y-1.5">
+                {shopPicker.shops.map((s) => (
+                  <li key={s.slug}>
+                    <button
+                      type="button"
+                      disabled={loadingPack !== null}
+                      onClick={() => startCreditCheckout(shopPicker.pack, s.slug)}
+                      className="flex w-full items-center justify-between rounded-xl border border-zinc-200 px-3 py-2.5 text-left text-sm hover:border-[color:var(--color-brand-300)] hover:bg-[color:var(--color-brand-50)] disabled:opacity-60"
+                    >
+                      <span>
+                        <span className="block font-medium">{s.name}</span>
+                        <span className="block font-mono text-[11px] text-zinc-500">
+                          /s/{s.slug}
+                        </span>
+                      </span>
+                      <span className="text-[11px] text-[color:var(--color-brand-700)]">
+                        เลือก →
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="mt-3 w-full"
+                onClick={() => setShopPicker(null)}
+              >
+                ยกเลิก
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );

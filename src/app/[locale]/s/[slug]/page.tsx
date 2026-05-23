@@ -9,6 +9,9 @@ import { db, PlanKey, ProductStatus } from "@/lib/db";
 import { getEffectivePlan } from "@/lib/plan";
 import { getShopBySlug as getDemoShop } from "@/lib/demo-data";
 import { LogoMark } from "@/components/ui/logo";
+import { MaintenancePage } from "@/components/maintenance-page";
+import { viewerCanBypassMaintenance, viewerIsAdmin } from "@/lib/admin";
+import { getPlatformSetting } from "@/lib/platform-settings";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
@@ -55,6 +58,22 @@ export default async function StorefrontPage({ params }: PageProps) {
   const { slug, locale } = await params;
   setRequestLocale(locale);
 
+  // Platform-wide maintenance mode short-circuits the storefront. Admins
+  // (USER role listed in allowedRoles, or ADMIN/SUPER_ADMIN failsafe) keep
+  // browsing so they can validate the fix before unlocking.
+  const maintenance = await getPlatformSetting("maintenance_mode");
+  if (maintenance.enabled) {
+    const canBypass = await viewerCanBypassMaintenance(maintenance.allowedRoles);
+    if (!canBypass) {
+      return (
+        <MaintenancePage
+          message={maintenance.message}
+          viewerIsAdmin={false}
+        />
+      );
+    }
+  }
+
   const dbShop = await db.shop.findUnique({
     where: { slug },
     include: {
@@ -70,6 +89,9 @@ export default async function StorefrontPage({ params }: PageProps) {
   if (dbShop?.suspended) {
     notFound();
   }
+
+  // Silence unused-imports for symbols only used inside the bypass branch.
+  void viewerIsAdmin;
 
   // Watermark shows for FREE-tier shops only. Demo shops + paid tiers hide it.
   // Per pricing copy: "มีโลโก้ SalePage บนหน้าเว็บ" (Free) → "ไม่มีโลโก้" (paid).
