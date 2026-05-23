@@ -229,14 +229,14 @@ export function PromptPayDemo() {
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35 }}
-                className="relative aspect-square w-full max-w-[300px] rounded-2xl border-2 border-[color:var(--color-brand-200)] bg-white p-4 shadow-xl shadow-rose-100"
+                className="relative aspect-square w-full max-w-[300px] overflow-hidden rounded-2xl border-2 border-[color:var(--color-brand-200)] bg-white p-4 shadow-xl shadow-rose-100"
               >
                 {qr ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={qr.dataUrl}
                     alt="PromptPay QR"
-                    className="size-full rounded-lg"
+                    className="block h-full w-full rounded-lg object-contain"
                   />
                 ) : (
                   <div className="grid size-full place-items-center rounded-lg bg-zinc-50 text-zinc-400">

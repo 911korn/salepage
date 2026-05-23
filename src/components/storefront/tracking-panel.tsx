@@ -99,9 +99,13 @@ export function TrackingPanel({
 
         <div className="mt-4 grid place-items-center">
           {qrDataUrl ? (
-            <div className="aspect-square w-full max-w-[280px] rounded-2xl border-2 border-[color:var(--color-brand-200)] bg-white p-3 shadow-lg shadow-rose-100">
+            <div className="aspect-square w-full max-w-[280px] overflow-hidden rounded-2xl border-2 border-[color:var(--color-brand-200)] bg-white p-3 shadow-lg shadow-rose-100">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrDataUrl} alt="PromptPay QR" className="size-full" />
+              <img
+                src={qrDataUrl}
+                alt="PromptPay QR"
+                className="block h-full w-full object-contain"
+              />
             </div>
           ) : (
             <div className="grid aspect-square w-full max-w-[280px] place-items-center rounded-2xl border-2 border-dashed border-rose-200 bg-white text-zinc-400">
