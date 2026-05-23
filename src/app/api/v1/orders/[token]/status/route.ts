@@ -2,6 +2,8 @@ import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { db, OrderStatus } from "@/lib/db";
+import { sendOrderShipped } from "@/lib/email";
+import { buildOrderRef } from "@/lib/orders";
 
 interface Ctx {
   params: Promise<{ token: string }>;
@@ -75,7 +77,29 @@ export async function PATCH(request: Request, ctx: Ctx) {
   const updated = await db.order.update({
     where: { id: order.id },
     data,
+    include: { shop: { select: { name: true, contact: true } } },
   });
+
+  // Fire shipping notification email when transitioning to SHIPPING
+  if (status === "SHIPPING" && updated.customerEmail) {
+    const items = updated.items as Array<{
+      productName: string;
+      qty: number;
+      priceSatang: number;
+    }>;
+    void sendOrderShipped({
+      ref: buildOrderRef(updated.createdAt, updated.id),
+      token: updated.publicToken,
+      customerName: updated.customerName,
+      customerEmail: updated.customerEmail,
+      totalSatang: updated.totalSatang,
+      items,
+      shopName: updated.shop.name,
+      shopContactEmail:
+        (updated.shop.contact as { email?: string } | null)?.email ?? null,
+      trackingNumber: updated.trackingNumber,
+    });
+  }
 
   return ok({ order: updated });
 }

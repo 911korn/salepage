@@ -2,6 +2,8 @@ import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { db, OrderStatus } from "@/lib/db";
 import { verifySlip } from "@/lib/slip-verify";
+import { sendOrderPaid, sendPaymentReceivedAlert } from "@/lib/email";
+import { buildOrderRef } from "@/lib/orders";
 
 interface Ctx {
   params: Promise<{ token: string }>;
@@ -37,7 +39,17 @@ export async function POST(request: Request, ctx: Ctx) {
 
   const order = await db.order.findUnique({
     where: { publicToken: token },
-    include: { shop: { select: { id: true, promptpayId: true } } },
+    include: {
+      shop: {
+        select: {
+          id: true,
+          name: true,
+          promptpayId: true,
+          contact: true,
+          owner: { select: { email: true } },
+        },
+      },
+    },
   });
   if (!order) return fail("not_found", "ไม่พบออเดอร์นี้", 404);
 
@@ -114,6 +126,39 @@ export async function POST(request: Request, ctx: Ctx) {
       }),
     ),
   );
+
+  // Fire email notifications (non-blocking, errors swallowed)
+  const ref = buildOrderRef(order.createdAt, order.id);
+  const shopContactEmail =
+    (order.shop.contact as { email?: string } | null)?.email ?? null;
+  // items snapshot was persisted as Json — re-read into the email-friendly shape
+  const emailItems = (order.items as unknown as Array<{
+    productName: string;
+    qty: number;
+    priceSatang: number;
+  }>).map((it) => ({
+    productName: it.productName,
+    qty: it.qty,
+    priceSatang: it.priceSatang,
+  }));
+  const emailCtx = {
+    ref,
+    token: order.publicToken,
+    customerName: order.customerName,
+    customerEmail: order.customerEmail,
+    totalSatang: order.totalSatang,
+    items: emailItems,
+    shopName: order.shop.name,
+    shopContactEmail,
+    slipRef: updated.slipRef ?? undefined,
+  };
+  void sendOrderPaid(emailCtx);
+  if (order.shop.owner?.email) {
+    void sendPaymentReceivedAlert({
+      ...emailCtx,
+      ownerEmail: order.shop.owner.email,
+    });
+  }
 
   return ok({
     verified: true,

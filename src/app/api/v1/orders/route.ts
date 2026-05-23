@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { db, OrderStatus, ProductStatus } from "@/lib/db";
-import { generateOrderToken } from "@/lib/orders";
+import { generateOrderToken, buildOrderRef } from "@/lib/orders";
 import { generatePromptPay } from "@/lib/promptpay";
+import { sendOrderCreated, sendNewOrderAlert } from "@/lib/email";
 
 const Item = z.object({
   productSlug: z.string().min(1),
@@ -42,6 +43,8 @@ export async function POST(request: Request) {
       name: true,
       status: true,
       promptpayId: true,
+      contact: true,
+      owner: { select: { email: true } },
     },
   });
   if (!shop || shop.status !== "ACTIVE") {
@@ -116,6 +119,31 @@ export async function POST(request: Request) {
       notes: input.notes,
     },
   });
+
+  // Fire emails in the background — don't await + don't fail the order on email error.
+  const ref = buildOrderRef(order.createdAt, order.id);
+  const shopContactEmail =
+    (shop.contact as { email?: string } | null)?.email ?? null;
+  const emailCtx = {
+    ref,
+    token: order.publicToken,
+    customerName: order.customerName,
+    customerEmail: order.customerEmail,
+    totalSatang: order.totalSatang,
+    items: itemsSnapshot,
+    shopName: shop.name,
+    shopContactEmail,
+  };
+  // Customer confirmation
+  void sendOrderCreated(emailCtx);
+  // Shop-owner alert
+  if (shop.owner?.email) {
+    void sendNewOrderAlert({
+      ...emailCtx,
+      ownerEmail: shop.owner.email,
+      dashboardSlug: shop.slug,
+    });
+  }
 
   return ok(
     {
