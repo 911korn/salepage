@@ -323,6 +323,78 @@
       "desc": "Open an online store in a few steps — share the link and you're selling.",
       "cta": "Start creating"
     },
+    "orders": {
+      "title": "Orders",
+      "filters": {
+        "all": "All",
+        "pending": "Pending",
+        "paid": "Paid",
+        "shipping": "Shipping",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled"
+      },
+      "empty": "No orders in this filter yet",
+      "headers": {
+        "order": "Order",
+        "customer": "Customer",
+        "total": "Total",
+        "status": "Status",
+        "time": "Time"
+      },
+      "detail": {
+        "title": "Order {ref}",
+        "items": "Items",
+        "customer": "Recipient",
+        "shipping": "Shipping address",
+        "payment": "Payment",
+        "slipRef": "Slip reference",
+        "trackingNumber": "Tracking number",
+        "trackingPlaceholder": "e.g. EH123456789TH",
+        "notes": "Notes",
+        "actions": {
+          "markShipping": "Mark shipping",
+          "markDelivered": "Mark delivered",
+          "cancel": "Cancel order",
+          "save": "Save",
+          "viewPublic": "View customer tracking page",
+          "copyTrackingLink": "Copy tracking link for customer",
+          "linkCopied": "Link copied"
+        },
+        "errors": {
+          "updateFailed": "Could not update order"
+        }
+      }
+    },
+    "settings": {
+      "title": "Shop settings",
+      "subtitle": "Edit details, theme, contact info, and PromptPay",
+      "sections": {
+        "general": "General",
+        "contact": "Contact",
+        "payment": "Payment",
+        "policies": "Policies"
+      },
+      "fields": {
+        "name": "Shop name",
+        "description": "Description",
+        "category": "Category",
+        "themeColor": "Theme color",
+        "logoText": "Logo text",
+        "logoHint": "1 character — shown inside the round logo",
+        "promptpayId": "PromptPay ID",
+        "promptpayHint": "10-digit phone or 13-digit national ID — used to generate customer payment QRs",
+        "phone": "Shop phone",
+        "line": "LINE ID",
+        "facebook": "Facebook URL",
+        "returnPolicy": "Return policy",
+        "shippingTime": "Shipping time"
+      },
+      "save": "Save settings",
+      "saved": "Saved",
+      "errors": {
+        "saveFailed": "Could not save"
+      }
+    },
     "products": {
       "title": "All products",
       "subtitle": "{n} items",

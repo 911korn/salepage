@@ -323,6 +323,78 @@
       "desc": "เปิดร้านออนไลน์ในไม่กี่ขั้นตอน — แชร์ลิงก์ขายได้ทันที",
       "cta": "เริ่มสร้างร้าน"
     },
+    "orders": {
+      "title": "ออเดอร์",
+      "filters": {
+        "all": "ทั้งหมด",
+        "pending": "รอชำระ",
+        "paid": "ชำระแล้ว",
+        "shipping": "รอจัดส่ง",
+        "delivered": "ส่งสำเร็จ",
+        "cancelled": "ยกเลิก"
+      },
+      "empty": "ยังไม่มีออเดอร์ในตัวกรองนี้",
+      "headers": {
+        "order": "ออเดอร์",
+        "customer": "ลูกค้า",
+        "total": "ยอด",
+        "status": "สถานะ",
+        "time": "เวลา"
+      },
+      "detail": {
+        "title": "ออเดอร์ {ref}",
+        "items": "รายการสินค้า",
+        "customer": "ผู้รับ",
+        "shipping": "ที่อยู่จัดส่ง",
+        "payment": "การชำระเงิน",
+        "slipRef": "เลขอ้างอิงสลิป",
+        "trackingNumber": "เลขพัสดุ",
+        "trackingPlaceholder": "เช่น EH123456789TH",
+        "notes": "หมายเหตุ",
+        "actions": {
+          "markShipping": "เริ่มจัดส่ง",
+          "markDelivered": "ส่งสำเร็จ",
+          "cancel": "ยกเลิกออเดอร์",
+          "save": "บันทึก",
+          "viewPublic": "ดูหน้า public ของลูกค้า",
+          "copyTrackingLink": "คัดลอกลิงก์ติดตามให้ลูกค้า",
+          "linkCopied": "คัดลอกลิงก์แล้ว"
+        },
+        "errors": {
+          "updateFailed": "อัปเดตออเดอร์ไม่สำเร็จ"
+        }
+      }
+    },
+    "settings": {
+      "title": "ตั้งค่าร้าน",
+      "subtitle": "ปรับข้อมูล สี การติดต่อ และ PromptPay ของร้าน",
+      "sections": {
+        "general": "ทั่วไป",
+        "contact": "ช่องทางติดต่อ",
+        "payment": "การชำระเงิน",
+        "policies": "นโยบาย"
+      },
+      "fields": {
+        "name": "ชื่อร้าน",
+        "description": "คำอธิบายร้าน",
+        "category": "หมวดหมู่",
+        "themeColor": "สีธีม",
+        "logoText": "ตัวอักษรในโลโก้",
+        "logoHint": "1 ตัวอักษร — แสดงในวงกลม logo",
+        "promptpayId": "PromptPay ID",
+        "promptpayHint": "เบอร์โทร 10 หลัก หรือเลขบัตร 13 หลัก — ใช้สร้าง QR ตอนลูกค้าจ่ายเงิน",
+        "phone": "เบอร์โทรร้าน",
+        "line": "LINE ID",
+        "facebook": "Facebook URL",
+        "returnPolicy": "นโยบายคืนสินค้า",
+        "shippingTime": "ระยะเวลาจัดส่ง"
+      },
+      "save": "บันทึกการตั้งค่า",
+      "saved": "บันทึกเรียบร้อย",
+      "errors": {
+        "saveFailed": "บันทึกไม่สำเร็จ"
+      }
+    },
     "products": {
       "title": "สินค้าทั้งหมด",
       "subtitle": "{n} รายการ",
