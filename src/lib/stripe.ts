@@ -26,38 +26,72 @@ export function getStripe(): Stripe {
   return _client;
 }
 
-export type PlanKey = "pro" | "business";
+export type PlanKey = "starter" | "pro" | "business" | "agency";
+export type BillingPeriod = "month" | "year";
 
 export interface PlanDef {
   key: PlanKey;
-  priceEnvVar: "STRIPE_PRICE_PRO" | "STRIPE_PRICE_BUSINESS";
-  /** Days of free trial. 0 = no trial / immediate billing. */
+  /** Monthly price in THB (for one-time PromptPay flow). Annual = 10x */
+  monthlyTHB: number;
+  /** Stripe price ID env-var prefixes: STRIPE_PRICE_{KEY}_{PERIOD} */
   trialDays: number;
   /** Whether this plan can be self-served via Checkout. */
   selfService: boolean;
+  /** Display-only: product limit shown on pricing card. null = unlimited */
+  productLimit: number | null;
+  /** Monthly AI-slip verification quota included (0 = pay per slip) */
+  slipsPerMonth: number;
 }
 
 export const PLANS: Record<PlanKey, PlanDef> = {
+  starter: {
+    key: "starter",
+    monthlyTHB: 199,
+    trialDays: 0,
+    selfService: true,
+    productLimit: 30,
+    slipsPerMonth: 0,
+  },
   pro: {
     key: "pro",
-    priceEnvVar: "STRIPE_PRICE_PRO",
+    monthlyTHB: 399,
     trialDays: 14,
     selfService: true,
+    productLimit: 200,
+    slipsPerMonth: 300,
   },
   business: {
     key: "business",
-    priceEnvVar: "STRIPE_PRICE_BUSINESS",
+    monthlyTHB: 990,
     trialDays: 0,
     selfService: true,
+    productLimit: 1000,
+    slipsPerMonth: 1500,
+  },
+  agency: {
+    key: "agency",
+    monthlyTHB: 2990,
+    trialDays: 0,
+    selfService: true,
+    productLimit: null,
+    slipsPerMonth: 10000,
   },
 };
 
-export function getPriceIdForPlan(key: PlanKey): string {
-  const def = PLANS[key];
-  const id = process.env[def.priceEnvVar];
+/**
+ * Look up Stripe price ID by plan + period.
+ * Env vars STRIPE_PRICE_{KEY}_{MONTH|YEAR} were created via the
+ * provisioning script — see .env.local for the live values.
+ */
+export function getPriceIdForPlan(
+  key: PlanKey,
+  period: BillingPeriod = "month",
+): string {
+  const envVar = `STRIPE_PRICE_${key.toUpperCase()}_${period.toUpperCase()}`;
+  const id = process.env[envVar];
   if (!id) {
     throw new Error(
-      `${def.priceEnvVar} is not set. Run the Stripe provisioning script, then update Vercel env.`,
+      `${envVar} is not set. Run the Stripe provisioning script, then update Vercel env.`,
     );
   }
   return id;

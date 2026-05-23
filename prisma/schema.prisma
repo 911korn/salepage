@@ -265,9 +265,11 @@ model Subscription {
 }
 
 enum PlanKey {
+  FREE
   STARTER
   PRO
   BUSINESS
+  AGENCY
 }
 
 enum SubscriptionStatus {

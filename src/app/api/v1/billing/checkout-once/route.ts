@@ -9,21 +9,34 @@ import { getStripe, getSiteUrl, stripeLocale } from "@/lib/stripe";
 // rolling Subscription record.
 
 const Body = z.object({
-  plan: z.enum(["pro", "business"]),
-  period: z.enum(["month", "year"]).default("month"),
+  plan: z.enum(["starter", "pro", "business", "agency"]),
+  period: z.enum(["month", "year"]).default("year"),
   email: z.string().email().optional(),
   locale: z.enum(["th", "en"]).optional().default("th"),
   shopSlug: z.string().optional(),
 });
 
-const PLAN_LABELS: Record<"pro" | "business", string> = {
+type PaidPlan = "starter" | "pro" | "business" | "agency";
+
+const PLAN_LABELS: Record<PaidPlan, string> = {
+  starter: "SalePage Starter",
   pro: "SalePage Pro",
   business: "SalePage Business",
+  agency: "SalePage Agency",
 };
 
-const MONTHLY_THB: Record<"pro" | "business", number> = {
-  pro: 299,
-  business: 790,
+const MONTHLY_THB: Record<PaidPlan, number> = {
+  starter: 199,
+  pro: 399,
+  business: 990,
+  agency: 2990,
+};
+
+const PLAN_DESCRIPTIONS: Record<PaidPlan, string> = {
+  starter: "Starter — 30 สินค้า ไม่มีโลโก้ SalePage รับออเดอร์เต็มรูปแบบ",
+  pro: "Pro — 200 สินค้า Custom Domain LINE alerts AI slip 300/เดือน",
+  business: "Business — 1,000 สินค้า หลายแอดมิน AI slip 1,500/เดือน",
+  agency: "Agency — 50 ร้าน Client Workspace AI slip 10,000/เดือน",
 };
 
 export async function POST(request: Request) {
@@ -52,10 +65,7 @@ export async function POST(request: Request) {
             unit_amount: amountSatang,
             product_data: {
               name: `${PLAN_LABELS[plan]} · ${periodLabel}`,
-              description:
-                plan === "pro"
-                  ? "Pro plan — unlimited products, AI slip verification, custom domain, VIP support"
-                  : "Business plan — multi-shop, priority support, advanced analytics",
+              description: PLAN_DESCRIPTIONS[plan],
             },
           },
           quantity: 1,

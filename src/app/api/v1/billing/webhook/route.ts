@@ -139,7 +139,13 @@ async function extendOneTimeSubscription(
   const planMeta = session.metadata?.plan;
   const periodMeta = session.metadata?.period ?? "month";
   const planKey =
-    planMeta === "business" ? PlanKey.BUSINESS : PlanKey.PRO;
+    planMeta === "starter"
+      ? PlanKey.STARTER
+      : planMeta === "business"
+        ? PlanKey.BUSINESS
+        : planMeta === "agency"
+          ? PlanKey.AGENCY
+          : PlanKey.PRO;
   const days = periodMeta === "year" ? 365 : 30;
 
   // Roll the existing currentPeriodEnd forward if it's still active; otherwise
@@ -236,12 +242,27 @@ async function upsertSubscription(userId: string, sub: Stripe.Subscription) {
 function mapPlan(sub: Stripe.Subscription): PlanKey {
   // Prefer metadata.plan (we set this on Checkout creation), fall back to price id lookup.
   const metaPlan = sub.metadata?.plan;
+  if (metaPlan === "starter") return PlanKey.STARTER;
   if (metaPlan === "pro") return PlanKey.PRO;
   if (metaPlan === "business") return PlanKey.BUSINESS;
+  if (metaPlan === "agency") return PlanKey.AGENCY;
 
   const priceId = sub.items.data[0]?.price?.id;
-  if (priceId === process.env.STRIPE_PRICE_PRO) return PlanKey.PRO;
-  if (priceId === process.env.STRIPE_PRICE_BUSINESS) return PlanKey.BUSINESS;
+  // Check all month + year price IDs across all 4 paid tiers
+  const PRICE_TO_PLAN: Record<string, PlanKey> = {};
+  for (const tier of ["STARTER", "PRO", "BUSINESS", "AGENCY"] as const) {
+    for (const period of ["MONTH", "YEAR"] as const) {
+      const env = process.env[`STRIPE_PRICE_${tier}_${period}`];
+      if (env) PRICE_TO_PLAN[env] = PlanKey[tier];
+    }
+  }
+  // Legacy single-period env keys
+  if (process.env.STRIPE_PRICE_PRO)
+    PRICE_TO_PLAN[process.env.STRIPE_PRICE_PRO] = PlanKey.PRO;
+  if (process.env.STRIPE_PRICE_BUSINESS)
+    PRICE_TO_PLAN[process.env.STRIPE_PRICE_BUSINESS] = PlanKey.BUSINESS;
+
+  if (priceId && PRICE_TO_PLAN[priceId]) return PRICE_TO_PLAN[priceId];
   return PlanKey.PRO; // safe default
 }
 

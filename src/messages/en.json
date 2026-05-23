@@ -139,56 +139,118 @@
     "viewAll": "View all products"
   },
   "pricing": {
-    "tagline": "Starts free",
-    "title1": "Pay only for what you use —",
-    "titleHighlight": "30%+ cheaper than competitors",
-    "desc": "Free forever. No per-order fee. Customers transfer money straight to your account.",
+    "tagline": "Open free",
+    "title1": "Open your shop free —",
+    "titleHighlight": "pay only when you want help",
+    "desc": "Open an online store, take orders, and get paid via PromptPay — no commission, no per-order fee, money goes straight to your bank account.",
     "footnote": "Prices include 7% VAT · cancel anytime · upgrade/downgrade any month",
     "perMonth": "/month",
+    "perYear": "/year",
     "lifetime": "Forever",
+    "toggle": {
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "saveBadge": "Save 2 months"
+    },
+    "popular": "Most popular",
     "plans": {
-      "starter": {
-        "name": "Starter",
-        "desc": "Start selling with no costs",
+      "free": {
+        "name": "Free",
+        "desc": "For sellers who just want to start simple",
         "cta": "Start free",
         "features": [
           "Up to 5 products",
-          "2 images per product",
-          "Automatic PromptPay QR",
-          "Manual slip verification",
-          "subdomain salepage.in.th/{your-shop}",
-          "Basic back-office"
+          "Shareable shop link",
+          "Receive orders through the web",
+          "Auto-generated PromptPay QR",
+          "Customers attach payment slip",
+          "SalePage logo shown on storefront",
+          "AI slip verify: buy credits separately"
+        ]
+      },
+      "starter": {
+        "name": "Starter",
+        "desc": "For shops starting real sales that want a more polished page",
+        "cta": "Start Starter",
+        "features": [
+          "Up to 30 products",
+          "No SalePage logo",
+          "More storefront customization",
+          "Full order management",
+          "Auto PromptPay QR",
+          "Basic order notifications",
+          "AI slip verify: buy credits separately"
         ]
       },
       "pro": {
         "name": "Pro",
-        "desc": "For shops that need full power",
+        "desc": "Popular — for shops selling every day",
         "cta": "Try Pro free 14 days",
         "features": [
-          "Unlimited products",
-          "10 images per product",
-          "AI slip verify ฿0.50 / slip",
-          "Coupons + loyalty points",
-          "Analytics + funnel report",
+          "Up to 200 products",
           "Your own custom domain",
-          "Verified ✓ badge",
-          "VIP support within 1 hour"
+          "No SalePage logo",
+          "Full order + checkout suite",
+          "Auto PromptPay QR",
+          "LINE notifications",
+          "Basic analytics",
+          "Ad campaign support",
+          "AI slip verify · 300 slips/month included"
         ]
       },
       "business": {
         "name": "Business",
-        "desc": "Multiple shops, multiple brands, one account",
+        "desc": "For shops with high volume, real ad spend, or a team",
         "cta": "Start Business",
         "features": [
-          "Everything in Pro",
-          "Up to 5 shops per account",
-          "Unlimited free AI slip verify",
-          "API + Webhook for ERP",
-          "Webhook → LINE OA / Slack",
-          "10 staff users per branch",
-          "99.9% SLA + Account Manager"
+          "Up to 1,000 products",
+          "Multiple landing pages / campaigns",
+          "Multiple admins",
+          "Custom domain",
+          "No SalePage logo",
+          "LINE notifications",
+          "Advanced analytics",
+          "Order data export",
+          "Webhook / API",
+          "Priority support",
+          "AI slip verify · 1,500 slips/month included"
+        ]
+      },
+      "agency": {
+        "name": "Agency",
+        "desc": "For agencies, multi-shop operators, or brand-management teams",
+        "cta": "Start Agency",
+        "features": [
+          "Up to 50 shops / campaigns",
+          "Client workspace",
+          "Team access",
+          "Custom domain",
+          "No SalePage logo",
+          "Webhook / API",
+          "Data export",
+          "Advanced analytics",
+          "Priority support",
+          "AI slip verify · 10,000 slips/month included"
         ]
       }
+    },
+    "credits": {
+      "title": "AI slip-verify credits",
+      "subtitle": "For Free and Starter users — or anyone who needs more slips. AI checks the amount, transfer time, and slip integrity in real time.",
+      "packs": [
+        { "slips": 50, "priceBaht": 49 },
+        { "slips": 150, "priceBaht": 129 },
+        { "slips": 500, "priceBaht": 399 },
+        { "slips": 1500, "priceBaht": 990 },
+        { "slips": 5000, "priceBaht": 2900 }
+      ],
+      "buyCta": "Buy credits",
+      "footnote": "Credits never expire. Usable across every shop in the same account."
+    },
+    "guarantees": {
+      "noCommission": "No commission",
+      "noFee": "No per-order fee",
+      "direct": "Money goes direct to your bank"
     }
   },
   "finalCta": {

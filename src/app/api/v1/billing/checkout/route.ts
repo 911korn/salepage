@@ -10,7 +10,8 @@ import {
 } from "@/lib/stripe";
 
 const Body = z.object({
-  plan: z.enum(["pro", "business"]),
+  plan: z.enum(["starter", "pro", "business", "agency"]),
+  period: z.enum(["month", "year"]).optional().default("year"),
   email: z.string().email().optional(),
   locale: z.enum(["th", "en"]).optional().default("th"),
   shopSlug: z.string().optional(),
@@ -19,11 +20,11 @@ const Body = z.object({
 export async function POST(request: Request) {
   const parsed = await parseJson(request, Body);
   if (!parsed.ok) return parsed.response;
-  const { plan, email, locale, shopSlug } = parsed.data;
+  const { plan, period, email, locale, shopSlug } = parsed.data;
 
   try {
     const stripe = getStripe();
-    const priceId = getPriceIdForPlan(plan as PlanKey);
+    const priceId = getPriceIdForPlan(plan as PlanKey, period);
     const planDef = PLANS[plan as PlanKey];
     const base = getSiteUrl();
     const localePrefix = locale === "th" ? "" : `/${locale}`;
@@ -48,12 +49,14 @@ export async function POST(request: Request) {
           : {}),
         metadata: {
           plan,
+          period,
           locale,
           ...(shopSlug ? { shopSlug } : {}),
         },
       },
       metadata: {
         plan,
+        period,
         locale,
         ...(shopSlug ? { shopSlug } : {}),
       },
