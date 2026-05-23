@@ -65,6 +65,12 @@ export default async function StorefrontPage({ params }: PageProps) {
     },
   });
 
+  // Admin-suspended shops disappear from public view. Owner can see why in
+  // /dashboard banner (TODO) and reach out to support.
+  if (dbShop?.suspended) {
+    notFound();
+  }
+
   // Watermark shows for FREE-tier shops only. Demo shops + paid tiers hide it.
   // Per pricing copy: "มีโลโก้ SalePage บนหน้าเว็บ" (Free) → "ไม่มีโลโก้" (paid).
   const ownerPlan = dbShop ? await getEffectivePlan(dbShop.ownerId) : null;

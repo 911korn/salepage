@@ -29,13 +29,29 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Platform admin role. USER = regular shop owner. ADMIN = SalePage operator
+  // with access to /admin. SUPER_ADMIN can grant/revoke other users' roles
+  // and edit PlatformSetting. Defaults to USER for all signups.
+  role          UserRole  @default(USER)
+
   // Stripe (one customer per User across all their shops)
   stripeCustomerId String? @unique
 
-  accounts     Account[]
-  sessions     Session[]
-  shops        Shop[]
-  subscription Subscription?
+  // Soft-suspend flag set by /admin/users. Blocks sign-in via NextAuth
+  // signIn callback; does not delete data.
+  suspended     Boolean   @default(false)
+
+  accounts       Account[]
+  sessions       Session[]
+  shops          Shop[]
+  subscription   Subscription?
+  adminActions   AdminAuditLog[] @relation("AdminActor")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
 }
 
 model Account {
@@ -121,6 +137,17 @@ model Shop {
   rating     Float @default(0)
   totalSold  Int   @default(0)
 
+  // Admin-only flags. Distinct from owner-controlled `status` (PAUSED/ARCHIVED).
+  // `suspended` = platform admin took shop offline (returns 503 on storefront).
+  // `featured`  = pinned on landing/discover surfaces by admin.
+  suspended  Boolean @default(false)
+  featured   Boolean @default(false)
+
+  // AI slip-verify credit wallet. Admin can top up via /admin/shops/[id].
+  // Decremented per /api/v1/slip/verify call once the plan's monthly quota
+  // is exhausted. Defaults to 0 so paid tiers fall back gracefully.
+  slipCredits Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -132,6 +159,7 @@ model Shop {
   conversations Conversation[]
 
   @@index([ownerId])
+  @@index([featured, status])
 }
 
 enum ShopStatus {
@@ -418,4 +446,41 @@ model CustomerLoyalty {
 
   @@unique([shopId, customerPhone])
   @@index([shopId, points])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Platform admin (/admin) — global config + audit trail
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Key-value store for platform-wide flags edited from /admin/settings.
+/// Reads use getPlatformSetting() with in-process cache; writes invalidate it.
+///
+/// Reserved keys (with shapes):
+///   announcement_banner  { enabled: bool, text: string, tone: "info"|"warning" }
+///   maintenance_mode     { enabled: bool, message: string, allowedRoles: string[] }
+///   email_from_override  { from: string }
+///   slip_verify_provider { provider: "slipok"|"easyslip"|"mock" }
+///   default_plan_caps    { products: number, ordersPerMonth: number, slipsPerMonth: number }
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+/// Every mutating admin action gets a row here. Append-only — no UI to edit.
+/// Surfaced at /admin/audit, used for incident review + accountability.
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation("AdminActor", fields: [actorId], references: [id], onDelete: Cascade)
+  action     String   // e.g. "user.suspend", "shop.feature", "settings.update"
+  targetType String?  // "user" | "shop" | "subscription" | "review" | "setting" | ...
+  targetId   String?
+  diff       Json?    // before/after snapshot or arbitrary action context
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }

@@ -44,13 +44,14 @@ export async function POST(request: Request) {
       slug: true,
       name: true,
       status: true,
+      suspended: true,
       promptpayId: true,
       contact: true,
       loyaltyBahtValuePerPoint: true,
       owner: { select: { email: true } },
     },
   });
-  if (!shop || shop.status !== "ACTIVE") {
+  if (!shop || shop.status !== "ACTIVE" || shop.suspended) {
     return fail("shop_not_found", "ไม่พบร้านค้านี้", 404);
   }
 

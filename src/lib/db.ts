@@ -12,6 +12,7 @@ export {
   OrderStatus,
   CouponType,
   ConversationMessageDirection,
+  UserRole,
 } from "@/generated/prisma";
 
 function makeClient() {

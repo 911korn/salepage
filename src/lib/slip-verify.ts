@@ -215,3 +215,51 @@ function pickNumber(obj: Record<string, unknown>, path: string[]): number | unde
   }
   return typeof cur === "number" ? cur : undefined;
 }
+
+export interface SlipOkQuota {
+  ok: boolean;
+  quota?: number;
+  used?: number;
+  remaining?: number;
+  expireDate?: string;
+  error?: string;
+}
+
+/// Fetches SlipOK remaining quota for the configured branch. Returns
+/// { ok:false } with an error string if the API key is missing or call fails.
+/// Surfaces on /admin overview as an early-warning gauge.
+export async function getSlipOkQuota(): Promise<SlipOkQuota> {
+  const apiKey = process.env.SLIPOK_API_KEY;
+  const branchId = process.env.SLIPOK_BRANCH_ID;
+  if (!apiKey || !branchId) {
+    return { ok: false, error: "SLIPOK_API_KEY / SLIPOK_BRANCH_ID not set" };
+  }
+  try {
+    const res = await fetch(
+      `https://api.slipok.com/api/line/apikey/${branchId}/quota`,
+      { headers: { "x-authorization": apiKey }, cache: "no-store" },
+    );
+    const json = (await res.json()) as {
+      success?: boolean;
+      data?: { quota?: number; specialQuota?: number; overQuota?: number; expireDate?: string };
+      message?: string;
+    };
+    if (!res.ok || !json.success || !json.data) {
+      return { ok: false, error: json.message ?? `HTTP ${res.status}` };
+    }
+    const quota = json.data.quota ?? 0;
+    const overQuota = json.data.overQuota ?? 0;
+    return {
+      ok: true,
+      quota,
+      used: overQuota,
+      remaining: Math.max(0, quota - overQuota),
+      expireDate: json.data.expireDate,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+}

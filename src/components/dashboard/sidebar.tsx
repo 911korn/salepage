@@ -11,6 +11,7 @@ import {
   Package,
   Plus,
   Settings,
+  ShieldAlert,
   ShoppingBag,
   Star,
   Ticket,
@@ -37,6 +38,7 @@ interface UserSummary {
   email: string | null;
   image: string | null;
   plan?: string;
+  isAdmin?: boolean;
 }
 
 interface Props {
@@ -207,6 +209,14 @@ export function DashboardSidebar({ shops, activeShopSlug, user }: Props) {
             <LogOut className="size-3.5" /> {t("common.signOut")}
           </button>
         </div>
+        {user.isAdmin ? (
+          <Link
+            href="/admin"
+            className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-2 py-1.5 text-[12px] font-medium text-white hover:bg-zinc-800"
+          >
+            <ShieldAlert className="size-3.5" /> เปิด Admin Panel
+          </Link>
+        ) : null}
       </div>
     </aside>
   );

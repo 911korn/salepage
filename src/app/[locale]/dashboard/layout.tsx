@@ -2,6 +2,7 @@ import { setRequestLocale } from "next-intl/server";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { requireDashboardSession } from "@/lib/dashboard";
+import { viewerIsAdmin } from "@/lib/admin";
 import type { Locale } from "@/i18n/routing";
 
 interface Props {
@@ -14,6 +15,7 @@ export default async function DashboardLayout({ children, params }: Props) {
   setRequestLocale(locale as Locale);
 
   const { user, shops } = await requireDashboardSession();
+  const isAdmin = await viewerIsAdmin();
 
   // Default to first shop; UI can switch via ?shop=slug
   const activeShop = shops[0];
@@ -35,6 +37,7 @@ export default async function DashboardLayout({ children, params }: Props) {
           email: user.email,
           image: user.image,
           plan: user.subscription?.plan,
+          isAdmin,
         }}
       />
       <div className="flex min-w-0 flex-1 flex-col">
