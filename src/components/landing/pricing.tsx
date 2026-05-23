@@ -98,8 +98,23 @@ export function Pricing() {
 
         {/* iOS-style yearly toggle — default ON so the 17% saving is the first read */}
         <div className="mt-10 flex items-center justify-center gap-3">
-          <span className="text-[15px] font-semibold text-zinc-900">
-            {t("toggle.saveBadge")}
+          <span
+            className={cn(
+              "inline-flex items-center gap-2 text-[15px] transition-colors",
+              yearly ? "font-semibold text-zinc-900" : "text-zinc-500",
+            )}
+          >
+            {t("toggle.yearly")}
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider transition-opacity",
+                yearly
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-zinc-100 text-zinc-400",
+              )}
+            >
+              {t("toggle.saveBadge")}
+            </span>
           </span>
           <button
             type="button"
@@ -123,7 +138,7 @@ export function Pricing() {
           </button>
           <span
             className={cn(
-              "text-[13px] transition-colors",
+              "text-[15px] transition-colors",
               yearly ? "text-zinc-500" : "font-semibold text-zinc-900",
             )}
           >
