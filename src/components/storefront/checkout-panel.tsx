@@ -9,8 +9,10 @@ import {
   Plus,
   PlusCircle,
   ShoppingBag,
+  ShoppingCart,
   Sparkles,
   Ticket,
+  Trash2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -27,7 +29,18 @@ interface Props {
     priceBaht: number;
     type: "PHYSICAL" | "DIGITAL";
     stock?: number | null;
+    image?: string | null;
   };
+}
+
+interface CheckoutItem {
+  productSlug: string;
+  name: string;
+  priceBaht: number;
+  type: "PHYSICAL" | "DIGITAL";
+  stock?: number | null;
+  image?: string | null;
+  qty: number;
 }
 
 interface AddressSuggestion {
@@ -64,6 +77,8 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
   const t = useTranslations("order.checkout");
   const [pending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState<"single" | "cart">("single");
+  const [cartItems, setCartItems] = useState<CheckoutItem[]>([]);
 
   const [qty, setQty] = useState(1);
   const [name, setName] = useState("");
@@ -101,16 +116,42 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
     address: "",
   });
 
-  const subtotal = product.priceBaht * qty;
+  const singleItem: CheckoutItem = {
+    productSlug: product.slug,
+    name: product.name,
+    priceBaht: product.priceBaht,
+    type: product.type,
+    stock: product.stock,
+    image: product.image,
+    qty,
+  };
+  const checkoutItems = checkoutMode === "cart" ? cartItems : [singleItem];
+  const subtotal = checkoutItems.reduce(
+    (sum, item) => sum + item.priceBaht * item.qty,
+    0,
+  );
   const shipping = 0; // v1: shop sets per-product shipping later
   const couponDiscount = couponApplied?.discountBaht ?? 0;
   const pointsDiscount =
     redeemPoints * (loyalty?.bahtValuePerPoint ?? 0);
   const total = Math.max(0, subtotal + shipping - couponDiscount - pointsDiscount);
-  const needsAddress = product.type === "PHYSICAL";
+  const needsAddress = checkoutItems.some((item) => item.type === "PHYSICAL");
   const soldOut = product.stock === 0;
+  const cartCount = countCartItems(cartItems);
+  const cartTotal = totalCartBaht(cartItems);
+  const cartInvalid = checkoutMode === "cart" && cartItems.length === 0;
   const cleanPhone = normalizePhoneForCheckout(phone);
   const phoneReady = cleanPhone.length >= 9;
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setCartItems(readCart(shopSlug));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [shopSlug]);
 
   useEffect(() => {
     fieldValuesRef.current = { name, phone, email, address };
@@ -314,6 +355,76 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
     setSelectedThaiAddress(null);
   }
 
+  function persistCart(items: CheckoutItem[]) {
+    const normalized = normalizeCartItems(items);
+    setCartItems(normalized);
+    writeCart(shopSlug, normalized);
+    return normalized;
+  }
+
+  function addCurrentProductToCart() {
+    if (soldOut) {
+      toast.error("สินค้าหมดสต๊อก");
+      return;
+    }
+
+    const next = persistCart([
+      ...cartItems,
+      {
+        productSlug: product.slug,
+        name: product.name,
+        priceBaht: product.priceBaht,
+        type: product.type,
+        stock: product.stock,
+        image: product.image,
+        qty: 1,
+      },
+    ]);
+    const item = next.find((cartItem) => cartItem.productSlug === product.slug);
+    toast.success("ใส่ตะกร้าแล้ว", {
+      description: `${product.name} x ${item?.qty ?? 1}`,
+    });
+  }
+
+  function updateCartQty(productSlug: string, nextQty: number) {
+    persistCart(
+      cartItems.map((item) =>
+        item.productSlug === productSlug
+          ? { ...item, qty: nextQty }
+          : item,
+      ),
+    );
+  }
+
+  function removeCartItem(productSlug: string) {
+    persistCart(cartItems.filter((item) => item.productSlug !== productSlug));
+  }
+
+  function openSingleCheckout() {
+    setCheckoutMode("single");
+    setExpanded(true);
+  }
+
+  function openCartCheckout() {
+    const next =
+      cartItems.length > 0
+        ? cartItems
+        : persistCart([
+            {
+              productSlug: product.slug,
+              name: product.name,
+              priceBaht: product.priceBaht,
+              type: product.type,
+              stock: product.stock,
+              image: product.image,
+              qty: 1,
+            },
+          ]);
+    if (next.length === 0) return;
+    setCheckoutMode("cart");
+    setExpanded(true);
+  }
+
   async function applyCoupon() {
     if (!couponCode.trim()) return;
     setCouponChecking(true);
@@ -346,7 +457,14 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (soldOut) return toast.error("สินค้าหมดสต๊อก");
+    if (cartInvalid) return toast.error("ยังไม่มีสินค้าในตะกร้า");
+    if (checkoutMode === "single" && soldOut) return toast.error("สินค้าหมดสต๊อก");
+    const unavailableItem = checkoutItems.find(
+      (item) => item.stock !== null && item.stock !== undefined && item.stock < item.qty,
+    );
+    if (unavailableItem) {
+      return toast.error(`${unavailableItem.name}: สต๊อกไม่พอ`);
+    }
     if (!name.trim()) return toast.error(t("errors.nameRequired"));
     if (!phone.trim()) return toast.error(t("errors.phoneRequired"));
     if (needsAddress && !address.trim())
@@ -387,6 +505,9 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
           label: makeAddressPreview(address.trim()),
           lastUsedAt: new Date().toISOString(),
         });
+        if (checkoutMode === "cart") {
+          persistCart([]);
+        }
         window.location.assign(`/o/${json.data.token}`);
       } catch (e) {
         toast.error(t("errors.createFailed"), {
@@ -401,7 +522,10 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           shopSlug,
-          items: [{ productSlug: product.slug, qty }],
+          items: checkoutItems.map((item) => ({
+            productSlug: item.productSlug,
+            qty: item.qty,
+          })),
           customerName: name.trim(),
           customerPhone: phone.trim(),
           customerEmail: email.trim() || undefined,
@@ -417,20 +541,61 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
 
   if (!expanded) {
     return (
-      <button
-        type="button"
-        onClick={() => setExpanded(true)}
-        disabled={soldOut}
-        className={cn(
-          "flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white shadow-lg transition-transform active:scale-[0.99]",
-          soldOut
-            ? "cursor-not-allowed bg-zinc-300 shadow-none"
-            : "bg-[color:var(--color-brand-600)] shadow-rose-200 hover:scale-[1.01]",
-        )}
-      >
-        <ShoppingBag className="size-5" />{" "}
-        {soldOut ? "สินค้าหมด" : `${t("buyNow")} · ฿${product.priceBaht.toLocaleString()}`}
-      </button>
+      <div className="space-y-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_4.25rem] gap-2">
+          <button
+            type="button"
+            onClick={openSingleCheckout}
+            disabled={soldOut}
+            className={cn(
+              "flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-4 text-base font-semibold text-white shadow-lg transition-transform active:scale-[0.99]",
+              soldOut
+                ? "cursor-not-allowed bg-zinc-300 shadow-none"
+                : "bg-[color:var(--color-brand-600)] shadow-rose-200 hover:scale-[1.01]",
+            )}
+          >
+            <ShoppingBag className="size-5" />{" "}
+            {soldOut
+              ? "สินค้าหมด"
+              : `${t("buyNow")} · ฿${product.priceBaht.toLocaleString()}`}
+          </button>
+          <button
+            type="button"
+            onClick={addCurrentProductToCart}
+            disabled={soldOut}
+            aria-label="ใส่ตะกร้า"
+            title="ใส่ตะกร้า"
+            className={cn(
+              "relative grid min-h-14 place-items-center rounded-2xl border bg-white text-[color:var(--color-brand-700)] shadow-sm transition active:scale-[0.99]",
+              soldOut
+                ? "cursor-not-allowed border-zinc-200 text-zinc-300"
+                : "border-[color:var(--color-brand-200)] hover:bg-[color:var(--color-brand-50)]",
+            )}
+          >
+            <ShoppingCart className="size-5" />
+            {cartCount > 0 ? (
+              <span className="absolute right-2 top-2 grid min-w-5 place-items-center rounded-full bg-[color:var(--color-brand-600)] px-1 text-[10px] font-bold leading-5 text-white">
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
+        {cartCount > 0 ? (
+          <button
+            type="button"
+            onClick={openCartCheckout}
+            className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-[color:var(--color-brand-200)] bg-white px-4 text-left shadow-sm active:scale-[0.99]"
+          >
+            <span className="inline-flex min-w-0 items-center gap-2 text-sm font-semibold text-zinc-900">
+              <ShoppingCart className="size-4 shrink-0 text-[color:var(--color-brand-600)]" />
+              <span className="truncate">ตะกร้า {cartCount} ชิ้น</span>
+            </span>
+            <span className="shrink-0 text-sm font-bold text-[color:var(--color-brand-700)]">
+              ฿{cartTotal.toLocaleString()}
+            </span>
+          </button>
+        ) : null}
+      </div>
     );
   }
 
@@ -441,31 +606,31 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
     >
       <h2 className="font-display flex items-center gap-2 text-lg font-bold">
         <Sparkles className="size-4 text-[color:var(--color-brand-600)]" />
-        {t("title")}
+        {checkoutMode === "cart" ? "สั่งซื้อจากตะกร้า" : t("title")}
       </h2>
       <p className="mt-1 text-[13px] text-zinc-500">{t("subtitle")}</p>
 
-      {/* Qty row */}
-      <div className="mt-5 flex items-center justify-between">
-        <span className="text-sm font-medium">{t("qty")}</span>
-        <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-border)] bg-white">
-          <button
-            type="button"
-            onClick={() => setQty(Math.max(1, qty - 1))}
-            className="grid size-9 place-items-center rounded-full text-zinc-700 hover:bg-[color:var(--color-soft)]"
-          >
-            <Minus className="size-4" />
-          </button>
-          <span className="w-8 text-center text-sm font-semibold">{qty}</span>
-          <button
-            type="button"
-            onClick={() => setQty(Math.min(99, qty + 1))}
-            className="grid size-9 place-items-center rounded-full text-zinc-700 hover:bg-[color:var(--color-soft)]"
-          >
-            <Plus className="size-4" />
-          </button>
+      {checkoutMode === "cart" ? (
+        <CartItemsEditor
+          items={cartItems}
+          onQtyChange={updateCartQty}
+          onRemove={removeCartItem}
+          onBackToBuyNow={() => {
+            setCheckoutMode("single");
+            if (cartItems.length === 0) setExpanded(false);
+          }}
+        />
+      ) : (
+        <div className="mt-5 flex items-center justify-between">
+          <span className="text-sm font-medium">{t("qty")}</span>
+          <QuantityStepper
+            value={qty}
+            min={1}
+            max={maxQty(product.stock)}
+            onChange={setQty}
+          />
         </div>
-      </div>
+      )}
 
       <div className="mt-4 space-y-3">
         <FieldInput
@@ -659,6 +824,152 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
         {soldOut ? "สินค้าหมด" : t("submit")}
       </Button>
     </form>
+  );
+}
+
+function CartItemsEditor({
+  items,
+  onQtyChange,
+  onRemove,
+  onBackToBuyNow,
+}: {
+  items: CheckoutItem[];
+  onQtyChange: (productSlug: string, qty: number) => void;
+  onRemove: (productSlug: string) => void;
+  onBackToBuyNow: () => void;
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="mt-5 rounded-2xl border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-soft)] p-4 text-sm text-zinc-600">
+        <p className="font-semibold text-zinc-900">ตะกร้ายังว่าง</p>
+        <button
+          type="button"
+          onClick={onBackToBuyNow}
+          className="mt-3 min-h-10 rounded-xl bg-white px-3 text-xs font-bold text-[color:var(--color-brand-700)] ring-1 ring-[color:var(--color-border)]"
+        >
+          กลับไปซื้อสินค้านี้
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 space-y-2 rounded-2xl border border-[color:var(--color-border)] bg-white p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="inline-flex items-center gap-1.5 text-[13px] font-bold text-zinc-900">
+          <ShoppingCart className="size-4 text-[color:var(--color-brand-600)]" />
+          รายการในตะกร้า
+        </p>
+        <button
+          type="button"
+          onClick={onBackToBuyNow}
+          className="min-h-9 rounded-xl px-3 text-xs font-semibold text-zinc-600 ring-1 ring-[color:var(--color-border)]"
+        >
+          ซื้อชิ้นนี้
+        </button>
+      </div>
+      <div className="divide-y divide-[color:var(--color-border)]">
+        {items.map((item) => (
+          <div key={item.productSlug} className="flex gap-3 py-3 first:pt-2 last:pb-1">
+            <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-zinc-100">
+              {item.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.image} alt="" className="size-full object-cover" />
+              ) : (
+                <ShoppingBag className="size-5 text-zinc-400" />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-zinc-900">{item.name}</p>
+                  <p className="text-xs font-semibold text-[color:var(--color-brand-700)]">
+                    ฿{item.priceBaht.toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onRemove(item.productSlug)}
+                  aria-label={`ลบ ${item.name} ออกจากตะกร้า`}
+                  className="grid size-9 shrink-0 place-items-center rounded-xl text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-xs text-zinc-500">
+                  {item.type === "DIGITAL" ? "DIGITAL" : "PHYSICAL"}
+                </span>
+                <QuantityStepper
+                  value={item.qty}
+                  min={1}
+                  max={maxQty(item.stock)}
+                  onChange={(qty) => onQtyChange(item.productSlug, qty)}
+                  compact
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function QuantityStepper({
+  value,
+  min,
+  max,
+  onChange,
+  compact = false,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+  compact?: boolean;
+}) {
+  const nextDown = Math.max(min, value - 1);
+  const nextUp = Math.min(max, value + 1);
+
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border border-[color:var(--color-border)] bg-white",
+        compact && "gap-1",
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => onChange(nextDown)}
+        disabled={value <= min}
+        className={cn(
+          "grid place-items-center rounded-full text-zinc-700 hover:bg-[color:var(--color-soft)] disabled:text-zinc-300",
+          compact ? "size-8" : "size-9",
+        )}
+      >
+        <Minus className="size-4" />
+      </button>
+      <span
+        className={cn(
+          "text-center text-sm font-semibold",
+          compact ? "w-7" : "w-8",
+        )}
+      >
+        {value}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange(nextUp)}
+        disabled={value >= max}
+        className={cn(
+          "grid place-items-center rounded-full text-zinc-700 hover:bg-[color:var(--color-soft)] disabled:text-zinc-300",
+          compact ? "size-8" : "size-9",
+        )}
+      >
+        <Plus className="size-4" />
+      </button>
+    </div>
   );
 }
 
@@ -981,6 +1292,67 @@ function Row({
       </dd>
     </div>
   );
+}
+
+function maxQty(stock?: number | null) {
+  if (stock === null || stock === undefined) return 99;
+  return Math.max(1, Math.min(99, stock));
+}
+
+function cartStorageKey(shopSlug: string) {
+  return `salepage:cart:${shopSlug}`;
+}
+
+function readCart(shopSlug: string): CheckoutItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(cartStorageKey(shopSlug));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CheckoutItem[];
+    if (!Array.isArray(parsed)) return [];
+    return normalizeCartItems(parsed);
+  } catch {
+    return [];
+  }
+}
+
+function writeCart(shopSlug: string, items: CheckoutItem[]) {
+  if (typeof window === "undefined") return;
+  const normalized = normalizeCartItems(items);
+  if (normalized.length === 0) {
+    window.localStorage.removeItem(cartStorageKey(shopSlug));
+    return;
+  }
+  window.localStorage.setItem(cartStorageKey(shopSlug), JSON.stringify(normalized));
+}
+
+function normalizeCartItems(items: CheckoutItem[]) {
+  const map = new Map<string, CheckoutItem>();
+  for (const item of items) {
+    if (!item?.productSlug || !item.name || item.priceBaht <= 0) continue;
+    if (item.stock === 0) continue;
+    const current = map.get(item.productSlug);
+    const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
+    const stockMax = maxQty(item.stock);
+    map.set(item.productSlug, {
+      productSlug: item.productSlug,
+      name: item.name,
+      priceBaht: item.priceBaht,
+      type: item.type === "DIGITAL" ? "DIGITAL" : "PHYSICAL",
+      stock: item.stock ?? null,
+      image: item.image ?? null,
+      qty: Math.min(stockMax, (current?.qty ?? 0) + qty),
+    });
+  }
+  return Array.from(map.values()).slice(0, 20);
+}
+
+function countCartItems(items: CheckoutItem[]) {
+  return items.reduce((sum, item) => sum + item.qty, 0);
+}
+
+function totalCartBaht(items: CheckoutItem[]) {
+  return items.reduce((sum, item) => sum + item.priceBaht * item.qty, 0);
 }
 
 function normalizePhoneForCheckout(value: string) {
