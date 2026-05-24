@@ -176,16 +176,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   {product.type === "DIGITAL" ? "DIGITAL" : "PHYSICAL"}
                 </Badge>
                 <Badge tone="neutral" className="text-[11px]">
-                  ขาย {product.sold.toLocaleString()}
+                  ขายแล้ว {product.sold.toLocaleString()}
                 </Badge>
-                {product.stock !== null ? (
-                  <Badge
-                    tone={product.stock > 5 ? "success" : "warning"}
-                    className="text-[11px]"
-                  >
-                    {product.stock > 0
-                      ? `เหลือ ${product.stock}`
-                      : "หมดสต๊อก"}
+                {product.stock === 0 ? (
+                  <Badge tone="warning" className="text-[11px]">
+                    หมดสต๊อก
                   </Badge>
                 ) : null}
               </div>
@@ -205,6 +200,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   name: product.name,
                   priceBaht: product.priceBaht,
                   type: product.type,
+                  stock: product.stock,
                 }}
               />
             </div>

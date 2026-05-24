@@ -3,7 +3,7 @@ import { ok, fail, parseJson } from "@/lib/api";
 import { db, OrderStatus } from "@/lib/db";
 import { verifySlip } from "@/lib/slip-verify";
 import { sendOrderPaid, sendPaymentReceivedAlert } from "@/lib/email";
-import { buildOrderRef } from "@/lib/orders";
+import { applyPaidOrderInventory, buildOrderRef } from "@/lib/orders";
 import { tryConsumeSlip } from "@/lib/slip-credits";
 import { extractSlipQrPayloadFromBase64 } from "@/lib/slip-qr";
 
@@ -136,16 +136,7 @@ export async function POST(request: Request, ctx: Ctx) {
     },
   });
 
-  // Increment product.sold counters in the background (best-effort)
-  const itemsArr = order.items as Array<{ productSlug: string; qty: number }>;
-  await Promise.allSettled(
-    itemsArr.map((it) =>
-      db.product.update({
-        where: { shopId_slug: { shopId: order.shop.id, slug: it.productSlug } },
-        data: { sold: { increment: it.qty } },
-      }),
-    ),
-  );
+  await applyPaidOrderInventory(order);
 
   // Fire email notifications (non-blocking, errors swallowed)
   const ref = buildOrderRef(order.createdAt, order.id);

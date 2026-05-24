@@ -342,7 +342,7 @@
     "sold": "ขายไปแล้ว",
     "allProducts": "สินค้าทั้งหมด",
     "items": "รายการ",
-    "soldCount": "ขาย {n}",
+    "soldCount": "ขายแล้ว {n}",
     "physical": "PHYSICAL",
     "digital": "DIGITAL",
     "badgeHot": "HOT",

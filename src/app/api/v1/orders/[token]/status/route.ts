@@ -3,7 +3,7 @@ import { ok, fail, parseJson } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { db, OrderStatus } from "@/lib/db";
 import { sendOrderShipped } from "@/lib/email";
-import { buildOrderRef } from "@/lib/orders";
+import { applyPaidOrderInventory, buildOrderRef } from "@/lib/orders";
 
 interface Ctx {
   params: Promise<{ token: string }>;
@@ -97,6 +97,10 @@ export async function PATCH(request: Request, ctx: Ctx) {
 
   // Award loyalty points on the first transition into PAID (only once — guard
   // by checking we transitioned FROM PENDING). 1 point per Shop.loyaltyBahtPerPoint THB spent.
+  if (status === "PAID" && order.status === OrderStatus.PENDING) {
+    await applyPaidOrderInventory(order);
+  }
+
   if (status === "PAID" && order.status === OrderStatus.PENDING && updated.customerPhone) {
     const cleanPhone = updated.customerPhone.replace(/[^\d]/g, "");
     if (cleanPhone.length >= 9) {

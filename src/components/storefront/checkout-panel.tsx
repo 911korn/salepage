@@ -25,6 +25,7 @@ interface Props {
     name: string;
     priceBaht: number;
     type: "PHYSICAL" | "DIGITAL";
+    stock?: number | null;
   };
 }
 
@@ -75,6 +76,7 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
     redeemPoints * (loyalty?.bahtValuePerPoint ?? 0);
   const total = Math.max(0, subtotal + shipping - couponDiscount - pointsDiscount);
   const needsAddress = product.type === "PHYSICAL";
+  const soldOut = product.stock === 0;
   const cleanPhone = normalizePhoneForCheckout(phone);
   const phoneReady = cleanPhone.length >= 9;
 
@@ -180,6 +182,7 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (soldOut) return toast.error("สินค้าหมดสต๊อก");
     if (!name.trim()) return toast.error(t("errors.nameRequired"));
     if (!phone.trim()) return toast.error(t("errors.phoneRequired"));
     if (needsAddress && !address.trim())
@@ -232,10 +235,16 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[color:var(--color-brand-600)] py-4 text-base font-semibold text-white shadow-lg shadow-rose-200 transition-transform hover:scale-[1.01] active:scale-[0.99]"
+        disabled={soldOut}
+        className={cn(
+          "flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white shadow-lg transition-transform active:scale-[0.99]",
+          soldOut
+            ? "cursor-not-allowed bg-zinc-300 shadow-none"
+            : "bg-[color:var(--color-brand-600)] shadow-rose-200 hover:scale-[1.01]",
+        )}
       >
-        <ShoppingBag className="size-5" /> {t("buyNow")} · ฿
-        {product.priceBaht.toLocaleString()}
+        <ShoppingBag className="size-5" />{" "}
+        {soldOut ? "สินค้าหมด" : `${t("buyNow")} · ฿${product.priceBaht.toLocaleString()}`}
       </button>
     );
   }
@@ -446,9 +455,9 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
         size="lg"
         className="mt-5 w-full"
         loading={pending}
-        disabled={pending}
+        disabled={pending || soldOut}
       >
-        {t("submit")}
+        {soldOut ? "สินค้าหมด" : t("submit")}
       </Button>
     </form>
   );
