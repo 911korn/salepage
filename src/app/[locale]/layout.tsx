@@ -6,6 +6,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing, type Locale } from "@/i18n/routing";
 import { PlatformBanner } from "@/components/platform-banner";
+import { LineLiffBootstrap } from "@/components/storefront/line-liff-bootstrap";
 import "../globals.css";
 
 const kanit = Kanit({
@@ -89,6 +90,7 @@ export default async function LocaleLayout({
     >
       <body className="min-h-screen bg-[color:var(--color-bg)] text-[color:var(--color-fg)]">
         <NextIntlClientProvider>
+          <LineLiffBootstrap />
           <PlatformBanner />
           {children}
           <Toaster

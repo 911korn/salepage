@@ -13,21 +13,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
+import {
+  fetchLineConfig,
+  initLineLiff,
+  type LiffClient,
+  type LineConfig,
+} from "@/lib/line-liff-client";
 
 interface Props {
   shopSlug?: string | null;
-}
-
-interface LineConfig {
-  liffId: string | null;
-  configured: boolean;
-}
-
-interface LiffClient {
-  init: (opts: { liffId: string }) => Promise<void>;
-  isLoggedIn: () => boolean;
-  login: (opts?: { redirectUri?: string }) => void;
-  getIDToken: () => string | null;
 }
 
 interface LineOrder {
@@ -53,14 +47,6 @@ interface LineOrder {
   items: Array<{ name: string; qty: number; image: string | null }>;
 }
 
-declare global {
-  interface Window {
-    liff?: LiffClient;
-  }
-}
-
-let liffPromise: Promise<LiffClient> | null = null;
-
 export function LineOrdersApp({ shopSlug }: Props) {
   const [config, setConfig] = useState<LineConfig | null>(null);
   const [orders, setOrders] = useState<LineOrder[]>([]);
@@ -73,17 +59,16 @@ export function LineOrdersApp({ shopSlug }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/v1/line/config")
-      .then((r) => r.json())
-      .then(async (json) => {
+    fetchLineConfig()
+      .then(async (lineConfig) => {
         if (cancelled) return;
-        if (!json.ok || !json.data.configured || !json.data.liffId) {
+        if (!lineConfig.configured || !lineConfig.liffId) {
           setConfig({ liffId: null, configured: false });
           setLoading(false);
           return;
         }
-        setConfig(json.data);
-        const liff = await initLiff(json.data.liffId);
+        setConfig(lineConfig);
+        const liff = await initLineLiff(lineConfig.liffId);
         if (cancelled) return;
         if (!liff.isLoggedIn()) {
           setNeedsLogin(true);
@@ -136,7 +121,7 @@ export function LineOrdersApp({ shopSlug }: Props) {
     if (!config?.liffId) return;
     setLoading(true);
     try {
-      const liff = await initLiff(config.liffId);
+      const liff = await initLineLiff(config.liffId);
       if (!liff.isLoggedIn()) {
         liff.login({ redirectUri: window.location.href });
         return;
@@ -340,40 +325,4 @@ function StateCard({
       </p>
     </section>
   );
-}
-
-async function initLiff(liffId: string): Promise<LiffClient> {
-  const liff = await loadLiffSdk();
-  await liff.init({ liffId });
-  return liff;
-}
-
-function loadLiffSdk(): Promise<LiffClient> {
-  if (window.liff) return Promise.resolve(window.liff);
-  if (liffPromise) return liffPromise;
-
-  liffPromise = new Promise((resolve, reject) => {
-    const existing = document.getElementById("line-liff-sdk") as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener("load", () => {
-        if (window.liff) resolve(window.liff);
-        else reject(new Error("LIFF SDK missing"));
-      });
-      existing.addEventListener("error", () => reject(new Error("LIFF SDK load failed")));
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "line-liff-sdk";
-    script.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
-    script.async = true;
-    script.onload = () => {
-      if (window.liff) resolve(window.liff);
-      else reject(new Error("LIFF SDK missing"));
-    };
-    script.onerror = () => reject(new Error("LIFF SDK load failed"));
-    document.head.appendChild(script);
-  });
-
-  return liffPromise;
 }

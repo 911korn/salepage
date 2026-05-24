@@ -10,6 +10,7 @@ import { getEffectivePlan } from "@/lib/plan";
 import { getShopBySlug as getDemoShop } from "@/lib/demo-data";
 import { LogoMark } from "@/components/ui/logo";
 import { MaintenancePage } from "@/components/maintenance-page";
+import { LineLiffGate } from "@/components/storefront/line-liff-gate";
 import { viewerCanBypassMaintenance, viewerIsAdmin } from "@/lib/admin";
 import { getPlatformSetting } from "@/lib/platform-settings";
 import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
@@ -191,6 +192,7 @@ export default async function StorefrontPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[color:var(--color-soft)]">
+      <LineLiffGate />
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
         <div className="container-page flex h-14 min-w-0 items-center gap-2">
           <Link

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrackingPanel } from "@/components/storefront/tracking-panel";
 import { ReviewForm } from "@/components/storefront/review-form";
 import { LineOrderLinker } from "@/components/storefront/line-order-linker";
+import { LineLiffGate } from "@/components/storefront/line-liff-gate";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { generatePromptPay } from "@/lib/promptpay";
@@ -80,6 +81,7 @@ export default async function OrderTrackingPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-[color:var(--color-soft)]">
+      <LineLiffGate />
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
         <div className="container-page flex h-14 items-center justify-between">
           <Link

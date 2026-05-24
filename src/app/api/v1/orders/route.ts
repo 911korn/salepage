@@ -4,6 +4,7 @@ import { db, OrderStatus, ProductStatus } from "@/lib/db";
 import { generateOrderToken, buildOrderRef } from "@/lib/orders";
 import { generatePromptPay } from "@/lib/promptpay";
 import { sendOrderCreated, sendNewOrderAlert } from "@/lib/email";
+import { verifyPlatformLineIdToken } from "@/lib/line";
 import { getPlatformSetting } from "@/lib/platform-settings";
 import { viewerCanBypassMaintenance } from "@/lib/admin";
 import {
@@ -30,6 +31,7 @@ const Body = z.object({
   shippingSatang: z.number().int().nonnegative().max(100_000).default(0),
   couponCode: z.string().min(1).max(40).optional().nullable(),
   redeemPoints: z.number().int().min(0).optional().default(0),
+  lineIdToken: z.string().min(10).max(5000).optional(),
 });
 
 /**
@@ -166,6 +168,19 @@ export async function POST(request: Request) {
     subtotalSatang + input.shippingSatang - couponDiscountSatang - pointsDiscountSatang,
   );
 
+  let lineProfile: Awaited<ReturnType<typeof verifyPlatformLineIdToken>> | null = null;
+  if (input.lineIdToken) {
+    try {
+      lineProfile = await verifyPlatformLineIdToken(input.lineIdToken);
+    } catch {
+      return fail(
+        "line_login_invalid",
+        "LINE login หมดอายุ กรุณาเปิดหน้านี้ผ่าน LINE อีกครั้ง",
+        401,
+      );
+    }
+  }
+
   // Generate PromptPay QR if shop has receiver set
   let qr: Awaited<ReturnType<typeof generatePromptPay>> | null = null;
   if (shop.promptpayId) {
@@ -198,6 +213,10 @@ export async function POST(request: Request) {
       couponId,
       couponDiscountSatang,
       pointsRedeemed,
+      customerLineUserId: lineProfile?.sub,
+      customerLineDisplayName: lineProfile?.name,
+      customerLinePictureUrl: lineProfile?.picture,
+      lineLinkedAt: lineProfile ? new Date() : undefined,
     },
   });
 

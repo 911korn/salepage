@@ -17,6 +17,7 @@ import { useRouter } from "@/i18n/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { getLineIdTokenIfAvailable } from "@/lib/line-liff-client";
 
 interface Props {
   shopSlug: string;
@@ -190,6 +191,7 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
 
     startTransition(async () => {
       try {
+        const lineIdToken = await getLineIdTokenIfAvailable().catch(() => null);
         const res = await fetch("/api/v1/orders", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -203,6 +205,7 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
             notes: notes.trim() || undefined,
             couponCode: couponApplied?.code,
             redeemPoints: redeemPoints > 0 ? redeemPoints : undefined,
+            lineIdToken: lineIdToken ?? undefined,
           }),
         });
         const json = await res.json();

@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, ChevronRight, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
+import {
+  fetchLineConfig,
+  initLineLiff,
+  type LiffClient,
+  type LineConfig,
+} from "@/lib/line-liff-client";
 
 interface Props {
   token: string;
@@ -11,26 +17,6 @@ interface Props {
   displayName?: string | null;
   pictureUrl?: string | null;
 }
-
-interface LineConfig {
-  liffId: string | null;
-  configured: boolean;
-}
-
-interface LiffClient {
-  init: (opts: { liffId: string }) => Promise<void>;
-  isLoggedIn: () => boolean;
-  login: (opts?: { redirectUri?: string }) => void;
-  getIDToken: () => string | null;
-}
-
-declare global {
-  interface Window {
-    liff?: LiffClient;
-  }
-}
-
-let liffPromise: Promise<LiffClient> | null = null;
 
 export function LineOrderLinker({
   token,
@@ -73,11 +59,10 @@ export function LineOrderLinker({
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/v1/line/config")
-      .then((r) => r.json())
-      .then((json) => {
-        if (cancelled || !json.ok) return;
-        setConfig(json.data);
+    fetchLineConfig()
+      .then((lineConfig) => {
+        if (cancelled) return;
+        setConfig(lineConfig);
       })
       .catch(() => {});
     return () => {
@@ -88,7 +73,7 @@ export function LineOrderLinker({
   useEffect(() => {
     if (!config?.configured || !config.liffId || linked) return;
     let cancelled = false;
-    initLiff(config.liffId)
+    initLineLiff(config.liffId)
       .then((liff) => {
         if (cancelled) return;
         setReady(true);
@@ -109,7 +94,7 @@ export function LineOrderLinker({
     if (!config?.liffId || busy) return;
     setBusy(true);
     try {
-      const liff = await initLiff(config.liffId);
+      const liff = await initLineLiff(config.liffId);
       setReady(true);
       if (!liff.isLoggedIn()) {
         liff.login({ redirectUri: window.location.href });
@@ -182,40 +167,4 @@ export function LineOrderLinker({
       </div>
     </section>
   );
-}
-
-async function initLiff(liffId: string): Promise<LiffClient> {
-  const liff = await loadLiffSdk();
-  await liff.init({ liffId });
-  return liff;
-}
-
-function loadLiffSdk(): Promise<LiffClient> {
-  if (window.liff) return Promise.resolve(window.liff);
-  if (liffPromise) return liffPromise;
-
-  liffPromise = new Promise((resolve, reject) => {
-    const existing = document.getElementById("line-liff-sdk") as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener("load", () => {
-        if (window.liff) resolve(window.liff);
-        else reject(new Error("LIFF SDK missing"));
-      });
-      existing.addEventListener("error", () => reject(new Error("LIFF SDK load failed")));
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "line-liff-sdk";
-    script.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
-    script.async = true;
-    script.onload = () => {
-      if (window.liff) resolve(window.liff);
-      else reject(new Error("LIFF SDK missing"));
-    };
-    script.onerror = () => reject(new Error("LIFF SDK load failed"));
-    document.head.appendChild(script);
-  });
-
-  return liffPromise;
 }
