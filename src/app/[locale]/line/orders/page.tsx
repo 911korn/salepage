@@ -1,5 +1,4 @@
 import { setRequestLocale } from "next-intl/server";
-import { LineLiffGate } from "@/components/storefront/line-liff-gate";
 import { LineOrdersApp } from "@/components/storefront/line-orders-app";
 import type { Locale } from "@/i18n/routing";
 
@@ -18,10 +17,5 @@ export default async function LineOrdersPage({
   const { shop } = await searchParams;
   setRequestLocale(locale);
 
-  return (
-    <>
-      <LineLiffGate />
-      <LineOrdersApp shopSlug={Array.isArray(shop) ? shop[0] : shop ?? null} />
-    </>
-  );
+  return <LineOrdersApp shopSlug={Array.isArray(shop) ? shop[0] : shop ?? null} />;
 }

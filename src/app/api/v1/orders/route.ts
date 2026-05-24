@@ -57,6 +57,9 @@ export async function POST(request: Request) {
   const parsed = await parseJson(request, Body);
   if (!parsed.ok) return parsed.response;
   const input = parsed.data;
+  const normalizedCustomerPhone = input.customerPhone
+    ? normalizeCustomerPhone(input.customerPhone)
+    : undefined;
 
   const shop = await db.shop.findUnique({
     where: { slug: input.shopSlug },
@@ -200,7 +203,7 @@ export async function POST(request: Request) {
       shopId: shop.id,
       publicToken: token,
       customerName: input.customerName.trim(),
-      customerPhone: input.customerPhone,
+      customerPhone: normalizedCustomerPhone || input.customerPhone,
       customerEmail: input.customerEmail,
       customerAddress: input.customerAddress,
       items: itemsSnapshot,

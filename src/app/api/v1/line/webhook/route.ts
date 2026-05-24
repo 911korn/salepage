@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  buildPlatformLineLiffUrl,
   getPlatformLineChannelAccessToken,
   getPlatformLineChannelSecret,
   replyLineMessage,
@@ -49,8 +48,7 @@ export async function POST(request: Request) {
     (body.events ?? [])
       .filter((event) => event.replyToken && event.source?.type === "user")
       .map((event) => {
-        const ordersUrl =
-          buildPlatformLineLiffUrl("/line/orders") ?? `${siteUrl()}/line/orders`;
+        const ordersUrl = `${siteUrl()}/line/orders`;
         return replyLineMessage({
           channelAccessToken,
           replyToken: event.replyToken!,

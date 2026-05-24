@@ -29,7 +29,6 @@ export function LineOrderLinker({
   const [lineName, setLineName] = useState(displayName ?? "");
   const [linePicture, setLinePicture] = useState(pictureUrl ?? "");
   const [busy, setBusy] = useState(false);
-  const [ready, setReady] = useState(false);
 
   async function linkWithLine(liff: LiffClient) {
     const idToken = liff.getIDToken();
@@ -70,24 +69,6 @@ export function LineOrderLinker({
     };
   }, []);
 
-  useEffect(() => {
-    if (!config?.configured || !config.liffId || linked) return;
-    let cancelled = false;
-    initLineLiff(config.liffId)
-      .then((liff) => {
-        if (cancelled) return;
-        setReady(true);
-        if (liff.isLoggedIn()) return linkWithLine(liff);
-      })
-      .catch(() => {
-        if (!cancelled) setReady(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config?.configured, config?.liffId, linked, token]);
-
   if (!config?.configured) return null;
 
   async function handleClick() {
@@ -95,7 +76,6 @@ export function LineOrderLinker({
     setBusy(true);
     try {
       const liff = await initLineLiff(config.liffId);
-      setReady(true);
       if (!liff.isLoggedIn()) {
         liff.login({ redirectUri: window.location.href });
         return;
@@ -149,20 +129,20 @@ export function LineOrderLinker({
             <MessageCircle className="size-5" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold">เช็กสถานะออเดอร์ผ่าน LINE</p>
+            <p className="text-sm font-bold">บันทึกออเดอร์ไว้กับ LINE</p>
             <p className="mt-0.5 text-xs leading-relaxed text-zinc-600">
-              ครั้งหน้ากลับมาดูสถานะได้ทันที ไม่ต้องจำลิงก์หรือค้นหาแชตเก่า
+              ไม่จำเป็นต้องทำตอนนี้ จ่ายเงินให้เสร็จก่อนได้ แล้วค่อยผูกไว้ดูครั้งหน้า
             </p>
           </div>
         </div>
         <button
           type="button"
           onClick={handleClick}
-          disabled={busy || (!ready && !config?.liffId)}
+          disabled={busy || !config?.liffId}
           className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#06C755] px-4 text-sm font-bold text-white shadow-lg shadow-emerald-100 transition active:scale-[0.99] disabled:opacity-60 sm:w-auto"
         >
           {busy ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
-          เช็กสถานะด้วย LINE
+          ผูก LINE ไว้ดูครั้งหน้า
         </button>
       </div>
     </section>

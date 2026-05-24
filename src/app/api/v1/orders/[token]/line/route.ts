@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { db } from "@/lib/db";
 import { verifyPlatformLineIdToken } from "@/lib/line";
+import { normalizeCustomerPhone } from "@/lib/customer-addresses";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,8 @@ export async function POST(request: Request, ctx: Ctx) {
       id: true,
       publicToken: true,
       status: true,
+      shopId: true,
+      customerPhone: true,
       customerLineUserId: true,
       shop: { select: { slug: true, name: true } },
     },
@@ -50,14 +53,17 @@ export async function POST(request: Request, ctx: Ctx) {
     );
   }
 
+  const linkedAt = new Date();
+  const lineData = {
+    customerLineUserId: profile.sub,
+    customerLineDisplayName: profile.name ?? null,
+    customerLinePictureUrl: profile.picture ?? null,
+    lineLinkedAt: linkedAt,
+  };
+
   const updated = await db.order.update({
     where: { id: order.id },
-    data: {
-      customerLineUserId: profile.sub,
-      customerLineDisplayName: profile.name ?? null,
-      customerLinePictureUrl: profile.picture ?? null,
-      lineLinkedAt: new Date(),
-    },
+    data: lineData,
     select: {
       publicToken: true,
       status: true,
@@ -66,6 +72,22 @@ export async function POST(request: Request, ctx: Ctx) {
       shop: { select: { slug: true, name: true } },
     },
   });
+
+  const phone = normalizeCustomerPhone(order.customerPhone);
+  if (phone.length >= 9) {
+    void db.order
+      .updateMany({
+        where: {
+          shopId: order.shopId,
+          customerPhone: phone,
+          OR: [{ customerLineUserId: null }, { customerLineUserId: profile.sub }],
+        },
+        data: lineData,
+      })
+      .catch((e) => {
+        console.warn("[line] bulk phone link failed:", e);
+      });
+  }
 
   return ok({
     linked: true,

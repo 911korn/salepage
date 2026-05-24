@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import {
   ArrowLeft,
   ChevronRight,
   Loader2,
   MessageCircle,
   PackageCheck,
+  Phone,
+  Search,
   ShoppingBag,
   Truck,
 } from "lucide-react";
@@ -54,49 +56,71 @@ export function LineOrdersApp({ shopSlug }: Props) {
     displayName: string | null;
     pictureUrl: string | null;
   } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [needsLogin, setNeedsLogin] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [lineLoading, setLineLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetchLineConfig()
-      .then(async (lineConfig) => {
+      .then((lineConfig) => {
         if (cancelled) return;
-        if (!lineConfig.configured || !lineConfig.liffId) {
-          setConfig({ liffId: null, configured: false });
-          setLoading(false);
-          return;
-        }
         setConfig(lineConfig);
-        const liff = await initLineLiff(lineConfig.liffId);
-        if (cancelled) return;
-        if (!liff.isLoggedIn()) {
-          setNeedsLogin(true);
-          setLoading(false);
-          return;
-        }
-        await fetchOrders(liff);
       })
-      .catch((e) => {
-        if (cancelled) return;
-        toast.error("เปิด LINE ไม่สำเร็จ", {
-          description: e instanceof Error ? e.message : "กรุณาลองใหม่อีกครั้ง",
-        });
-        setNeedsLogin(true);
-        setLoading(false);
-      });
+      .catch(() => {});
 
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try {
+      const storedPhone = window.localStorage.getItem(orderPhoneStorageKey(shopSlug)) ?? "";
+      queueMicrotask(() => setPhone(storedPhone));
+    } catch {
+      /* localStorage can be blocked in privacy modes */
+    }
   }, [shopSlug]);
+
+  async function lookupByPhone(e?: FormEvent) {
+    e?.preventDefault();
+    const cleanPhone = phone.replace(/[^\d]/g, "");
+    if (cleanPhone.length < 9) {
+      toast.error("กรุณากรอกเบอร์โทรให้ครบ");
+      return;
+    }
+
+    setLoading(true);
+    setSearched(true);
+    setProfile(null);
+    try {
+      const res = await fetch("/api/v1/orders/lookup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone, shopSlug }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        toast.error(json.error?.message ?? "ค้นหาออเดอร์ไม่สำเร็จ");
+        return;
+      }
+      setOrders(json.data.orders);
+      try {
+        window.localStorage.setItem(orderPhoneStorageKey(shopSlug), json.data.phone);
+      } catch {
+        /* ignore */
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function fetchOrders(liff: LiffClient) {
     const idToken = liff.getIDToken();
     if (!idToken) {
-      setNeedsLogin(true);
-      setLoading(false);
+      setLineLoading(false);
       return;
     }
 
@@ -108,18 +132,18 @@ export function LineOrdersApp({ shopSlug }: Props) {
     const json = await res.json();
     if (!res.ok || !json.ok) {
       toast.error(json.error?.message ?? "โหลดออเดอร์ไม่สำเร็จ");
-      setLoading(false);
+      setLineLoading(false);
       return;
     }
     setProfile(json.data.profile);
     setOrders(json.data.orders);
-    setNeedsLogin(false);
-    setLoading(false);
+    setSearched(true);
+    setLineLoading(false);
   }
 
   async function login() {
     if (!config?.liffId) return;
-    setLoading(true);
+    setLineLoading(true);
     try {
       const liff = await initLineLiff(config.liffId);
       if (!liff.isLoggedIn()) {
@@ -131,7 +155,7 @@ export function LineOrdersApp({ shopSlug }: Props) {
       toast.error("Login LINE ไม่สำเร็จ", {
         description: e instanceof Error ? e.message : "กรุณาลองใหม่อีกครั้ง",
       });
-      setLoading(false);
+      setLineLoading(false);
     }
   }
 
@@ -156,7 +180,7 @@ export function LineOrdersApp({ shopSlug }: Props) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={profile.pictureUrl} alt="" className="size-full object-cover" />
                 ) : (
-                  <MessageCircle className="size-6" />
+                  <Phone className="size-6" />
                 )}
               </span>
               <div className="min-w-0 flex-1">
@@ -164,51 +188,60 @@ export function LineOrdersApp({ shopSlug }: Props) {
                   ออเดอร์ของฉัน
                 </h1>
                 <p className="truncate text-sm text-zinc-600">
-                  {profile?.displayName || "ดูสถานะจากบัญชี LINE นี้"}
+                  {profile?.displayName || "ค้นหาด้วยเบอร์โทรที่ใช้สั่งซื้อ"}
                 </p>
               </div>
             </div>
           </section>
 
+          <form
+            onSubmit={lookupByPhone}
+            className="rounded-3xl border border-[color:var(--color-border)] bg-white p-5 shadow-sm sm:p-6"
+          >
+            <label className="text-sm font-bold text-zinc-900" htmlFor="order-phone">
+              เบอร์โทรที่ใช้สั่งซื้อ
+            </label>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <input
+                id="order-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="เช่น 0863273566"
+                className="min-h-12 flex-1 rounded-2xl border border-[color:var(--color-border)] bg-white px-4 text-base outline-none focus:border-[color:var(--color-brand-400)] focus:ring-2 focus:ring-[color:var(--color-brand-100)]"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[color:var(--color-brand-600)] px-5 text-sm font-bold text-white shadow-lg shadow-rose-100 active:scale-[0.99] disabled:opacity-60"
+              >
+                {loading ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
+                ค้นหาออเดอร์
+              </button>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+              ลูกค้าใหม่สั่งซื้อได้ทันที ไม่ต้อง Login ส่วน LINE เอาไว้ผูกกับเบอร์เพื่อดูครั้งหน้า
+            </p>
+          </form>
+
           {loading ? (
             <StateCard
               icon={<Loader2 className="size-6 animate-spin" />}
               title="กำลังโหลดออเดอร์"
-              description="กำลังตรวจสอบออเดอร์จากบัญชี LINE นี้"
+              description="กำลังค้นหาจากเบอร์โทรที่ใช้สั่งซื้อ"
             />
-          ) : !config?.configured ? (
+          ) : !searched ? (
             <StateCard
-              icon={<MessageCircle className="size-6" />}
-              title="ยังไม่ได้เปิดระบบเช็กสถานะผ่าน LINE"
-              description="ทีม SalePage ต้องตั้งค่า LIFF ID และ LINE Login Channel ก่อน"
+              icon={<Phone className="size-6" />}
+              title="กรอกเบอร์เพื่อดูออเดอร์"
+              description="ใช้เบอร์เดียวกับตอนสั่งซื้อ ระบบจะแสดงออเดอร์ล่าสุดให้เลือก"
             />
-          ) : needsLogin ? (
-            <section className="rounded-3xl border border-[color:var(--color-border)] bg-white p-5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#06C755] text-white">
-                  <MessageCircle className="size-6" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-bold">เข้าสู่ LINE เพื่อดูสถานะออเดอร์</h2>
-                  <p className="mt-1 text-sm leading-relaxed text-zinc-600">
-                    ระบบจะหาออเดอร์ที่เคยบันทึกไว้กับบัญชี LINE นี้
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={login}
-                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#06C755] px-4 text-sm font-bold text-white shadow-lg shadow-emerald-100 active:scale-[0.99]"
-              >
-                <MessageCircle className="size-4" />
-                ดูสถานะด้วย LINE
-              </button>
-            </section>
           ) : orders.length === 0 ? (
             <StateCard
               icon={<ShoppingBag className="size-6" />}
-              title="ยังไม่มีออเดอร์ในบัญชี LINE นี้"
-              description="หลังสั่งซื้อ กดเช็กสถานะด้วย LINE บนหน้าสถานะออเดอร์ครั้งแรก แล้วออเดอร์จะมาอยู่ตรงนี้"
+              title="ยังไม่พบออเดอร์ของเบอร์นี้"
+              description="ตรวจสอบเบอร์อีกครั้ง หรือเปิดจากลิงก์สถานะที่ได้รับหลังสั่งซื้อ"
             />
           ) : (
             <section className="space-y-3">
@@ -217,10 +250,39 @@ export function LineOrdersApp({ shopSlug }: Props) {
               ))}
             </section>
           )}
+
+          {config?.configured ? (
+            <section className="rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#06C755] text-white">
+                  <MessageCircle className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-bold">ตัวเลือกเสริม: ดูด้วย LINE</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-600">
+                    ใช้เมื่อต้องการรวมออเดอร์ที่เคยผูกไว้กับบัญชี LINE นี้เท่านั้น
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={login}
+                disabled={lineLoading}
+                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-700 active:scale-[0.99] disabled:opacity-60"
+              >
+                {lineLoading ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
+                ดูออเดอร์ที่ผูกกับ LINE
+              </button>
+            </section>
+          ) : null}
         </div>
       </div>
     </main>
   );
+}
+
+function orderPhoneStorageKey(shopSlug?: string | null) {
+  return shopSlug ? `salepage:orders-phone:${shopSlug}` : "salepage:orders-phone";
 }
 
 function OrderCard({ order }: { order: LineOrder }) {
