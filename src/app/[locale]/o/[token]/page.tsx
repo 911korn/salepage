@@ -123,7 +123,7 @@ export default async function OrderTrackingPage({ params }: PageProps) {
                     {paymentStatusText(order.status, t("verified"))}
                   </p>
                   {order.slipRef ? (
-                    <p className="font-mono text-[11px] text-emerald-800">
+                    <p className="break-all font-mono text-[11px] text-emerald-800">
                       ref: {order.slipRef}
                     </p>
                   ) : null}
