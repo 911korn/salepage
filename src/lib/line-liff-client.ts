@@ -98,10 +98,6 @@ export async function initLineLiff(liffId: string): Promise<LiffClient> {
 }
 
 export async function getLineIdTokenIfAvailable(): Promise<string | null> {
-  if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
-    return null;
-  }
-
   const config = await fetchLineConfig();
   if (!config.configured || !config.liffId) return null;
 

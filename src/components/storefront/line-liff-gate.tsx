@@ -8,14 +8,11 @@ import {
   hasLiffReturnParam,
   initLineLiff,
   isLiffActiveSession,
-  isLineInAppBrowser,
   markLiffActive,
 } from "@/lib/line-liff-client";
 
 export function LineLiffGate() {
   useEffect(() => {
-    if (!isLineInAppBrowser()) return;
-
     let cancelled = false;
 
     async function run() {
