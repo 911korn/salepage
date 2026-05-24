@@ -15,6 +15,7 @@
   "common": {
     "createFreeShop": "Start free",
     "signIn": "Sign in",
+    "dashboard": "Dashboard",
     "viewExample": "View example shop",
     "recommended": "Recommended",
     "tryItNow": "Try it now",

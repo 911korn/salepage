@@ -16,7 +16,11 @@ const NAV_KEYS = [
   { href: "#pricing", key: "pricing" },
 ] as const;
 
-export function Navbar() {
+interface Props {
+  signedIn?: boolean;
+}
+
+export function Navbar({ signedIn = false }: Props) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const tNav = useTranslations("nav");
@@ -58,21 +62,35 @@ export function Navbar() {
 
         <div className="flex items-center gap-2">
           <LocaleSwitcher className="hidden md:inline-flex" />
-          <Link
-            href="/signin"
-            className="hidden text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)] md:inline-flex md:px-3 md:py-2"
-          >
-            {tCommon("signIn")}
-          </Link>
-          <Link
-            href="/signup"
-            className={cn(
-              buttonStyles({ size: "sm" }),
-              "hidden md:inline-flex",
-            )}
-          >
-            {tCommon("createFreeShop")}
-          </Link>
+          {signedIn ? (
+            <Link
+              href="/dashboard"
+              className={cn(
+                buttonStyles({ size: "sm" }),
+                "hidden md:inline-flex",
+              )}
+            >
+              {tCommon("dashboard")}
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/signin"
+                className="hidden text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)] md:inline-flex md:px-3 md:py-2"
+              >
+                {tCommon("signIn")}
+              </Link>
+              <Link
+                href="/signup"
+                className={cn(
+                  buttonStyles({ size: "sm" }),
+                  "hidden md:inline-flex",
+                )}
+              >
+                {tCommon("createFreeShop")}
+              </Link>
+            </>
+          )}
           <button
             type="button"
             aria-label={tCommon("menu")}
@@ -104,20 +122,31 @@ export function Navbar() {
                 </span>
                 <LocaleSwitcher />
               </div>
-              <div className="mt-2 flex gap-2 pt-2">
-                <Link
-                  href="/signin"
-                  className="flex-1 rounded-xl border border-[color:var(--color-border)] py-3 text-center text-[15px] font-medium"
-                >
-                  {tCommon("signIn")}
-                </Link>
-                <Link
-                  href="/signup"
-                  className="flex-1 rounded-xl bg-[color:var(--color-brand-600)] py-3 text-center text-[15px] font-medium text-white"
-                >
-                  {tCommon("createFreeShop")}
-                </Link>
-              </div>
+              {signedIn ? (
+                <div className="mt-2 pt-2">
+                  <Link
+                    href="/dashboard"
+                    className="block rounded-xl bg-[color:var(--color-brand-600)] py-3 text-center text-[15px] font-medium text-white"
+                  >
+                    {tCommon("dashboard")}
+                  </Link>
+                </div>
+              ) : (
+                <div className="mt-2 flex gap-2 pt-2">
+                  <Link
+                    href="/signin"
+                    className="flex-1 rounded-xl border border-[color:var(--color-border)] py-3 text-center text-[15px] font-medium"
+                  >
+                    {tCommon("signIn")}
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="flex-1 rounded-xl bg-[color:var(--color-brand-600)] py-3 text-center text-[15px] font-medium text-white"
+                  >
+                    {tCommon("createFreeShop")}
+                  </Link>
+                </div>
+              )}
             </nav>
           </div>
         </div>

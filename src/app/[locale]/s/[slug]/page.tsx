@@ -12,6 +12,8 @@ import { LogoMark } from "@/components/ui/logo";
 import { MaintenancePage } from "@/components/maintenance-page";
 import { viewerCanBypassMaintenance, viewerIsAdmin } from "@/lib/admin";
 import { getPlatformSetting } from "@/lib/platform-settings";
+import { auth } from "@/lib/auth";
+import { dashboardHref } from "@/lib/dashboard-routing";
 import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
 import type { Locale } from "@/i18n/routing";
 
@@ -187,14 +189,19 @@ export default async function StorefrontPage({ params }: PageProps) {
 
   const t = await getTranslations("shop");
   const tCommon = await getTranslations("common");
+  const session = await auth();
   const shop = view;
+  const ownerDashboardHref =
+    dbShop && session?.user?.id === dbShop.ownerId
+      ? dashboardHref("/dashboard", dbShop.slug)
+      : null;
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[color:var(--color-soft)]">
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
         <div className="container-page flex h-14 min-w-0 items-center gap-2">
           <Link
-            href="/"
+            href={ownerDashboardHref ?? "/"}
             className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)]"
           >
             <ArrowLeft className="size-4" /> {t("back")}
@@ -203,14 +210,27 @@ export default async function StorefrontPage({ params }: PageProps) {
             {storefrontLabel(shop.slug)}
           </p>
           <Link
-            href="/signup"
+            href={ownerDashboardHref ?? "/signup"}
             className={cn(buttonStyles({
               size: "sm",
               className: "shrink-0 px-2.5 text-xs sm:px-3.5 sm:text-sm",
             }))}
           >
-            <span className="sm:hidden">สร้างร้าน</span>
-            <span className="hidden sm:inline">{t("createOwn")}</span>
+            {ownerDashboardHref ? (
+              <>
+                <span className="sm:hidden">
+                  {locale === "th" ? "จัดการร้าน" : "Manage"}
+                </span>
+                <span className="hidden sm:inline">
+                  {locale === "th" ? "จัดการร้าน" : tCommon("dashboard")}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="sm:hidden">สร้างร้าน</span>
+                <span className="hidden sm:inline">{t("createOwn")}</span>
+              </>
+            )}
           </Link>
         </div>
       </header>

@@ -7,6 +7,7 @@ import { StorefrontPreview } from "@/components/landing/storefront-preview";
 import { Pricing } from "@/components/landing/pricing";
 import { FinalCta } from "@/components/landing/cta";
 import { Footer } from "@/components/landing/footer";
+import { auth } from "@/lib/auth";
 import type { Locale } from "@/i18n/routing";
 
 export default async function HomePage({
@@ -16,9 +17,11 @@ export default async function HomePage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const session = await auth();
+
   return (
     <>
-      <Navbar />
+      <Navbar signedIn={Boolean(session?.user)} />
       <main>
         <Hero />
         <PromptPayDemo />

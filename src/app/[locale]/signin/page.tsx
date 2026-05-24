@@ -1,8 +1,11 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { LogoLockup } from "@/components/ui/logo";
 import { SignInForm } from "@/components/auth/sign-in-form";
+import { auth } from "@/lib/auth";
+import { normalizeDashboardCallbackUrl } from "@/lib/signin-callback";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
@@ -14,6 +17,13 @@ export default async function SignInPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   const { callbackUrl } = await searchParams;
   setRequestLocale(locale);
+  const session = await auth();
+  const normalizedCallbackUrl = normalizeDashboardCallbackUrl(callbackUrl, locale);
+
+  if (session?.user) {
+    redirect(normalizedCallbackUrl);
+  }
+
   const t = await getTranslations("auth.signIn");
 
   const hasGoogle = Boolean(
@@ -41,7 +51,7 @@ export default async function SignInPage({ params, searchParams }: PageProps) {
 
             <div className="mt-7">
               <SignInForm
-                callbackUrl={Array.isArray(callbackUrl) ? callbackUrl[0] : callbackUrl}
+                callbackUrl={normalizedCallbackUrl}
                 hasGoogle={hasGoogle}
                 hasEmail={hasResend}
               />
