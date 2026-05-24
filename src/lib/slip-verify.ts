@@ -36,6 +36,10 @@ export interface SlipVerifyResult {
   receiver?: { name?: string; bank?: string; account?: string };
   /** Any mismatch we detected vs. expected values. */
   mismatch?: { field: "amount" | "receiver"; expected: unknown; got: unknown }[];
+  /** Machine-readable failure reason when the provider could not verify/parse. */
+  errorCode?: "provider_rejected" | "provider_error" | "receiver_unreadable";
+  /** Provider-facing failure text for debugging/support UI. */
+  errorMessage?: string;
   /** Provider used. */
   provider: SlipProvider;
   /** Raw provider response for debugging (only in non-production). */
@@ -95,14 +99,24 @@ async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult
   else if (input.imageBase64) body.data = input.imageBase64;
   if (input.expectAmount !== undefined) body.amount = input.expectAmount;
 
-  const res = await fetch(`https://api.slipok.com/api/line/apikey/${branchId}`, {
-    method: "POST",
-    headers: {
-      "x-authorization": apiKey,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`https://api.slipok.com/api/line/apikey/${branchId}`, {
+      method: "POST",
+      headers: {
+        "x-authorization": apiKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    return {
+      verified: false,
+      provider: "slipok",
+      errorCode: "provider_error",
+      errorMessage: err instanceof Error ? err.message : "SlipOK network error",
+    };
+  }
   const json = (await res.json()) as Record<string, unknown> & {
     success?: boolean;
     data?: Record<string, unknown>;
@@ -113,11 +127,14 @@ async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult
     return {
       verified: false,
       provider: "slipok",
+      errorCode: "provider_rejected",
+      errorMessage: json.message ?? `SlipOK HTTP ${res.status}`,
       raw: process.env.NODE_ENV === "production" ? undefined : json,
     };
   }
   const data = json.data ?? {};
   const receiverAccount = pickString(data, ["receiver", "account", "value"]);
+  const receiverUnreadable = Boolean(input.expectReceiverId && !receiverAccount);
 
   // Manual receiver match — `log: false` means SlipOK didn't enforce this.
   const mismatch: NonNullable<SlipVerifyResult["mismatch"]> = [];
@@ -134,8 +151,9 @@ async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult
   }
 
   return {
-    verified: mismatch.length === 0,
+    verified: !receiverUnreadable && mismatch.length === 0,
     provider: "slipok",
+    errorCode: receiverUnreadable ? "receiver_unreadable" : undefined,
     ref: pickString(data, ["transRef", "transactionId"]),
     amount: pickNumber(data, ["amount"]),
     transferredAt: pickString(data, ["transTimestamp", "transferredAt"]),

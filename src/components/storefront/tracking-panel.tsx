@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { AlertCircle, Check, Loader2, Upload, Wallet } from "lucide-react";
+import jsQR from "jsqr";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
@@ -27,6 +28,8 @@ interface SlipResult {
   mismatch?: MismatchEntry[];
   duplicate?: boolean;
   provider?: string;
+  reason?: string;
+  message?: string;
 }
 
 export function TrackingPanel({
@@ -56,10 +59,14 @@ export function TrackingPanel({
       setSubmitting(true);
       startTransition(async () => {
         try {
+          const qrPayload = await readQrPayloadFromImage(dataUrl);
           const res = await fetch(`/api/v1/orders/${token}/slip`, {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ imageBase64: base64 }),
+            body: JSON.stringify({
+              imageBase64: base64,
+              ...(qrPayload ? { qrPayload } : {}),
+            }),
           });
           const json = await res.json();
           if (!res.ok || !json.ok) {
@@ -190,6 +197,15 @@ export function TrackingPanel({
                       : t("mismatchReceiver")}
                   </li>
                 ))}
+                {!result.duplicate && !result.mismatch?.length ? (
+                  <li>
+                    {failureText(result.reason, {
+                      unreadable: t("unreadable"),
+                      systemError: t("systemError"),
+                      genericRejected: t("genericRejected"),
+                    })}
+                  </li>
+                ) : null}
               </ul>
             </div>
           </div>
@@ -209,4 +225,86 @@ function maskTail(id: string) {
   const digits = id.replace(/\D/g, "");
   if (digits.length < 4) return digits;
   return "xxx-x-x" + digits.slice(-4);
+}
+
+async function readQrPayloadFromImage(dataUrl: string): Promise<string | null> {
+  if (typeof document === "undefined") return null;
+
+  try {
+    const img = await loadImage(dataUrl);
+    const maxSide = 1200;
+    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+    const width = Math.max(1, Math.round(img.naturalWidth * scale));
+    const height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // Bank slips usually place the verification QR on the right side of the
+    // lower half. Keep client-side scanning cheap; the server has a full fallback.
+    const regions = [
+      {
+        x: Math.round(width * 0.45),
+        y: Math.round(height * 0.45),
+        width: Math.round(width * 0.55),
+        height: Math.round(height * 0.38),
+      },
+      {
+        x: Math.round(width * 0.25),
+        y: Math.round(height * 0.35),
+        width: Math.round(width * 0.75),
+        height: Math.round(height * 0.5),
+      },
+    ];
+
+    for (const region of regions) {
+      const payload = scanQr(ctx, region.x, region.y, region.width, region.height);
+      if (payload) return payload;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function scanQr(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const imageData = ctx.getImageData(x, y, width, height);
+  const code = jsQR(imageData.data, width, height, {
+    inversionAttempts: "dontInvert",
+  });
+  return code?.data?.trim() || null;
+}
+
+function loadImage(dataUrl: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Could not read slip image"));
+    img.src = dataUrl;
+  });
+}
+
+function failureText(
+  reason: string | undefined,
+  copy: { unreadable: string; systemError: string; genericRejected: string },
+) {
+  switch (reason) {
+    case "provider_rejected":
+    case "receiver_unreadable":
+      return copy.unreadable;
+    case "provider_error":
+      return copy.systemError;
+    default:
+      return copy.genericRejected;
+  }
 }

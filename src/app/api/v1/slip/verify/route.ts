@@ -3,6 +3,7 @@ import { verifySlip } from "@/lib/slip-verify";
 import { ok, fail, parseJson } from "@/lib/api";
 import { db } from "@/lib/db";
 import { tryConsumeSlip } from "@/lib/slip-credits";
+import { extractSlipQrPayloadFromBase64 } from "@/lib/slip-qr";
 
 const Body = z
   .object({
@@ -46,7 +47,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await verifySlip(input);
+    const result = await verifySlip({
+      ...input,
+      qrPayload: input.qrPayload ??
+        (await extractSlipQrPayloadFromBase64(input.imageBase64)) ??
+        undefined,
+    });
     return ok({ ...result, ...(consumeSource ? { consumedFrom: consumeSource } : {}) });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";

@@ -5,6 +5,7 @@ import { verifySlip } from "@/lib/slip-verify";
 import { sendOrderPaid, sendPaymentReceivedAlert } from "@/lib/email";
 import { buildOrderRef } from "@/lib/orders";
 import { tryConsumeSlip } from "@/lib/slip-credits";
+import { extractSlipQrPayloadFromBase64 } from "@/lib/slip-qr";
 
 interface Ctx {
   params: Promise<{ token: string }>;
@@ -80,9 +81,12 @@ export async function POST(request: Request, ctx: Ctx) {
     );
   }
 
+  const qrPayload = parsed.data.qrPayload ??
+    (await extractSlipQrPayloadFromBase64(parsed.data.imageBase64));
+
   const result = await verifySlip({
     imageBase64: parsed.data.imageBase64,
-    qrPayload: parsed.data.qrPayload,
+    qrPayload: qrPayload ?? undefined,
     expectAmount: order.totalSatang / 100,
     expectReceiverId: order.shop.promptpayId ?? undefined,
   });
@@ -91,9 +95,9 @@ export async function POST(request: Request, ctx: Ctx) {
     return ok({
       verified: false,
       status: order.status,
-      mismatch: result.mismatch ?? [
-        { field: "receiver", expected: order.shop.promptpayId, got: null },
-      ],
+      mismatch: result.mismatch ?? [],
+      reason: result.errorCode ?? "verification_failed",
+      message: result.errorMessage,
       provider: result.provider,
     });
   }
