@@ -1,128 +1,101 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { CheckoutPanel } from "@/components/storefront/checkout-panel";
+import { ShareButton } from "@/components/storefront/share-button";
 import { cn } from "@/lib/cn";
-import { db, ProductStatus } from "@/lib/db";
-import { getProduct as getDemoProduct, getShopBySlug as getDemoShop } from "@/lib/demo-data";
-import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
+import { getStorefrontProductView } from "@/lib/storefront-product-view";
+import {
+  absoluteStorefrontUrl,
+  storefrontLabel,
+  storefrontPath,
+} from "@/lib/storefront-url";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
   params: Promise<{ locale: Locale; slug: string; productSlug: string }>;
 }
 
+function metaDescription(product: {
+  name: string;
+  description: string | null;
+  priceBaht: number;
+}, shopName: string) {
+  const price = `฿${product.priceBaht.toLocaleString("th-TH")}`;
+  const text = product.description?.replace(/\s+/g, " ").trim();
+  if (text) {
+    return `${price} · ${text}`.slice(0, 180);
+  }
+
+  return `สั่งซื้อ ${product.name} ราคา ${price} จากร้าน ${shopName} ได้ทันทีบน SalePage`;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug, productSlug, locale } = await params;
+  const view = await getStorefrontProductView(slug, productSlug);
+
+  if (!view) {
+    return {};
+  }
+
+  const { product, shop } = view;
+  const productUrl = absoluteStorefrontUrl(shop.slug, product.slug);
+  const ogImageUrl = new URL(
+    `/api/v1/og/product/${encodeURIComponent(shop.slug)}/${encodeURIComponent(
+      product.slug,
+    )}?v=${product.updatedAtMs}`,
+    "https://salepage.in.th",
+  ).toString();
+  const description = metaDescription(product, shop.name);
+  const title = `${product.name} - ฿${product.priceBaht.toLocaleString(
+    "th-TH",
+  )} | ${shop.name}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: productUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: productUrl,
+      siteName: "SalePage",
+      type: "website",
+      locale: locale === "th" ? "th_TH" : "en_US",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${product.name} จากร้าน ${shop.name}`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImageUrl],
+    },
+  };
+}
+
 export default async function ProductDetailPage({ params }: PageProps) {
   const { locale, slug, productSlug } = await params;
   setRequestLocale(locale);
 
-  const shop = await db.shop.findUnique({
-    where: { slug },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      logoText: true,
-      logoUrl: true,
-      themeColor: true,
-      verified: true,
-      status: true,
-    },
-  });
-
-  let view:
-    | {
-        product: {
-          slug: string;
-          name: string;
-          description: string | null;
-          priceBaht: number;
-          compareAtBaht: number | null;
-          imageUrls: string[];
-          badge: "HOT" | "NEW" | "SALE" | null;
-          type: "PHYSICAL" | "DIGITAL";
-          stock: number | null;
-          sold: number;
-        };
-        shop: {
-          slug: string;
-          name: string;
-          logoText: string | null;
-          logoUrl: string | null;
-          themeColor: string;
-          verified: boolean;
-        };
-      }
-    | null = null;
-
-  if (shop && shop.status === "ACTIVE") {
-    const p = await db.product.findUnique({
-      where: { shopId_slug: { shopId: shop.id, slug: productSlug } },
-    });
-    if (p && p.status !== ProductStatus.HIDDEN) {
-      view = {
-        product: {
-          slug: p.slug,
-          name: p.name,
-          description: p.description,
-          priceBaht: Math.round(p.priceSatang / 100),
-          compareAtBaht: p.compareAtSatang
-            ? Math.round(p.compareAtSatang / 100)
-            : null,
-          imageUrls: p.imageUrls,
-          badge: p.badge,
-          type: p.type as "PHYSICAL" | "DIGITAL",
-          stock: p.stock,
-          sold: p.sold,
-        },
-        shop: {
-          slug: shop.slug,
-          name: shop.name,
-          logoText: shop.logoText,
-          logoUrl: shop.logoUrl,
-          themeColor: shop.themeColor,
-          verified: shop.verified,
-        },
-      };
-    }
-  }
-
-  if (!view) {
-    // Demo data fallback for landing's siam-snack preview
-    const demoShop = getDemoShop(slug);
-    const demoProduct = getDemoProduct(slug, productSlug);
-    if (demoShop && demoProduct) {
-      view = {
-        product: {
-          slug: demoProduct.slug,
-          name: demoProduct.name,
-          description: null,
-          priceBaht: demoProduct.price,
-          compareAtBaht: demoProduct.compareAt ?? null,
-          // demo "images" are CSS gradients — use empty array, fallback UI handles it
-          imageUrls: [],
-          badge: (demoProduct.badge ?? null) as "HOT" | "NEW" | "SALE" | null,
-          type: demoProduct.type === "digital" ? "DIGITAL" : "PHYSICAL",
-          stock: demoProduct.stock ?? null,
-          sold: demoProduct.sold,
-        },
-        shop: {
-          slug: demoShop.slug,
-          name: demoShop.name,
-          logoText: demoShop.logo,
-          logoUrl: null,
-          themeColor: demoShop.themeColor,
-          verified: demoShop.verified,
-        },
-      };
-    }
-  }
+  const view = await getStorefrontProductView(slug, productSlug);
 
   if (!view) notFound();
 
   const { product, shop: shopView } = view;
+  const productUrl = absoluteStorefrontUrl(shopView.slug, product.slug);
+  const shareText = metaDescription(product, shopView.name);
   const discountPct =
     product.compareAtBaht && product.compareAtBaht > product.priceBaht
       ? Math.round(
@@ -133,17 +106,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-[color:var(--color-soft)]">
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
-        <div className="container-page flex h-14 items-center justify-between">
+        <div className="container-page flex h-14 min-w-0 items-center gap-3">
           <Link
             href={storefrontPath(shopView.slug)}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)]"
+            className="inline-flex min-w-0 max-w-[48%] items-center gap-1.5 text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)]"
           >
-            <ArrowLeft className="size-4" /> {shopView.name}
+            <ArrowLeft className="size-4 shrink-0" />
+            <span className="truncate">{shopView.name}</span>
           </Link>
-          <p className="font-mono text-xs text-zinc-500">
+          <p className="min-w-0 flex-1 truncate text-right font-mono text-xs text-zinc-500">
             {storefrontLabel(shopView.slug, product.slug)}
           </p>
-          <span />
         </div>
       </header>
 
@@ -205,10 +178,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
           {/* Detail + checkout */}
           <div>
             <div className="rounded-3xl border border-[color:var(--color-border)] bg-white p-6 shadow-sm sm:p-7">
-              <div className="flex items-center gap-2">
+              <div className="flex items-start justify-between gap-3">
                 <Link
                   href={storefrontPath(shopView.slug)}
-                  className="flex items-center gap-2 text-sm text-zinc-600 hover:text-[color:var(--color-fg)]"
+                  className="flex min-w-0 items-center gap-2 pt-1 text-sm text-zinc-600 hover:text-[color:var(--color-fg)]"
                 >
                   <span
                     className="grid size-7 place-items-center overflow-hidden rounded-lg font-display text-xs font-bold text-white"
@@ -221,11 +194,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
                       shopView.logoText ?? shopView.name.slice(0, 1)
                     )}
                   </span>
-                  <span className="font-medium">{shopView.name}</span>
+                  <span className="truncate font-medium">{shopView.name}</span>
                   {shopView.verified ? (
-                    <ShieldCheck className="size-4 text-[color:var(--color-brand-600)]" />
+                    <ShieldCheck className="size-4 shrink-0 text-[color:var(--color-brand-600)]" />
                   ) : null}
                 </Link>
+                <ShareButton title={product.name} text={shareText} url={productUrl} />
               </div>
 
               <h1 className="font-display mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
