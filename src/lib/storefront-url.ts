@@ -11,6 +11,7 @@ const RESERVED_SHOP_SLUGS = new Set([
   "en",
   "favicon.ico",
   "icon.svg",
+  "line",
   "monitoring",
   "o",
   "privacy",

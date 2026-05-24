@@ -4,6 +4,7 @@ import { db, OrderStatus } from "@/lib/db";
 import { verifySlip } from "@/lib/slip-verify";
 import { sendOrderPaid, sendPaymentReceivedAlert } from "@/lib/email";
 import { applyPaidOrderInventory, buildOrderRef } from "@/lib/orders";
+import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
 import { tryConsumeSlip } from "@/lib/slip-credits";
 import { extractSlipQrPayloadFromBase64 } from "@/lib/slip-qr";
 
@@ -45,6 +46,7 @@ export async function POST(request: Request, ctx: Ctx) {
       shop: {
         select: {
           id: true,
+          slug: true,
           name: true,
           promptpayId: true,
           contact: true,
@@ -134,9 +136,11 @@ export async function POST(request: Request, ctx: Ctx) {
         ? JSON.parse(JSON.stringify(result.raw))
         : undefined,
     },
+    include: { shop: { select: { name: true, slug: true } } },
   });
 
   await applyPaidOrderInventory(order);
+  void notifyLineOrderUpdate(updated);
 
   // Fire email notifications (non-blocking, errors swallowed)
   const ref = buildOrderRef(order.createdAt, order.id);

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db, OrderStatus } from "@/lib/db";
 import { sendOrderShipped } from "@/lib/email";
 import { applyPaidOrderInventory, buildOrderRef } from "@/lib/orders";
+import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
 
 interface Ctx {
   params: Promise<{ token: string }>;
@@ -77,8 +78,12 @@ export async function PATCH(request: Request, ctx: Ctx) {
   const updated = await db.order.update({
     where: { id: order.id },
     data,
-    include: { shop: { select: { name: true, contact: true } } },
+    include: { shop: { select: { name: true, slug: true, contact: true } } },
   });
+
+  if (status !== undefined || trackingNumber !== undefined) {
+    void notifyLineOrderUpdate(updated);
+  }
 
   if (trackingNumber !== undefined || status === "DELIVERED" || status === "CANCELLED") {
     await db.shipment

@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { TrackingPanel } from "@/components/storefront/tracking-panel";
 import { ReviewForm } from "@/components/storefront/review-form";
+import { LineOrderLinker } from "@/components/storefront/line-order-linker";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { generatePromptPay } from "@/lib/promptpay";
@@ -103,6 +104,13 @@ export default async function OrderTrackingPage({ params }: PageProps) {
             </div>
             <StatusBadge status={order.status} />
           </header>
+
+          <LineOrderLinker
+            token={order.publicToken}
+            initiallyLinked={Boolean(order.customerLineUserId)}
+            displayName={order.customerLineDisplayName}
+            pictureUrl={order.customerLinePictureUrl}
+          />
 
           {order.status === OrderStatus.PENDING ? (
             <TrackingPanel

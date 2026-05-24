@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
+const LINE_ID_TOKEN_VERIFY_URL = "https://api.line.me/oauth2/v2.1/verify";
+
 /**
  * Verify LINE Messaging webhook signature.
  * See: developers.line.biz/en/reference/messaging-api/#signature-validation
@@ -50,6 +52,72 @@ export async function pushLineMessage(opts: {
     return { ok: false, status: res.status, error: txt };
   }
   return { ok: true, status: 200 };
+}
+
+export function getPlatformLineLiffId(): string | null {
+  return cleanEnv(process.env.NEXT_PUBLIC_LINE_LIFF_ID);
+}
+
+export function getPlatformLineLoginChannelId(): string | null {
+  return cleanEnv(process.env.LINE_LOGIN_CHANNEL_ID);
+}
+
+export function getPlatformLineChannelSecret(): string | null {
+  return cleanEnv(process.env.SALEPAGE_LINE_CHANNEL_SECRET);
+}
+
+export function getPlatformLineChannelAccessToken(): string | null {
+  return cleanEnv(process.env.SALEPAGE_LINE_CHANNEL_ACCESS_TOKEN);
+}
+
+export function isPlatformLineConfigured(): boolean {
+  return Boolean(getPlatformLineLiffId() && getPlatformLineLoginChannelId());
+}
+
+export interface LineIdTokenProfile {
+  sub: string;
+  name?: string;
+  picture?: string;
+  email?: string;
+}
+
+export async function verifyPlatformLineIdToken(
+  idToken: string,
+): Promise<LineIdTokenProfile> {
+  const channelId = getPlatformLineLoginChannelId();
+  if (!channelId) {
+    throw new Error("LINE_LOGIN_CHANNEL_ID is not set");
+  }
+
+  const form = new URLSearchParams();
+  form.set("id_token", idToken);
+  form.set("client_id", channelId);
+
+  const res = await fetch(LINE_ID_TOKEN_VERIFY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: form,
+  });
+  const json = (await res.json().catch(() => null)) as
+    | (LineIdTokenProfile & { aud?: string; error?: string; error_description?: string })
+    | null;
+
+  if (!res.ok || !json?.sub) {
+    throw new Error(json?.error_description ?? json?.error ?? "LINE ID token verify failed");
+  }
+  if (json.aud && json.aud !== channelId) {
+    throw new Error("LINE ID token audience mismatch");
+  }
+  if (!/^U[0-9a-f]{32}$/i.test(json.sub)) {
+    throw new Error("LINE ID token subject is invalid");
+  }
+
+  return {
+    sub: json.sub,
+    name: typeof json.name === "string" ? json.name : undefined,
+    picture: typeof json.picture === "string" ? json.picture : undefined,
+    email: typeof json.email === "string" ? json.email : undefined,
+  };
 }
 
 /**
@@ -107,4 +175,9 @@ export interface LineMessageEvent {
   replyToken: string;
   source: { type: "user" | "group" | "room"; userId?: string };
   message: { id: string; type: string; text?: string };
+}
+
+function cleanEnv(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }

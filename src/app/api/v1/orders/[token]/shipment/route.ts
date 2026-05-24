@@ -3,6 +3,7 @@ import { ok, fail, parseJson } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { db, OrderStatus } from "@/lib/db";
 import { sendOrderShipped } from "@/lib/email";
+import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
 import { buildOrderRef } from "@/lib/orders";
 import { hasProPlan } from "@/lib/plan";
 import {
@@ -86,7 +87,7 @@ export async function POST(request: Request, ctx: Ctx) {
   const { token } = await ctx.params;
   const order = await db.order.findUnique({
     where: { publicToken: token },
-    include: { shop: { select: { id: true, ownerId: true, name: true, contact: true } } },
+    include: { shop: { select: { id: true, ownerId: true, name: true, slug: true, contact: true } } },
   });
   if (!order) return fail("not_found", "ไม่พบออเดอร์นี้", 404);
   if (order.shop.ownerId !== session.user.id) {
@@ -187,11 +188,11 @@ export async function POST(request: Request, ctx: Ctx) {
               ...(input.markShipping ? { status: OrderStatus.SHIPPING } : {}),
               trackingNumber,
             },
-            include: { shop: { select: { name: true, contact: true } } },
+            include: { shop: { select: { name: true, slug: true, contact: true } } },
           })
         : await tx.order.findUniqueOrThrow({
             where: { id: order.id },
-            include: { shop: { select: { name: true, contact: true } } },
+            include: { shop: { select: { name: true, slug: true, contact: true } } },
           });
 
     return { shipment, order: updatedOrder };
@@ -215,6 +216,10 @@ export async function POST(request: Request, ctx: Ctx) {
         (result.order.shop.contact as { email?: string } | null)?.email ?? null,
       trackingNumber: result.order.trackingNumber,
     });
+  }
+
+  if (shouldMarkShipping || trackingNumber !== order.trackingNumber) {
+    void notifyLineOrderUpdate(result.order);
   }
 
   return ok(result);
