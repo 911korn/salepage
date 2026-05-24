@@ -1,7 +1,16 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { AlertCircle, Check, Loader2, Upload, Wallet } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  Loader2,
+  MessageCircle,
+  Phone,
+  Upload,
+  Wallet,
+  XCircle,
+} from "lucide-react";
 import jsQR from "jsqr";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -13,6 +22,8 @@ interface Props {
   receiver: string;
   qrDataUrl: string | null;
   shopName: string;
+  initialManualReview?: boolean;
+  shopContact?: ShopContact;
 }
 
 interface MismatchEntry {
@@ -25,11 +36,21 @@ interface SlipResult {
   verified: boolean;
   status?: string;
   slipRef?: string;
+  slipImageUrl?: string | null;
+  manualReview?: boolean;
   mismatch?: MismatchEntry[];
   duplicate?: boolean;
   provider?: string;
   reason?: string;
   message?: string;
+  shopContact?: ShopContact;
+}
+
+interface ShopContact {
+  phone?: string | null;
+  phoneUrl?: string | null;
+  line?: string | null;
+  lineUrl?: string | null;
 }
 
 export function TrackingPanel({
@@ -38,13 +59,21 @@ export function TrackingPanel({
   receiver,
   qrDataUrl,
   shopName,
+  initialManualReview = false,
+  shopContact,
 }: Props) {
   const t = useTranslations("order.tracking");
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [submitting, setSubmitting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [result, setResult] = useState<SlipResult | null>(null);
+
+  const manualReview = Boolean(
+    result?.manualReview || (!result && initialManualReview),
+  );
+  const manualContact = result?.shopContact ?? shopContact;
 
   function onFile(file: File) {
     if (!file.type.startsWith("image/")) {
@@ -74,7 +103,10 @@ export function TrackingPanel({
             return;
           }
           setResult(json.data as SlipResult);
-          if (json.data.verified) {
+          if (json.data.manualReview) {
+            toast.success(t("manualReviewToast"));
+            setTimeout(() => router.refresh(), 1000);
+          } else if (json.data.verified) {
             toast.success(t("verified"));
             // Reload the server-rendered page to flip to PAID view
             setTimeout(() => router.refresh(), 1200);
@@ -89,6 +121,27 @@ export function TrackingPanel({
       });
     };
     reader.readAsDataURL(file);
+  }
+
+  async function cancelOrder() {
+    if (!confirm(t("cancelConfirm"))) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/v1/orders/${token}/cancel`, {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        toast.error(json.error?.message ?? t("cancelFailed"));
+        return;
+      }
+      toast.success(t("cancelledToast"));
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("cancelFailed"));
+    } finally {
+      setCancelling(false);
+    }
   }
 
   return (
@@ -178,7 +231,17 @@ export function TrackingPanel({
           />
         </label>
 
-        {result && !result.verified ? (
+        {manualReview ? (
+          <ManualReviewNotice
+            contact={manualContact}
+            title={t("manualReviewTitle")}
+            description={t("manualReviewDesc")}
+            lineLabel={t("manualReviewLine")}
+            phoneLabel={t("manualReviewPhone")}
+          />
+        ) : null}
+
+        {result && !result.verified && !result.manualReview ? (
           <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <AlertCircle className="mt-0.5 size-4 shrink-0" />
             <div className="min-w-0">
@@ -217,6 +280,86 @@ export function TrackingPanel({
           </div>
         ) : null}
       </section>
+
+      <section className="rounded-3xl border border-rose-100 bg-white p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-600">
+            <XCircle className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-display text-base font-semibold text-zinc-950">
+              {t("cancelTitle")}
+            </h2>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-600">
+              {t("cancelDesc")}
+            </p>
+            <button
+              type="button"
+              onClick={cancelOrder}
+              disabled={cancelling || submitting || pending}
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-rose-600 px-4 text-sm font-bold text-white shadow-lg shadow-rose-100 transition active:scale-[0.99] disabled:opacity-60 sm:w-auto"
+            >
+              {cancelling ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : null}
+              {t("cancelAction")}
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ManualReviewNotice({
+  contact,
+  title,
+  description,
+  lineLabel,
+  phoneLabel,
+}: {
+  contact?: ShopContact;
+  title: string;
+  description: string;
+  lineLabel: string;
+  phoneLabel: string;
+}) {
+  return (
+    <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
+      <div className="flex items-start gap-2">
+        <AlertCircle className="mt-0.5 size-4 shrink-0" />
+        <div className="min-w-0">
+          <p className="font-bold">{title}</p>
+          <p className="mt-1 leading-relaxed">
+            {description}
+          </p>
+        </div>
+      </div>
+
+      {contact?.lineUrl || contact?.phoneUrl ? (
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          {contact.lineUrl ? (
+            <a
+              href={contact.lineUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[#06C755] px-4 text-sm font-bold text-white shadow-sm transition active:scale-[0.99]"
+            >
+              <MessageCircle className="size-4" />
+              {lineLabel}
+            </a>
+          ) : null}
+          {contact.phoneUrl ? (
+            <a
+              href={contact.phoneUrl}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-bold text-zinc-800 ring-1 ring-amber-200 transition active:scale-[0.99]"
+            >
+              <Phone className="size-4" />
+              {phoneLabel} {contact.phone}
+            </a>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

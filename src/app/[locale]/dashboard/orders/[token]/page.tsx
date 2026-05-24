@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, ExternalLink, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowLeft, ExternalLink, Sparkles } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -175,6 +175,33 @@ export default async function OrderDetailPage({
                 <Row label="Provider" value={order.slipProvider} />
               ) : null}
             </dl>
+            {order.slipImageUrl ? (
+              <a
+                href={order.slipImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 block overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-soft)]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={order.slipImageUrl}
+                  alt="Payment slip"
+                  className="max-h-80 w-full object-contain"
+                />
+              </a>
+            ) : null}
+            {order.status === OrderStatus.PENDING && order.slipProvider === "manual" ? (
+              <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13px] text-amber-900">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <div>
+                  <p className="font-bold">มีสลิปรอตรวจด้วยมือ</p>
+                  <p className="mt-0.5 leading-relaxed">
+                    ตรวจยอดและบัญชีรับเงินจากสลิปนี้ ถ้าถูกต้องให้กด
+                    “ยืนยันว่าชำระแล้ว” เพื่อหักสต็อกและเริ่มจัดส่ง
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </section>
 
           {shippingEligible ? (

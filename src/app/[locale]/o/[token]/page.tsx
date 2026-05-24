@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft, Check, MapPin, ShieldCheck, Truck } from "lucide-react";
+import { ArrowLeft, Check, MapPin, ShieldCheck, Truck, XCircle } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +58,7 @@ export default async function OrderTrackingPage({ params }: PageProps) {
   }
 
   const ref = buildOrderRef(order.createdAt, order.id);
+  const shopContact = buildShopContact(order.shop.contact);
   const items = order.items as Array<{
     productSlug: string;
     productName: string;
@@ -119,28 +120,22 @@ export default async function OrderTrackingPage({ params }: PageProps) {
               receiver={order.shop.promptpayId ?? ""}
               qrDataUrl={qrDataUrl}
               shopName={order.shop.name}
+              initialManualReview={Boolean(order.slipImageUrl && order.slipProvider === "manual")}
+              shopContact={shopContact}
             />
           ) : (
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-7">
-              <div className="flex items-center gap-3">
-                <span className="grid size-10 place-items-center rounded-xl bg-white text-emerald-600">
-                  <Check className="size-5" strokeWidth={3} />
-                </span>
-                <div>
-                  <p className="font-display text-base font-bold text-emerald-900">
-                    {paymentStatusText(order.status, t("verified"))}
-                  </p>
-                  {order.slipRef ? (
-                    <p className="break-all font-mono text-[11px] text-emerald-800">
-                      ref: {order.slipRef}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            </div>
+            <OrderStateCard
+              status={order.status}
+              paidText={t("verified")}
+              manualPaidText={t("manualPaid")}
+              cancelledText={t("cancelledStatusText")}
+              refundedText={t("refundedStatusText")}
+              slipProvider={order.slipProvider}
+              slipRef={order.slipRef}
+            />
           )}
 
-          {order.status !== OrderStatus.PENDING ? (
+          {isFulfillmentStatus(order.status) ? (
             <ShipmentStatusCard
               status={order.status}
               shipment={order.shipment}
@@ -287,6 +282,83 @@ function paymentStatusText(status: OrderStatus, paidText: string) {
   return paidText;
 }
 
+function OrderStateCard({
+  status,
+  paidText,
+  manualPaidText,
+  cancelledText,
+  refundedText,
+  slipProvider,
+  slipRef,
+}: {
+  status: OrderStatus;
+  paidText: string;
+  manualPaidText: string;
+  cancelledText: string;
+  refundedText: string;
+  slipProvider: string | null;
+  slipRef: string | null;
+}) {
+  const cancelled =
+    status === OrderStatus.CANCELLED || status === OrderStatus.REFUNDED;
+  const manualPaid = status === OrderStatus.PAID && slipProvider === "manual";
+
+  return (
+    <div
+      className={cn(
+        "rounded-3xl border p-5 sm:p-7",
+        cancelled
+          ? "border-rose-200 bg-rose-50"
+          : "border-emerald-200 bg-emerald-50",
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            "grid size-10 place-items-center rounded-xl bg-white",
+            cancelled ? "text-rose-600" : "text-emerald-600",
+          )}
+        >
+          {cancelled ? (
+            <XCircle className="size-5" strokeWidth={3} />
+          ) : (
+            <Check className="size-5" strokeWidth={3} />
+          )}
+        </span>
+        <div>
+          <p
+            className={cn(
+              "font-display text-base font-bold",
+              cancelled ? "text-rose-900" : "text-emerald-900",
+            )}
+          >
+            {cancelled
+              ? status === OrderStatus.REFUNDED
+                ? refundedText
+                : cancelledText
+              : manualPaid
+                ? manualPaidText
+              : paymentStatusText(status, paidText)}
+          </p>
+          {slipRef && !cancelled ? (
+            <p className="break-all font-mono text-[11px] text-emerald-800">
+              ref: {slipRef}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function isFulfillmentStatus(status: OrderStatus) {
+  return (
+    status === OrderStatus.PAID ||
+    status === OrderStatus.SHIPPING ||
+    status === OrderStatus.DELIVERED
+  );
+}
+
 function ShipmentStatusCard({
   status,
   shipment,
@@ -340,4 +412,25 @@ function ShipmentStatusCard({
       ) : null}
     </section>
   );
+}
+
+function buildShopContact(contact: unknown) {
+  const parsed = contact as {
+    phone?: string | null;
+    line?: string | null;
+  } | null;
+  const phone = parsed?.phone?.trim() || null;
+  const line = parsed?.line?.trim() || null;
+  const phoneNumber = phone?.replace(/[^\d+]/g, "") || null;
+  return {
+    phone,
+    phoneUrl: phoneNumber ? `tel:${phoneNumber}` : null,
+    line,
+    lineUrl: line ? buildLineUrl(line) : null,
+  };
+}
+
+function buildLineUrl(line: string) {
+  if (line.startsWith("http://") || line.startsWith("https://")) return line;
+  return `https://line.me/R/ti/p/${line.startsWith("@") ? "%40" + line.slice(1) : line}`;
 }

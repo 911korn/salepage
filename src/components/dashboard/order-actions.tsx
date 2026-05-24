@@ -65,6 +65,7 @@ export function OrderActions({
   }
 
   const canShip = currentStatus === "PAID" && !shippingManaged;
+  const canMarkPaid = currentStatus === "PENDING";
   const canDeliver = currentStatus === "SHIPPING";
   const canCancel =
     currentStatus === "PENDING" ||
@@ -100,6 +101,15 @@ export function OrderActions({
             ) : null}
           </div>
         ) : null}
+
+        <Button
+          size="md"
+          className={cn("w-full", !canMarkPaid && "hidden")}
+          loading={pending}
+          onClick={() => patchOrder({ status: "PAID" })}
+        >
+          <Check className="size-4" /> {t("actions.markPaid")}
+        </Button>
 
         <Button
           size="md"

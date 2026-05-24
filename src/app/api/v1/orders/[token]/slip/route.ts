@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { put } from "@vercel/blob";
 import { ok, fail, parseJson } from "@/lib/api";
 import { db, OrderStatus } from "@/lib/db";
 import { verifySlip } from "@/lib/slip-verify";
@@ -11,6 +12,8 @@ import { extractSlipQrPayloadFromBase64 } from "@/lib/slip-qr";
 interface Ctx {
   params: Promise<{ token: string }>;
 }
+
+export const runtime = "nodejs";
 
 const Body = z
   .object({
@@ -69,18 +72,49 @@ export async function POST(request: Request, ctx: Ctx) {
     });
   }
 
+  const uploadedSlipUrl = await storeSlipImage({
+    imageBase64: parsed.data.imageBase64,
+    shopId: order.shop.id,
+    orderId: order.id,
+  });
+
   // Reserve a slip-verify call against the shop's plan quota / credit wallet
   // BEFORE hitting the SlipOK API (SlipOK charges per call regardless of
-  // verification outcome). If exhausted, return 402 so the customer's UI can
-  // surface a "ติดต่อร้าน — โควต้าหมด" hint.
+  // verification outcome). If exhausted, keep the uploaded slip on the order
+  // and switch the customer into a manual-review flow instead of blocking them.
   const consume = await tryConsumeSlip(order.shop.id, order.shop.ownerId);
   if (!consume.ok) {
-    return fail(
-      "slip_quota_exhausted",
-      "ร้านนี้ใช้โควต้าเช็คสลิปเดือนนี้หมดแล้ว เจ้าของร้านต้องเติมเครดิตก่อน",
-      402,
-      { remaining: consume.remaining },
-    );
+    const manualReason =
+      consume.remaining.monthlyQuota === 0 && consume.remaining.credits === 0
+        ? "no_auto_verify"
+        : "slip_quota_exhausted";
+
+    await db.order.update({
+      where: { id: order.id },
+      data: {
+        slipImageUrl: uploadedSlipUrl ?? order.slipImageUrl,
+        slipProvider: "manual",
+        slipRaw: toJson({
+          manualReview: true,
+          reason: manualReason,
+          submittedAt: new Date().toISOString(),
+          remaining: consume.remaining,
+          slipStored: Boolean(uploadedSlipUrl ?? order.slipImageUrl),
+        }),
+      },
+    });
+
+    return ok({
+      verified: false,
+      manualReview: true,
+      status: order.status,
+      reason: manualReason,
+      message:
+        "ร้านนี้ไม่ได้เปิดตรวจสลิปอัตโนมัติ ระบบรับสลิปไว้แล้วและรอร้านตรวจสอบด้วยมือ",
+      slipImageUrl: uploadedSlipUrl ?? order.slipImageUrl,
+      shopContact: buildShopContact(order.shop.contact),
+      remaining: consume.remaining,
+    });
   }
 
   const qrPayload = parsed.data.qrPayload ??
@@ -129,6 +163,7 @@ export async function POST(request: Request, ctx: Ctx) {
     where: { id: order.id },
     data: {
       status: OrderStatus.PAID,
+      slipImageUrl: uploadedSlipUrl ?? order.slipImageUrl,
       slipRef: result.ref,
       slipVerifiedAt: new Date(),
       slipProvider: result.provider,
@@ -184,4 +219,79 @@ export async function POST(request: Request, ctx: Ctx) {
     receiver: result.receiver,
     provider: result.provider,
   });
+}
+
+interface StoreSlipImageInput {
+  imageBase64?: string;
+  shopId: string;
+  orderId: string;
+}
+
+async function storeSlipImage({
+  imageBase64,
+  shopId,
+  orderId,
+}: StoreSlipImageInput): Promise<string | null> {
+  if (!imageBase64 || !process.env.BLOB_READ_WRITE_TOKEN) return null;
+
+  try {
+    const clean = imageBase64.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "");
+    const bytes = Buffer.from(clean, "base64");
+    if (!bytes.byteLength || bytes.byteLength > 8 * 1024 * 1024) return null;
+
+    const { contentType, extension } = sniffImageType(bytes);
+    const result = await put(
+      `slips/${shopId}/${orderId}/${Date.now()}.${extension}`,
+      bytes,
+      {
+        access: "public",
+        addRandomSuffix: false,
+        contentType,
+      },
+    );
+    return result.url;
+  } catch {
+    return null;
+  }
+}
+
+function sniffImageType(bytes: Buffer) {
+  if (bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex"))) {
+    return { contentType: "image/png", extension: "png" };
+  }
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { contentType: "image/jpeg", extension: "jpg" };
+  }
+  if (
+    bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+    bytes.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return { contentType: "image/webp", extension: "webp" };
+  }
+  return { contentType: "image/jpeg", extension: "jpg" };
+}
+
+function buildShopContact(contact: unknown) {
+  const parsed = contact as {
+    phone?: string | null;
+    line?: string | null;
+  } | null;
+  const phone = parsed?.phone?.trim() || null;
+  const line = parsed?.line?.trim() || null;
+  const phoneNumber = phone?.replace(/[^\d+]/g, "") || null;
+  return {
+    phone,
+    phoneUrl: phoneNumber ? `tel:${phoneNumber}` : null,
+    line,
+    lineUrl: line ? buildLineUrl(line) : null,
+  };
+}
+
+function buildLineUrl(line: string) {
+  if (line.startsWith("http://") || line.startsWith("https://")) return line;
+  return `https://line.me/R/ti/p/${line.startsWith("@") ? "%40" + line.slice(1) : line}`;
+}
+
+function toJson(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
 }
