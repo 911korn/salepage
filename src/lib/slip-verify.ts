@@ -133,7 +133,9 @@ async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult
     };
   }
   const data = json.data ?? {};
-  const receiverAccount = pickString(data, ["receiver", "account", "value"]);
+  const receiverAccount = nonEmptyString(
+    pickString(data, ["receiver", "account", "value"]),
+  ) ?? nonEmptyString(pickString(data, ["receiver", "proxy", "value"]));
   const receiverUnreadable = Boolean(input.expectReceiverId && !receiverAccount);
 
   // Manual receiver match — `log: false` means SlipOK didn't enforce this.
@@ -221,6 +223,10 @@ function pickString(obj: Record<string, unknown>, path: string[]): string | unde
     }
   }
   return typeof cur === "string" ? cur : undefined;
+}
+
+function nonEmptyString(value: string | undefined) {
+  return value?.trim() || undefined;
 }
 
 function pickNumber(obj: Record<string, unknown>, path: string[]): number | undefined {
