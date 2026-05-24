@@ -190,20 +190,27 @@ export default async function StorefrontPage({ params }: PageProps) {
   const shop = view;
 
   return (
-    <div className="min-h-screen bg-[color:var(--color-soft)]">
+    <div className="min-h-screen overflow-x-hidden bg-[color:var(--color-soft)]">
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
-        <div className="container-page flex h-14 items-center justify-between">
+        <div className="container-page flex h-14 min-w-0 items-center gap-2">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)]"
+            className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)]"
           >
             <ArrowLeft className="size-4" /> {t("back")}
           </Link>
-          <p className="font-mono text-xs text-zinc-500">
+          <p className="min-w-0 flex-1 truncate text-center font-mono text-xs text-zinc-500">
             {storefrontLabel(shop.slug)}
           </p>
-          <Link href="/signup" className={cn(buttonStyles({ size: "sm" }))}>
-            {t("createOwn")}
+          <Link
+            href="/signup"
+            className={cn(buttonStyles({
+              size: "sm",
+              className: "shrink-0 px-2.5 text-xs sm:px-3.5 sm:text-sm",
+            }))}
+          >
+            <span className="sm:hidden">สร้างร้าน</span>
+            <span className="hidden sm:inline">{t("createOwn")}</span>
           </Link>
         </div>
       </header>

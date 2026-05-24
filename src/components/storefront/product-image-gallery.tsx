@@ -42,7 +42,7 @@ export function ProductImageGallery({
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-[color:var(--color-border)] bg-white">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-[color:var(--color-border)] bg-white">
       <div className="relative aspect-square w-full bg-zinc-100">
         {hasImages ? (
           <div

@@ -104,7 +104,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       : 0;
 
   return (
-    <div className="min-h-screen bg-[color:var(--color-soft)]">
+    <div className="min-h-screen overflow-x-hidden bg-[color:var(--color-soft)]">
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
         <div className="container-page flex h-14 min-w-0 items-center gap-3">
           <Link
@@ -121,7 +121,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       </header>
 
       <div className="container-page py-6 lg:py-10">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr] lg:gap-10">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[1.1fr_1fr] lg:gap-10">
           <ProductImageGallery
             images={product.imageUrls}
             productName={product.name}
@@ -130,7 +130,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           />
 
           {/* Detail + checkout */}
-          <div>
+          <div className="min-w-0">
             <div className="rounded-3xl border border-[color:var(--color-border)] bg-white p-6 shadow-sm sm:p-7">
               <div className="flex items-start justify-between gap-3">
                 <Link
