@@ -34,7 +34,7 @@ export function DashboardShell({
   const currentShopSlug = activeShop?.slug ?? activeShopSlug;
 
   return (
-    <div className="flex min-h-screen bg-[color:var(--color-soft)]">
+    <div className="flex min-h-screen bg-[color:var(--color-soft)] print:block print:bg-white">
       <DashboardSidebar
         shops={shops}
         activeShopSlug={currentShopSlug}
@@ -56,7 +56,7 @@ export function DashboardShell({
           }
           onOpenMenu={() => setMobileOpen(true)}
         />
-        <main className="flex-1 px-4 pt-5 pb-24 sm:pt-6 lg:px-8 lg:py-10">
+        <main className="flex-1 px-4 pt-5 pb-24 print:p-0 sm:pt-6 lg:px-8 lg:py-10">
           {children}
         </main>
       </div>

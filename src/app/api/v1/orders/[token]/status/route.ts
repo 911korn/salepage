@@ -80,6 +80,21 @@ export async function PATCH(request: Request, ctx: Ctx) {
     include: { shop: { select: { name: true, contact: true } } },
   });
 
+  if (trackingNumber !== undefined || status === "DELIVERED" || status === "CANCELLED") {
+    await db.shipment
+      .update({
+        where: { orderId: order.id },
+        data: {
+          ...(trackingNumber !== undefined ? { trackingNumber } : {}),
+          ...(status === "DELIVERED"
+            ? { status: "DELIVERED", deliveredAt: new Date() }
+            : {}),
+          ...(status === "CANCELLED" ? { status: "CANCELLED" } : {}),
+        },
+      })
+      .catch(() => {});
+  }
+
   // Award loyalty points on the first transition into PAID (only once — guard
   // by checking we transitioned FROM PENDING). 1 point per Shop.loyaltyBahtPerPoint THB spent.
   if (status === "PAID" && order.status === OrderStatus.PENDING && updated.customerPhone) {

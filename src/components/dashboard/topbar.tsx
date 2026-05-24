@@ -24,7 +24,7 @@ export function DashboardTopbar({ shop, onOpenMenu }: Props) {
   const shopLink = shop ? absoluteStorefrontUrl(shop.slug) : "";
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-2 overflow-hidden border-b border-[color:var(--color-border)] bg-white/95 px-3 backdrop-blur lg:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-2 overflow-hidden border-b border-[color:var(--color-border)] bg-white/95 px-3 backdrop-blur print:hidden lg:px-6">
       <button
         type="button"
         aria-label={t("openMenu")}

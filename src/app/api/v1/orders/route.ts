@@ -6,6 +6,13 @@ import { generatePromptPay } from "@/lib/promptpay";
 import { sendOrderCreated, sendNewOrderAlert } from "@/lib/email";
 import { getPlatformSetting } from "@/lib/platform-settings";
 import { viewerCanBypassMaintenance } from "@/lib/admin";
+import {
+  extractThaiPostcode,
+  makeAddressKey,
+  makeAddressLabel,
+  normalizeAddress,
+  normalizeCustomerPhone,
+} from "@/lib/customer-addresses";
 
 const Item = z.object({
   productSlug: z.string().min(1),
@@ -209,6 +216,43 @@ export async function POST(request: Request) {
       },
       data: { points: { decrement: pointsRedeemed } },
     });
+  }
+
+  if (input.customerPhone && input.customerAddress) {
+    const cleanPhone = normalizeCustomerPhone(input.customerPhone);
+    const cleanAddress = normalizeAddress(input.customerAddress);
+    if (cleanPhone.length >= 9 && cleanAddress.length >= 10) {
+      try {
+        const addressKey = makeAddressKey(cleanAddress);
+        await db.customerAddress.upsert({
+          where: {
+            shopId_customerPhone_addressKey: {
+              shopId: shop.id,
+              customerPhone: cleanPhone,
+              addressKey,
+            },
+          },
+          create: {
+            shopId: shop.id,
+            customerPhone: cleanPhone,
+            customerName: input.customerName.trim(),
+            label: makeAddressLabel(cleanAddress),
+            address: cleanAddress,
+            addressKey,
+            postcode: extractThaiPostcode(cleanAddress),
+          },
+          update: {
+            customerName: input.customerName.trim(),
+            label: makeAddressLabel(cleanAddress),
+            postcode: extractThaiPostcode(cleanAddress),
+            useCount: { increment: 1 },
+            lastUsedAt: new Date(),
+          },
+        });
+      } catch (e) {
+        console.warn("Customer address memory failed:", e);
+      }
+    }
   }
 
   // Fire emails in the background — don't await + don't fail the order on email error.

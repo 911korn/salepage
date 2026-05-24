@@ -32,20 +32,20 @@ model User {
   // Platform admin role. USER = regular shop owner. ADMIN = SalePage operator
   // with access to /admin. SUPER_ADMIN can grant/revoke other users' roles
   // and edit PlatformSetting. Defaults to USER for all signups.
-  role          UserRole  @default(USER)
+  role UserRole @default(USER)
 
   // Stripe (one customer per User across all their shops)
   stripeCustomerId String? @unique
 
   // Soft-suspend flag set by /admin/users. Blocks sign-in via NextAuth
   // signIn callback; does not delete data.
-  suspended     Boolean   @default(false)
+  suspended Boolean @default(false)
 
-  accounts       Account[]
-  sessions       Session[]
-  shops          Shop[]
-  subscription   Subscription?
-  adminActions   AdminAuditLog[] @relation("AdminActor")
+  accounts     Account[]
+  sessions     Session[]
+  shops        Shop[]
+  subscription Subscription?
+  adminActions AdminAuditLog[] @relation("AdminActor")
 }
 
 enum UserRole {
@@ -95,17 +95,17 @@ model VerificationToken {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Shop {
-  id          String  @id @default(cuid())
-  slug        String  @unique
+  id          String   @id @default(cuid())
+  slug        String   @unique
   name        String
   description String?
-  logoText    String? @db.VarChar(4) // single character/emoji shown in the round badge
+  logoText    String?  @db.VarChar(4) // single character/emoji shown in the round badge
   bannerUrls  String[] @default([])
   category    String? // matches messages/*.json categories.* keys
 
-  themeColor  String  @default("#e11d48")
-  verified    Boolean @default(false)
-  status      ShopStatus @default(ACTIVE)
+  themeColor String     @default("#e11d48")
+  verified   Boolean    @default(false)
+  status     ShopStatus @default(ACTIVE)
 
   // Owner
   ownerId String
@@ -122,7 +122,7 @@ model Shop {
   announcement String? @db.Text
 
   // Loyalty config — null/0 disables. baht spent per 1 point, baht per point on redeem.
-  loyaltyBahtPerPoint     Int @default(100)
+  loyaltyBahtPerPoint      Int @default(100)
   loyaltyBahtValuePerPoint Int @default(1)
 
   // LINE Messaging API integration (Business+ tier only — gated in code).
@@ -134,14 +134,14 @@ model Shop {
   lineChannelAccessToken String? @db.Text
   lineWebhookEnabled     Boolean @default(false)
 
-  rating     Float @default(0)
-  totalSold  Int   @default(0)
+  rating    Float @default(0)
+  totalSold Int   @default(0)
 
   // Admin-only flags. Distinct from owner-controlled `status` (PAUSED/ARCHIVED).
   // `suspended` = platform admin took shop offline (returns 503 on storefront).
   // `featured`  = pinned on landing/discover surfaces by admin.
-  suspended  Boolean @default(false)
-  featured   Boolean @default(false)
+  suspended Boolean @default(false)
+  featured  Boolean @default(false)
 
   // AI slip-verify credit wallet. Admin can top up via /admin/shops/[id].
   // Decremented per /api/v1/slip/verify call once the plan's monthly quota
@@ -151,12 +151,14 @@ model Shop {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products      Product[]
-  orders        Order[]
-  reviews       Review[]
-  coupons       Coupon[]
-  loyalty       CustomerLoyalty[]
-  conversations Conversation[]
+  products          Product[]
+  orders            Order[]
+  shipments         Shipment[]
+  reviews           Review[]
+  coupons           Coupon[]
+  loyalty           CustomerLoyalty[]
+  customerAddresses CustomerAddress[]
+  conversations     Conversation[]
 
   @@index([ownerId])
   @@index([featured, status])
@@ -178,12 +180,12 @@ model Product {
   priceSatang     Int
   compareAtSatang Int?
 
-  imageUrls   String[] @default([])
-  badge       ProductBadge?
-  type        ProductType   @default(PHYSICAL)
-  stock       Int?
-  sold        Int           @default(0)
-  status      ProductStatus @default(ACTIVE)
+  imageUrls String[]      @default([])
+  badge     ProductBadge?
+  type      ProductType   @default(PHYSICAL)
+  stock     Int?
+  sold      Int           @default(0)
+  status    ProductStatus @default(ACTIVE)
 
   shopId String
   shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
@@ -219,9 +221,9 @@ enum ProductStatus {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Order {
-  id          String  @id @default(cuid())
+  id          String @id @default(cuid())
   // Public token the customer uses to track this order without logging in.
-  publicToken String  @unique
+  publicToken String @unique
 
   shopId String
   shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
@@ -234,23 +236,24 @@ model Order {
 
   // Snapshot of products at time of purchase
   // [{ productId, productSlug, name, qty, priceSatang, image? }]
-  items    Json
+  items Json
 
   subtotalSatang Int
   shippingSatang Int @default(0)
   totalSatang    Int
 
-  status         OrderStatus @default(PENDING)
-  paymentMethod  String?     // "promptpay" | "cod" | "stripe"
+  status        OrderStatus @default(PENDING)
+  paymentMethod String? // "promptpay" | "cod" | "stripe"
 
   // Slip verification trail
-  slipImageUrl    String?
-  slipRef         String?    // bank transaction ref
-  slipVerifiedAt  DateTime?
-  slipProvider    String?    // "slipok" | "easyslip" | "mock"
-  slipRaw         Json?      // raw response for audit/replay
+  slipImageUrl   String?
+  slipRef        String? // bank transaction ref
+  slipVerifiedAt DateTime?
+  slipProvider   String? // "slipok" | "easyslip" | "mock"
+  slipRaw        Json? // raw response for audit/replay
 
   trackingNumber String?
+  shipment       Shipment?
   notes          String?
 
   // Discounts applied at checkout
@@ -278,23 +281,96 @@ enum OrderStatus {
   REFUNDED
 }
 
+model Shipment {
+  id      String @id @default(cuid())
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  // "manual" now; future values can be "easyparcel", "shippop", etc.
+  provider           String  @default("manual")
+  providerShipmentId String?
+
+  courierCode String
+  courierName String
+  serviceName String?
+  // "PICKUP" or "DROPOFF" kept as string to allow provider-specific modes later.
+  handoff     String  @default("DROPOFF")
+  // "DRAFT" | "READY_TO_SHIP" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED"
+  status      String  @default("READY_TO_SHIP")
+
+  trackingNumber String?
+  labelUrl       String?
+
+  senderName     String?
+  senderPhone    String?
+  senderAddress  String?
+  senderPostcode String?
+
+  receiverName     String
+  receiverPhone    String?
+  receiverAddress  String?
+  receiverPostcode String?
+
+  parcelWeightGram Int?
+  parcelWidthCm    Int?
+  parcelLengthCm   Int?
+  parcelHeightCm   Int?
+
+  shippingFeeSatang Int?
+  codAmountSatang   Int?
+  note              String?
+
+  bookedAt    DateTime?
+  shippedAt   DateTime?
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([shopId, status, createdAt])
+  @@index([trackingNumber])
+}
+
+// Anonymous checkout address memory. Scoped by shop + normalized phone so repeat
+// customers can reuse shipping addresses without an account.
+model CustomerAddress {
+  id            String   @id @default(cuid())
+  shopId        String
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerPhone String
+  customerName  String?
+  label         String?
+  address       String   @db.Text
+  addressKey    String
+  postcode      String?
+  useCount      Int      @default(1)
+  lastUsedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([shopId, customerPhone, addressKey])
+  @@index([shopId, customerPhone, lastUsedAt])
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Stripe subscriptions (platform billing — not shop payments)
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Subscription {
-  id                   String   @id @default(cuid())
-  userId               String   @unique
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  stripeSubscriptionId String   @unique
+  stripeSubscriptionId String @unique
   stripeCustomerId     String
 
-  plan                 PlanKey
-  status               SubscriptionStatus
-  currentPeriodEnd     DateTime?
-  trialEnd             DateTime?
-  cancelAtPeriodEnd    Boolean  @default(false)
+  plan              PlanKey
+  status            SubscriptionStatus
+  currentPeriodEnd  DateTime?
+  trialEnd          DateTime?
+  cancelAtPeriodEnd Boolean            @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -326,10 +402,10 @@ enum SubscriptionStatus {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model StripeEvent {
-  id          String   @id // Stripe event.id, e.g. evt_*
+  id          String    @id // Stripe event.id, e.g. evt_*
   type        String
   livemode    Boolean
-  receivedAt  DateTime @default(now())
+  receivedAt  DateTime  @default(now())
   processedAt DateTime?
   error       String?
   payload     Json
@@ -350,14 +426,14 @@ model Review {
   orderId   String?
   order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
-  rating        Int      // 1..5
-  comment       String?  @db.Text
+  rating        Int // 1..5
+  comment       String? @db.Text
   customerName  String
   customerPhone String?
 
   // Owner reply
-  reply       String?  @db.Text
-  repliedAt   DateTime?
+  reply     String?   @db.Text
+  repliedAt DateTime?
 
   createdAt DateTime @default(now())
 
@@ -369,12 +445,12 @@ model Coupon {
   id             String     @id @default(cuid())
   shopId         String
   shop           Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  code           String     // stored lower-cased; case-insensitive lookup
+  code           String // stored lower-cased; case-insensitive lookup
   type           CouponType
-  percent        Int?       // 1..100 (for PERCENT)
-  amountSatang   Int?       // for FIXED
+  percent        Int? // 1..100 (for PERCENT)
+  amountSatang   Int? // for FIXED
   minOrderSatang Int?
-  maxRedemptions Int?       // null = unlimited
+  maxRedemptions Int? // null = unlimited
   redeemedCount  Int        @default(0)
   expiresAt      DateTime?
   active         Boolean    @default(true)
@@ -399,9 +475,9 @@ model Conversation {
   id                 String   @id @default(cuid())
   shopId             String
   shop               Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  customerLineUserId String   // 33-char LINE userId starting with U
-  customerName       String?  // displayName from LINE profile
-  customerAvatar     String?  // pictureUrl from LINE profile
+  customerLineUserId String // 33-char LINE userId starting with U
+  customerName       String? // displayName from LINE profile
+  customerAvatar     String? // pictureUrl from LINE profile
   lastMessageAt      DateTime @default(now())
   lastMessageText    String?  @db.Text
   unreadCount        Int      @default(0)
@@ -474,10 +550,10 @@ model AdminAuditLog {
   id         String   @id @default(cuid())
   actorId    String
   actor      User     @relation("AdminActor", fields: [actorId], references: [id], onDelete: Cascade)
-  action     String   // e.g. "user.suspend", "shop.feature", "settings.update"
-  targetType String?  // "user" | "shop" | "subscription" | "review" | "setting" | ...
+  action     String // e.g. "user.suspend", "shop.feature", "settings.update"
+  targetType String? // "user" | "shop" | "subscription" | "review" | "setting" | ...
   targetId   String?
-  diff       Json?    // before/after snapshot or arbitrary action context
+  diff       Json? // before/after snapshot or arbitrary action context
   createdAt  DateTime @default(now())
 
   @@index([actorId, createdAt])

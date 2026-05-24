@@ -72,7 +72,7 @@ export function DashboardSidebar({ shops, activeShopSlug, user }: Props) {
     pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-[color:var(--color-border)] bg-white lg:flex">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-[color:var(--color-border)] bg-white print:hidden lg:flex">
       <DashboardSidebarInner
         shops={shops}
         activeShopSlug={activeShopSlug}
@@ -107,7 +107,7 @@ export function DashboardMobileDrawer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden">
+    <div className="fixed inset-0 z-50 print:hidden lg:hidden">
       <button
         type="button"
         aria-label={tCommon("closeMenu")}
@@ -354,7 +354,7 @@ export function DashboardBottomNav() {
   return (
     <nav
       aria-label={t("common.mobileNav")}
-      className="fixed inset-x-0 bottom-0 z-30 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-4 border-t border-[color:var(--color-border)] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(15_23_42/0.08)] backdrop-blur lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-4 border-t border-[color:var(--color-border)] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(15_23_42/0.08)] backdrop-blur print:hidden lg:hidden"
     >
       {MAIN_LINKS.map((link) => {
         const Icon = link.icon;

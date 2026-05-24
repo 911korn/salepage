@@ -21,9 +21,15 @@ interface Props {
   token: string;
   currentStatus: OrderStatus;
   trackingNumber: string | null;
+  shippingManaged?: boolean;
 }
 
-export function OrderActions({ token, currentStatus, trackingNumber }: Props) {
+export function OrderActions({
+  token,
+  currentStatus,
+  trackingNumber,
+  shippingManaged = false,
+}: Props) {
   const t = useTranslations("dashboard.orders.detail");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -58,7 +64,7 @@ export function OrderActions({ token, currentStatus, trackingNumber }: Props) {
     );
   }
 
-  const canShip = currentStatus === "PAID";
+  const canShip = currentStatus === "PAID" && !shippingManaged;
   const canDeliver = currentStatus === "SHIPPING";
   const canCancel =
     currentStatus === "PENDING" ||
@@ -70,28 +76,30 @@ export function OrderActions({ token, currentStatus, trackingNumber }: Props) {
       <h2 className="font-display mb-3 text-base font-semibold">Actions</h2>
 
       <div className="space-y-3">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            {t("trackingNumber")}
-          </label>
-          <Input
-            value={tracking}
-            onChange={(e) => setTracking(e.target.value)}
-            placeholder={t("trackingPlaceholder")}
-            disabled={currentStatus === "CANCELLED" || currentStatus === "REFUNDED"}
-          />
-          {tracking !== (trackingNumber ?? "") ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-2 w-full"
-              loading={pending}
-              onClick={() => patchOrder({ trackingNumber: tracking })}
-            >
-              <Check className="size-4" /> {t("actions.save")}
-            </Button>
-          ) : null}
-        </div>
+        {!shippingManaged ? (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              {t("trackingNumber")}
+            </label>
+            <Input
+              value={tracking}
+              onChange={(e) => setTracking(e.target.value)}
+              placeholder={t("trackingPlaceholder")}
+              disabled={currentStatus === "CANCELLED" || currentStatus === "REFUNDED"}
+            />
+            {tracking !== (trackingNumber ?? "") ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 w-full"
+                loading={pending}
+                onClick={() => patchOrder({ trackingNumber: tracking })}
+              >
+                <Check className="size-4" /> {t("actions.save")}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
 
         <Button
           size="md"

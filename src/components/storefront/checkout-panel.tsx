@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Minus, Plus, ShoppingBag, Sparkles, Ticket } from "lucide-react";
+import {
+  Clock,
+  MapPin,
+  Minus,
+  Plus,
+  PlusCircle,
+  ShoppingBag,
+  Sparkles,
+  Ticket,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
@@ -17,6 +26,18 @@ interface Props {
     priceBaht: number;
     type: "PHYSICAL" | "DIGITAL";
   };
+}
+
+interface AddressSuggestion {
+  id: string;
+  source: "local" | "server";
+  label?: string | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  address: string;
+  postcode?: string | null;
+  useCount?: number;
+  lastUsedAt?: string;
 }
 
 export function CheckoutPanel({ shopSlug, product }: Props) {
@@ -44,6 +65,8 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
     bahtValuePerPoint: number;
   } | null>(null);
   const [redeemPoints, setRedeemPoints] = useState(0);
+  const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([]);
+  const [addressLoading, setAddressLoading] = useState(false);
 
   const subtotal = product.priceBaht * qty;
   const shipping = 0; // v1: shop sets per-product shipping later
@@ -52,6 +75,8 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
     redeemPoints * (loyalty?.bahtValuePerPoint ?? 0);
   const total = Math.max(0, subtotal + shipping - couponDiscount - pointsDiscount);
   const needsAddress = product.type === "PHYSICAL";
+  const cleanPhone = normalizePhoneForCheckout(phone);
+  const phoneReady = cleanPhone.length >= 9;
 
   // Look up loyalty wallet when phone has 9+ digits
   useEffect(() => {
@@ -82,6 +107,46 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
       cancelled = true;
     };
   }, [phone, shopSlug]);
+
+  useEffect(() => {
+    if (!needsAddress) return;
+    if (!phoneReady) {
+      queueMicrotask(() => {
+        setAddressSuggestions([]);
+        setAddressLoading(false);
+      });
+      return;
+    }
+
+    let cancelled = false;
+    const local = readLocalAddresses(shopSlug, cleanPhone);
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setAddressSuggestions(local);
+      setAddressLoading(true);
+    });
+
+    fetch(`/api/v1/shops/${shopSlug}/addresses/${cleanPhone}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled || !json.ok) return;
+        const remote = (json.data.addresses as AddressSuggestion[]).map((item) => ({
+          ...item,
+          source: "server" as const,
+        }));
+        setAddressSuggestions(mergeAddressSuggestions([...local, ...remote]));
+      })
+      .catch(() => {
+        if (!cancelled) setAddressSuggestions(local);
+      })
+      .finally(() => {
+        if (!cancelled) setAddressLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cleanPhone, needsAddress, phoneReady, shopSlug]);
 
   async function applyCoupon() {
     if (!couponCode.trim()) return;
@@ -144,6 +209,15 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
           });
           return;
         }
+        rememberLocalAddress(shopSlug, cleanPhone, {
+          id: `local-${Date.now()}`,
+          source: "local",
+          customerName: name.trim(),
+          customerEmail: email.trim() || null,
+          address: address.trim(),
+          label: makeAddressPreview(address.trim()),
+          lastUsedAt: new Date().toISOString(),
+        });
         router.push(`/o/${json.data.token}`);
       } catch (e) {
         toast.error(t("errors.createFailed"), {
@@ -201,14 +275,6 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
 
       <div className="mt-4 space-y-3">
         <FieldInput
-          label={t("name")}
-          placeholder={t("namePlaceholder")}
-          value={name}
-          onChange={setName}
-          required
-          autoComplete="name"
-        />
-        <FieldInput
           label={t("phone")}
           placeholder={t("phonePlaceholder")}
           value={phone}
@@ -216,6 +282,32 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
           required
           autoComplete="tel"
           inputMode="numeric"
+        />
+        {needsAddress ? (
+          <AddressMemory
+            phoneReady={phoneReady}
+            loading={addressLoading}
+            suggestions={addressSuggestions}
+            selectedAddress={address}
+            onUse={(suggestion) => {
+              setAddress(suggestion.address);
+              if (!name.trim() && suggestion.customerName) {
+                setName(suggestion.customerName);
+              }
+              if (!email.trim() && suggestion.customerEmail) {
+                setEmail(suggestion.customerEmail);
+              }
+            }}
+            onNew={() => setAddress("")}
+          />
+        ) : null}
+        <FieldInput
+          label={t("name")}
+          placeholder={t("namePlaceholder")}
+          value={name}
+          onChange={setName}
+          required
+          autoComplete="name"
         />
         <FieldInput
           label={t("email")}
@@ -362,6 +454,106 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
   );
 }
 
+function AddressMemory({
+  phoneReady,
+  loading,
+  suggestions,
+  selectedAddress,
+  onUse,
+  onNew,
+}: {
+  phoneReady: boolean;
+  loading: boolean;
+  suggestions: AddressSuggestion[];
+  selectedAddress: string;
+  onUse: (suggestion: AddressSuggestion) => void;
+  onNew: () => void;
+}) {
+  if (!phoneReady) {
+    return (
+      <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-soft)] px-3.5 py-3 text-[13px] text-zinc-600">
+        <span className="inline-flex items-center gap-1.5 font-medium text-zinc-800">
+          <MapPin className="size-4 text-[color:var(--color-brand-600)]" />
+          ใส่เบอร์โทรก่อน
+        </span>
+        <p className="mt-1 leading-relaxed">
+          ถ้าเคยสั่งร้านนี้ ระบบจะแสดงที่อยู่เดิมให้กดใช้ได้ทันที
+        </p>
+      </div>
+    );
+  }
+
+  if (loading && suggestions.length === 0) {
+    return (
+      <div className="rounded-2xl border border-[color:var(--color-border)] bg-white px-3.5 py-3 text-[13px] text-zinc-600">
+        <span className="inline-flex items-center gap-1.5">
+          <Clock className="size-4 animate-pulse text-[color:var(--color-brand-600)]" />
+          กำลังเช็คที่อยู่เดิม...
+        </span>
+      </div>
+    );
+  }
+
+  if (suggestions.length === 0) {
+    return (
+      <div className="rounded-2xl border border-[color:var(--color-border)] bg-white px-3.5 py-3 text-[13px] text-zinc-600">
+        <span className="inline-flex items-center gap-1.5 font-medium text-zinc-800">
+          <PlusCircle className="size-4 text-[color:var(--color-brand-600)]" />
+          ยังไม่มีที่อยู่เดิม
+        </span>
+        <p className="mt-1 leading-relaxed">
+          ใส่ที่อยู่ครั้งนี้ ครั้งหน้าจะกดใช้ซ้ำได้เลย
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-brand-800)]">
+          <MapPin className="size-4" />
+          ที่อยู่ที่เคยใช้ในร้านนี้
+        </p>
+        <button
+          type="button"
+          onClick={onNew}
+          className="min-h-9 rounded-xl bg-white px-3 text-[12px] font-semibold text-zinc-700 ring-1 ring-[color:var(--color-border)]"
+        >
+          ใส่ใหม่
+        </button>
+      </div>
+      <div className="space-y-2">
+        {suggestions.map((suggestion) => {
+          const selected =
+            selectedAddress.trim() &&
+            normalizeText(selectedAddress) === normalizeText(suggestion.address);
+          return (
+            <button
+              key={`${suggestion.source}-${suggestion.id}`}
+              type="button"
+              onClick={() => onUse(suggestion)}
+              className={cn(
+                "min-h-16 w-full rounded-2xl bg-white px-3.5 py-3 text-left text-[13px] ring-1 transition active:scale-[0.99]",
+                selected
+                  ? "ring-[color:var(--color-brand-500)]"
+                  : "ring-[color:var(--color-border)]",
+              )}
+            >
+              <span className="block font-semibold text-zinc-900">
+                {suggestion.customerName || suggestion.label || "ที่อยู่เดิม"}
+              </span>
+              <span className="mt-0.5 line-clamp-2 block leading-relaxed text-zinc-600">
+                {suggestion.address}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Field({
   label,
   children,
@@ -424,4 +616,80 @@ function Row({
       </dd>
     </div>
   );
+}
+
+function normalizePhoneForCheckout(value: string) {
+  const digits = value.replace(/[^\d]/g, "");
+  if (digits.startsWith("66") && digits.length === 11) {
+    return `0${digits.slice(2)}`;
+  }
+  return digits;
+}
+
+function normalizeText(value: string) {
+  return value.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function makeAddressPreview(address: string) {
+  const clean = normalizeText(address);
+  if (clean.length <= 48) return clean;
+  return `${clean.slice(0, 45).trim()}...`;
+}
+
+function addressStorageKey(shopSlug: string, cleanPhone: string) {
+  return `salepage:checkout-addresses:${shopSlug}:${cleanPhone}`;
+}
+
+function readLocalAddresses(shopSlug: string, cleanPhone: string): AddressSuggestion[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(addressStorageKey(shopSlug, cleanPhone));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as AddressSuggestion[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item) => item?.address && typeof item.address === "string")
+      .slice(0, 3)
+      .map((item, index) => ({
+        ...item,
+        id: item.id || `local-${index}`,
+        source: "local" as const,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function rememberLocalAddress(
+  shopSlug: string,
+  cleanPhone: string,
+  suggestion: AddressSuggestion,
+) {
+  if (typeof window === "undefined" || cleanPhone.length < 9 || !suggestion.address) {
+    return;
+  }
+  const current = readLocalAddresses(shopSlug, cleanPhone);
+  const merged = mergeAddressSuggestions([suggestion, ...current]).slice(0, 3);
+  window.localStorage.setItem(
+    addressStorageKey(shopSlug, cleanPhone),
+    JSON.stringify(merged),
+  );
+}
+
+function mergeAddressSuggestions(suggestions: AddressSuggestion[]) {
+  const map = new Map<string, AddressSuggestion>();
+  for (const suggestion of suggestions) {
+    const key = normalizeText(suggestion.address);
+    if (!key) continue;
+    const existing = map.get(key);
+    map.set(key, {
+      ...suggestion,
+      customerName: suggestion.customerName ?? existing?.customerName ?? null,
+      customerEmail: suggestion.customerEmail ?? existing?.customerEmail ?? null,
+      label: suggestion.label ?? existing?.label ?? makeAddressPreview(suggestion.address),
+      useCount: suggestion.useCount ?? existing?.useCount,
+      lastUsedAt: suggestion.lastUsedAt ?? existing?.lastUsedAt,
+    });
+  }
+  return Array.from(map.values()).slice(0, 3);
 }

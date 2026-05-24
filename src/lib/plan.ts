@@ -5,6 +5,12 @@ const BUSINESS_TIER: ReadonlySet<PlanKey> = new Set([
   PlanKey.AGENCY,
 ]);
 
+const PRO_TIER: ReadonlySet<PlanKey> = new Set([
+  PlanKey.PRO,
+  PlanKey.BUSINESS,
+  PlanKey.AGENCY,
+]);
+
 const ACTIVE_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
   SubscriptionStatus.ACTIVE,
   SubscriptionStatus.TRIALING,
@@ -37,4 +43,13 @@ export async function getEffectivePlan(userId: string): Promise<PlanKey> {
 export async function hasBusinessPlan(userId: string): Promise<boolean> {
   const plan = await getEffectivePlan(userId);
   return BUSINESS_TIER.has(plan);
+}
+
+/**
+ * True iff the user is currently on PRO or above. Used by features that create
+ * operational leverage for shops, such as Auto Shipping.
+ */
+export async function hasProPlan(userId: string): Promise<boolean> {
+  const plan = await getEffectivePlan(userId);
+  return PRO_TIER.has(plan);
 }

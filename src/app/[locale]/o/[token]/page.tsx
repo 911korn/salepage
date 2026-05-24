@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft, Check, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ export default async function OrderTrackingPage({ params }: PageProps) {
   const order = await db.order.findUnique({
     where: { publicToken: token },
     include: {
+      shipment: true,
       shop: {
         select: {
           slug: true,
@@ -118,7 +119,7 @@ export default async function OrderTrackingPage({ params }: PageProps) {
                 </span>
                 <div>
                   <p className="font-display text-base font-bold text-emerald-900">
-                    {t("verified")}
+                    {paymentStatusText(order.status, t("verified"))}
                   </p>
                   {order.slipRef ? (
                     <p className="font-mono text-[11px] text-emerald-800">
@@ -129,6 +130,14 @@ export default async function OrderTrackingPage({ params }: PageProps) {
               </div>
             </div>
           )}
+
+          {order.status !== OrderStatus.PENDING ? (
+            <ShipmentStatusCard
+              status={order.status}
+              shipment={order.shipment}
+              trackingNumber={order.trackingNumber}
+            />
+          ) : null}
 
           {/* Items */}
           <section className="rounded-3xl border border-[color:var(--color-border)] bg-white p-5 sm:p-6">
@@ -248,8 +257,73 @@ function StatusBadge({ status }: { status: OrderStatus }) {
   if (status === OrderStatus.PAID)
     return <Badge tone="success" className="text-[11px]">ชำระแล้ว</Badge>;
   if (status === OrderStatus.SHIPPING)
-    return <Badge tone="soft-brand" className="text-[11px]">รอจัดส่ง</Badge>;
+    return <Badge tone="soft-brand" className="text-[11px]">จัดส่งแล้ว</Badge>;
   if (status === OrderStatus.DELIVERED)
     return <Badge tone="success" className="text-[11px]">ส่งสำเร็จ</Badge>;
   return <Badge tone="neutral" className="text-[11px]">ยกเลิก</Badge>;
+}
+
+function paymentStatusText(status: OrderStatus, paidText: string) {
+  if (status === OrderStatus.SHIPPING) {
+    return "ชำระเงินแล้ว และร้านเริ่มจัดส่งพัสดุแล้ว";
+  }
+  if (status === OrderStatus.DELIVERED) {
+    return "ชำระเงินแล้ว และจัดส่งสำเร็จแล้ว";
+  }
+  return paidText;
+}
+
+function ShipmentStatusCard({
+  status,
+  shipment,
+  trackingNumber,
+}: {
+  status: OrderStatus;
+  shipment: {
+    courierName: string;
+    serviceName: string | null;
+    handoff: string;
+    trackingNumber: string | null;
+    receiverAddress: string | null;
+  } | null;
+  trackingNumber: string | null;
+}) {
+  const code = shipment?.trackingNumber ?? trackingNumber;
+  const courier = shipment?.courierName ?? "ร้านค้าจะอัปเดตขนส่งให้เร็ว ๆ นี้";
+  const done = status === OrderStatus.DELIVERED;
+
+  return (
+    <section className="rounded-3xl border border-[color:var(--color-border)] bg-white p-5 sm:p-6">
+      <div className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]">
+          <Truck className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-base font-semibold">
+            {done ? "ส่งสำเร็จแล้ว" : status === OrderStatus.SHIPPING ? "พัสดุกำลังจัดส่ง" : "ร้านกำลังเตรียมพัสดุ"}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-600">{courier}</p>
+          {shipment?.serviceName ? (
+            <p className="text-[12px] text-zinc-500">{shipment.serviceName}</p>
+          ) : null}
+        </div>
+      </div>
+
+      {code ? (
+        <div className="mt-4 rounded-2xl bg-[color:var(--color-soft)] px-3.5 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            เลขพัสดุ
+          </p>
+          <p className="mt-1 break-all font-mono text-base font-bold">{code}</p>
+        </div>
+      ) : null}
+
+      {shipment?.receiverAddress ? (
+        <div className="mt-3 flex items-start gap-2 rounded-2xl bg-[color:var(--color-soft)] px-3.5 py-3 text-sm text-zinc-600">
+          <MapPin className="mt-0.5 size-4 shrink-0 text-[color:var(--color-brand-600)]" />
+          <p className="whitespace-pre-line">{shipment.receiverAddress}</p>
+        </div>
+      ) : null}
+    </section>
+  );
 }
