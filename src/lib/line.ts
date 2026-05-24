@@ -58,6 +58,15 @@ export function getPlatformLineLiffId(): string | null {
   return cleanEnv(process.env.NEXT_PUBLIC_LINE_LIFF_ID);
 }
 
+export function buildPlatformLineLiffUrl(path: string): string | null {
+  const liffId = getPlatformLineLiffId();
+  if (!liffId) return null;
+
+  const target = new URL(path.startsWith("/") ? path : `/${path}`, "https://salepage.in.th");
+  target.searchParams.set("sp_liff", "1");
+  return `https://liff.line.me/${encodeURIComponent(liffId)}${target.pathname}${target.search}${target.hash}`;
+}
+
 export function getPlatformLineLoginChannelId(): string | null {
   return cleanEnv(process.env.LINE_LOGIN_CHANNEL_ID);
 }

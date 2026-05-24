@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { CheckoutPanel } from "@/components/storefront/checkout-panel";
 import { ProductImageGallery } from "@/components/storefront/product-image-gallery";
 import { ShareButton } from "@/components/storefront/share-button";
-import { LineLiffGate } from "@/components/storefront/line-liff-gate";
 import { getStorefrontProductView } from "@/lib/storefront-product-view";
 import {
   absoluteStorefrontUrl,
@@ -106,7 +105,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[color:var(--color-soft)]">
-      <LineLiffGate />
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
         <div className="container-page flex h-14 min-w-0 items-center gap-3">
           <Link

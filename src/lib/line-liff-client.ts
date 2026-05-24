@@ -10,7 +10,7 @@ export interface LineConfig {
 }
 
 export interface LiffClient {
-  init: (opts: { liffId: string }) => Promise<void>;
+  init: (opts: { liffId: string; withLoginOnExternalBrowser?: boolean }) => Promise<void>;
   isLoggedIn: () => boolean;
   login: (opts?: { redirectUri?: string }) => void;
   getIDToken: () => string | null;
@@ -89,7 +89,7 @@ export async function initLineLiff(liffId: string): Promise<LiffClient> {
   liffInit = {
     id: liffId,
     promise: loadLiffSdk().then(async (liff) => {
-      await liff.init({ liffId });
+      await liff.init({ liffId, withLoginOnExternalBrowser: true });
       return liff;
     }),
   };

@@ -2,6 +2,7 @@ import "server-only";
 
 import { OrderStatus } from "@/lib/db";
 import {
+  buildPlatformLineLiffUrl,
   getPlatformLineChannelAccessToken,
   pushLineMessage,
 } from "@/lib/line";
@@ -45,6 +46,9 @@ function buildLineOrderText(order: LineOrderNotification): string {
   const ref = buildOrderRef(order.createdAt, order.id);
   const statusText = orderStatusText(order.status);
   const total = (order.totalSatang / 100).toLocaleString("th-TH");
+  const statusUrl =
+    buildPlatformLineLiffUrl(`/o/${order.publicToken}`) ??
+    `${siteUrl()}/o/${order.publicToken}`;
   const tracking = order.trackingNumber
     ? `\nเลขพัสดุ: ${order.trackingNumber}`
     : "";
@@ -54,7 +58,7 @@ function buildLineOrderText(order: LineOrderNotification): string {
     `${order.shop.name} ${ref}`,
     `ยอดรวม ฿${total}${tracking}`,
     "",
-    `เช็กสถานะ: ${siteUrl()}/o/${order.publicToken}`,
+    `ดูสถานะออเดอร์: ${statusUrl}`,
   ].join("\n");
 }
 

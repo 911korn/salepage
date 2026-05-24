@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { useRouter } from "@/i18n/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
@@ -44,7 +43,6 @@ interface AddressSuggestion {
 
 export function CheckoutPanel({ shopSlug, product }: Props) {
   const t = useTranslations("order.checkout");
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
 
@@ -224,7 +222,7 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
           label: makeAddressPreview(address.trim()),
           lastUsedAt: new Date().toISOString(),
         });
-        router.push(`/o/${json.data.token}`);
+        window.location.assign(`/o/${json.data.token}`);
       } catch (e) {
         toast.error(t("errors.createFailed"), {
           description: e instanceof Error ? e.message : "network error",

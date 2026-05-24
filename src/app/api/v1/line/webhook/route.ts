@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  buildPlatformLineLiffUrl,
   getPlatformLineChannelAccessToken,
   getPlatformLineChannelSecret,
   replyLineMessage,
@@ -47,18 +48,20 @@ export async function POST(request: Request) {
   await Promise.all(
     (body.events ?? [])
       .filter((event) => event.replyToken && event.source?.type === "user")
-      .map((event) =>
-        replyLineMessage({
+      .map((event) => {
+        const ordersUrl =
+          buildPlatformLineLiffUrl("/line/orders") ?? `${siteUrl()}/line/orders`;
+        return replyLineMessage({
           channelAccessToken,
           replyToken: event.replyToken!,
           text:
-            "เช็กออเดอร์ SalePage ของคุณได้ที่\n" +
-            `${siteUrl()}/line/orders\n\n` +
-            "ถ้าเพิ่งสั่งซื้อ ให้กดเช็กสถานะด้วย LINE บนหน้าสถานะออเดอร์ก่อน 1 ครั้ง",
+            "ดูสถานะออเดอร์ของคุณได้ที่\n" +
+            `${ordersUrl}\n\n` +
+            "ใช้บัญชี LINE เดิมที่สั่งซื้อ ระบบจะแสดงออเดอร์ให้อัตโนมัติ",
         }).catch((e) => {
           console.warn("[line] platform webhook reply failed:", e);
-        }),
-      ),
+        });
+      }),
   );
 
   return NextResponse.json({ ok: true });
