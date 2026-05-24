@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
   ArrowLeft,
@@ -16,8 +16,13 @@ import {
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import {
+  buildLiffRedirectUri,
+  buildLineOpenBridgePath,
   fetchLineConfig,
+  hasLiffReturnParam,
   initLineLiff,
+  isLiffActiveSession,
+  isLineInAppBrowser,
   type LiffClient,
   type LineConfig,
 } from "@/lib/line-liff-client";
@@ -60,6 +65,7 @@ export function LineOrdersApp({ shopSlug }: Props) {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [lineLoading, setLineLoading] = useState(false);
+  const autoLineLookupAttempted = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,7 +123,7 @@ export function LineOrdersApp({ shopSlug }: Props) {
     }
   }
 
-  async function fetchOrders(liff: LiffClient) {
+  const fetchOrders = useCallback(async (liff: LiffClient) => {
     const idToken = liff.getIDToken();
     if (!idToken) {
       setLineLoading(false);
@@ -139,15 +145,54 @@ export function LineOrdersApp({ shopSlug }: Props) {
     setOrders(json.data.orders);
     setSearched(true);
     setLineLoading(false);
-  }
+  }, [shopSlug]);
+
+  useEffect(() => {
+    if (!config?.liffId || autoLineLookupAttempted.current) return;
+    if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
+      return;
+    }
+
+    let cancelled = false;
+    autoLineLookupAttempted.current = true;
+    queueMicrotask(() => {
+      if (!cancelled) setLineLoading(true);
+    });
+
+    initLineLiff(config.liffId)
+      .then(async (liff) => {
+        if (cancelled) return;
+        if (!liff.isLoggedIn()) {
+          if (isLineInAppBrowser()) {
+            liff.login({ redirectUri: buildLiffRedirectUri() });
+            return;
+          }
+          setLineLoading(false);
+          return;
+        }
+        await fetchOrders(liff);
+      })
+      .catch(() => {
+        if (!cancelled) setLineLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config?.liffId, fetchOrders]);
 
   async function login() {
     if (!config?.liffId) return;
     setLineLoading(true);
     try {
+      if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
+        window.location.assign(buildLineOpenBridgePath());
+        return;
+      }
+
       const liff = await initLineLiff(config.liffId);
       if (!liff.isLoggedIn()) {
-        liff.login({ redirectUri: window.location.href });
+        liff.login({ redirectUri: buildLiffRedirectUri() });
         return;
       }
       await fetchOrders(liff);

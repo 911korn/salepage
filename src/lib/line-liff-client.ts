@@ -27,11 +27,15 @@ let liffInit:
     }
   | null = null;
 
-export function isLineInAppBrowser(userAgent = navigator.userAgent): boolean {
-  return /\bLine\//i.test(userAgent);
+export function isLineInAppBrowser(userAgent?: string): boolean {
+  const ua =
+    userAgent ??
+    (typeof navigator === "undefined" ? "" : navigator.userAgent);
+  return /\bLine\//i.test(ua);
 }
 
 export function hasLiffReturnParam(): boolean {
+  if (typeof window === "undefined") return false;
   return new URL(window.location.href).searchParams.get(LIFF_RETURN_PARAM) === "1";
 }
 
@@ -61,7 +65,19 @@ export function cleanLiffReturnParam() {
 export function buildLiffUrl(liffId: string, targetHref: string): string {
   const target = new URL(targetHref);
   target.searchParams.set(LIFF_RETURN_PARAM, "1");
-  return `https://liff.line.me/${liffId}${target.pathname}${target.search}${target.hash}`;
+  return `https://liff.line.me/${encodeURIComponent(liffId)}${target.pathname}${target.search}${target.hash}`;
+}
+
+export function buildLiffRedirectUri(targetHref = window.location.href): string {
+  const target = new URL(targetHref);
+  target.searchParams.set(LIFF_RETURN_PARAM, "1");
+  return target.toString();
+}
+
+export function buildLineOpenBridgePath(targetHref = window.location.href): string {
+  const target = new URL(targetHref);
+  const path = `${target.pathname}${target.search}${target.hash}`;
+  return `/line/open?to=${encodeURIComponent(path)}`;
 }
 
 export async function fetchLineConfig(): Promise<LineConfig> {
@@ -98,6 +114,10 @@ export async function initLineLiff(liffId: string): Promise<LiffClient> {
 }
 
 export async function getLineIdTokenIfAvailable(): Promise<string | null> {
+  if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
+    return null;
+  }
+
   const config = await fetchLineConfig();
   if (!config.configured || !config.liffId) return null;
 

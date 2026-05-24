@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  buildLiffRedirectUri,
   buildLiffUrl,
   cleanLiffReturnParam,
   fetchLineConfig,
@@ -39,7 +40,7 @@ export function LineLiffGate() {
       const liff = await initLineLiff(config.liffId);
       if (cancelled) return;
       if (!liff.isLoggedIn()) {
-        liff.login({ redirectUri: window.location.href });
+        liff.login({ redirectUri: buildLiffRedirectUri() });
         return;
       }
 

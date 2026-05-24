@@ -76,7 +76,7 @@ function buildLineOpenUrls(liffId: string, targetPath: string) {
   const path = `${target.pathname}${target.search}${target.hash}`;
 
   return {
-    liffUrl: `https://liff.line.me/${liffId}${path}`,
-    lineSchemeUrl: `line://app/${liffId}${path}`,
+    liffUrl: `https://liff.line.me/${encodeURIComponent(liffId)}${path}`,
+    lineSchemeUrl: `line://app/${encodeURIComponent(liffId)}${path}`,
   };
 }

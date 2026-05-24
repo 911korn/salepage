@@ -13,11 +13,42 @@ export function proxy(request: NextRequest) {
 
 function redirectLiffState(request: NextRequest) {
   const state = request.nextUrl.searchParams.get("liff.state");
-  if (!state || request.nextUrl.pathname !== "/") return null;
-  if (!state.startsWith("/") || state.startsWith("//")) return null;
+  if (!state) return null;
 
-  const target = new URL(state, request.url);
+  const target = resolveLiffStateTarget(state, request.url);
+  if (!target) return null;
+  if (!target.searchParams.has("sp_liff")) {
+    target.searchParams.set("sp_liff", "1");
+  }
   return NextResponse.redirect(target, 307);
+}
+
+function resolveLiffStateTarget(state: string, requestUrl: string) {
+  const base = new URL(requestUrl);
+  let target: URL;
+
+  try {
+    if (state.startsWith("/") && !state.startsWith("//")) {
+      target = new URL(state, base);
+    } else if (/^https?:\/\//i.test(state)) {
+      target = new URL(state);
+      if (target.origin !== base.origin) return null;
+    } else {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  if (
+    target.pathname.startsWith("/api") ||
+    target.pathname.startsWith("/_next") ||
+    target.pathname.startsWith("/_vercel")
+  ) {
+    return null;
+  }
+
+  return target;
 }
 
 export const config = {

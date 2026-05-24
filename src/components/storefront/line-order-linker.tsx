@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, ChevronRight, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import {
+  buildLiffRedirectUri,
+  buildLineOpenBridgePath,
   fetchLineConfig,
+  hasLiffReturnParam,
   initLineLiff,
+  isLiffActiveSession,
+  isLineInAppBrowser,
   type LiffClient,
   type LineConfig,
 } from "@/lib/line-liff-client";
@@ -29,14 +34,17 @@ export function LineOrderLinker({
   const [lineName, setLineName] = useState(displayName ?? "");
   const [linePicture, setLinePicture] = useState(pictureUrl ?? "");
   const [busy, setBusy] = useState(false);
+  const autoLinkAttempted = useRef(false);
 
-  async function linkWithLine(liff: LiffClient) {
+  const linkWithLine = useCallback(async (liff: LiffClient, silent = false) => {
     const idToken = liff.getIDToken();
     if (!idToken) {
-      toast.error("LINE ยังไม่ส่งสิทธิ์ยืนยันตัวตน", {
-        description: "กรุณาเปิดผ่าน LINE หรือ Login LINE อีกครั้ง",
-      });
-      return;
+      if (!silent) {
+        toast.error("LINE ยังไม่ส่งสิทธิ์ยืนยันตัวตน", {
+          description: "กรุณาเปิดผ่าน LINE หรือ Login LINE อีกครั้ง",
+        });
+      }
+      return false;
     }
 
     const res = await fetch(`/api/v1/orders/${encodeURIComponent(token)}/line`, {
@@ -46,15 +54,16 @@ export function LineOrderLinker({
     });
     const json = await res.json();
     if (!res.ok || !json.ok) {
-      toast.error(json.error?.message ?? "ผูก LINE ไม่สำเร็จ");
-      return;
+      if (!silent) toast.error(json.error?.message ?? "ผูก LINE ไม่สำเร็จ");
+      return false;
     }
 
     setLinked(true);
     setLineName(json.data.profile.displayName ?? "");
     setLinePicture(json.data.profile.pictureUrl ?? "");
-    toast.success("บันทึกช่องทางเช็กสถานะแล้ว");
-  }
+    if (!silent) toast.success("บันทึกช่องทางเช็กสถานะแล้ว");
+    return true;
+  }, [token]);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,15 +78,53 @@ export function LineOrderLinker({
     };
   }, []);
 
+  useEffect(() => {
+    if (!config?.liffId || linked || autoLinkAttempted.current) return;
+    if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
+      return;
+    }
+
+    let cancelled = false;
+    autoLinkAttempted.current = true;
+    queueMicrotask(() => {
+      if (!cancelled) setBusy(true);
+    });
+
+    initLineLiff(config.liffId)
+      .then(async (liff) => {
+        if (cancelled) return;
+        if (!liff.isLoggedIn()) {
+          if (isLineInAppBrowser()) {
+            liff.login({ redirectUri: buildLiffRedirectUri() });
+          }
+          return;
+        }
+        await linkWithLine(liff, true);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setBusy(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config?.liffId, linked, linkWithLine]);
+
   if (!config?.configured) return null;
 
   async function handleClick() {
     if (!config?.liffId || busy) return;
     setBusy(true);
     try {
+      if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
+        window.location.assign(buildLineOpenBridgePath());
+        return;
+      }
+
       const liff = await initLineLiff(config.liffId);
       if (!liff.isLoggedIn()) {
-        liff.login({ redirectUri: window.location.href });
+        liff.login({ redirectUri: buildLiffRedirectUri() });
         return;
       }
       await linkWithLine(liff);

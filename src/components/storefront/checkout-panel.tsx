@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { getLineIdTokenIfAvailable } from "@/lib/line-liff-client";
 
 interface Props {
   shopSlug: string;
@@ -266,28 +267,30 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
 
     startTransition(async () => {
       try {
-        const res = await fetch("/api/v1/orders", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            shopSlug,
-            items: [{ productSlug: product.slug, qty }],
-            customerName: name.trim(),
-            customerPhone: phone.trim(),
-            customerEmail: email.trim() || undefined,
-            customerAddress: needsAddress ? address.trim() : undefined,
-            notes: notes.trim() || undefined,
-            couponCode: couponApplied?.code,
-            redeemPoints: redeemPoints > 0 ? redeemPoints : undefined,
-          }),
-        });
-        const json = await res.json();
-        if (!res.ok || !json.ok) {
+        const lineIdToken = await getLineIdTokenIfAvailable().catch(() => null);
+        const res = await createOrder(lineIdToken);
+        let json = await res.json();
+
+        if (
+          lineIdToken &&
+          !res.ok &&
+          json.error?.code === "line_login_invalid"
+        ) {
+          const retry = await createOrder(null);
+          json = await retry.json();
+          if (!retry.ok || !json.ok) {
+            toast.error(t("errors.createFailed"), {
+              description: json.error?.message,
+            });
+            return;
+          }
+        } else if (!res.ok || !json.ok) {
           toast.error(t("errors.createFailed"), {
             description: json.error?.message,
           });
           return;
         }
+
         rememberLocalAddress(shopSlug, cleanPhone, {
           id: `local-${Date.now()}`,
           source: "local",
@@ -304,6 +307,25 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
         });
       }
     });
+
+    function createOrder(lineIdToken: string | null) {
+      return fetch("/api/v1/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          shopSlug,
+          items: [{ productSlug: product.slug, qty }],
+          customerName: name.trim(),
+          customerPhone: phone.trim(),
+          customerEmail: email.trim() || undefined,
+          customerAddress: needsAddress ? address.trim() : undefined,
+          notes: notes.trim() || undefined,
+          couponCode: couponApplied?.code,
+          redeemPoints: redeemPoints > 0 ? redeemPoints : undefined,
+          lineIdToken: lineIdToken ?? undefined,
+        }),
+      });
+    }
   }
 
   if (!expanded) {
