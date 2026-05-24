@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Check, Save } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
+import { Check, ImagePlus, Save, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
@@ -16,6 +16,7 @@ interface ShopProps {
   category: string | null;
   themeColor: string;
   logoText: string | null;
+  logoUrl: string | null;
   promptpayId: string | null;
   contact: { phone?: string; line?: string; facebook?: string } | null;
   policies: { returnPolicy?: string; shippingTime?: string } | null;
@@ -45,6 +46,11 @@ const THEME_PRESETS = [
   "#52525b",
 ];
 
+const MAX_PROFILE_BYTES = 5 * 1024 * 1024;
+const PROFILE_IMAGE_SIZE = 640;
+const OPTIMIZED_IMAGE_TYPE = "image/webp";
+const OPTIMIZED_IMAGE_QUALITY = 0.84;
+
 export function SettingsForm({ shop }: { shop: ShopProps }) {
   const t = useTranslations("dashboard.settings");
   const tCat = useTranslations("categories");
@@ -56,6 +62,9 @@ export function SettingsForm({ shop }: { shop: ShopProps }) {
   const [category, setCategory] = useState<string | null>(shop.category);
   const [themeColor, setThemeColor] = useState(shop.themeColor);
   const [logoText, setLogoText] = useState(shop.logoText ?? "");
+  const [logoUrl, setLogoUrl] = useState(shop.logoUrl ?? "");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [promptpayId, setPromptpayId] = useState(shop.promptpayId ?? "");
   const [phone, setPhone] = useState(shop.contact?.phone ?? "");
   const [line, setLine] = useState(shop.contact?.line ?? "");
@@ -80,6 +89,7 @@ export function SettingsForm({ shop }: { shop: ShopProps }) {
             category: category ?? null,
             themeColor,
             logoText: logoText.trim() || null,
+            logoUrl: logoUrl || null,
             promptpayId: promptpayId.trim() || null,
             contact: {
               phone: phone.trim() || null,
@@ -107,6 +117,40 @@ export function SettingsForm({ shop }: { shop: ShopProps }) {
         });
       }
     });
+  }
+
+  async function uploadProfileImage(file: File | null | undefined) {
+    if (!file || uploadingLogo) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("ไฟล์ต้องเป็นรูปภาพ");
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const optimized = await optimizeProfileImage(file);
+      if (optimized.size > MAX_PROFILE_BYTES) {
+        toast.error("รูปใหญ่เกินไป", { description: "สูงสุด 5MB" });
+        return;
+      }
+      const form = new FormData();
+      form.append("file", optimized);
+      const res = await fetch("/api/v1/upload", { method: "POST", body: form });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        toast.error(json.error?.message ?? "อัปโหลดรูปไม่สำเร็จ");
+        return;
+      }
+      setLogoUrl(json.data.url);
+      toast.success("อัปโหลดรูปโปรไฟล์แล้ว กดบันทึกเพื่อใช้กับร้าน");
+    } catch (e) {
+      toast.error("อัปโหลดรูปไม่สำเร็จ", {
+        description: e instanceof Error ? e.message : "network error",
+      });
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
   }
 
   return (
@@ -145,6 +189,53 @@ export function SettingsForm({ shop }: { shop: ShopProps }) {
           </div>
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("fields.profileImage")} hint={t("fields.profileImageHint")}>
+            <div className="flex items-center gap-3">
+              <div
+                className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-2xl border-4 border-white font-display text-3xl font-bold text-white shadow-md ring-1 ring-[color:var(--color-border)]"
+                style={{ background: themeColor }}
+              >
+                {logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logoUrl} alt="" className="size-full object-cover" />
+                ) : (
+                  logoText || name.slice(0, 1).toUpperCase()
+                )}
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => uploadProfileImage(e.target.files?.[0])}
+                />
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-white px-3 text-sm font-semibold text-zinc-800 disabled:opacity-60"
+                >
+                  <ImagePlus className="size-4" />
+                  {uploadingLogo
+                    ? t("fields.profileImageUploading")
+                    : logoUrl
+                      ? t("fields.profileImageChange")
+                      : t("fields.profileImageUpload")}
+                </button>
+                {logoUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setLogoUrl("")}
+                    className="ml-2 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-rose-50 px-3 text-sm font-semibold text-rose-700 ring-1 ring-rose-100"
+                  >
+                    <Trash2 className="size-4" />
+                    {t("fields.profileImageRemove")}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </Field>
           <Field label={t("fields.themeColor")}>
             <div className="flex flex-wrap items-center gap-2">
               {THEME_PRESETS.map((c) => (
@@ -268,6 +359,88 @@ function Card({
       <div className="mt-4 space-y-4">{children}</div>
     </section>
   );
+}
+
+async function optimizeProfileImage(file: File): Promise<File> {
+  let image: {
+    source: CanvasImageSource;
+    width: number;
+    height: number;
+    cleanup: () => void;
+  } | null = null;
+
+  try {
+    image = await loadImageSource(file);
+    const side = Math.min(image.width, image.height);
+    const sx = Math.max(0, Math.round((image.width - side) / 2));
+    const sy = Math.max(0, Math.round((image.height - side) / 2));
+    const size = Math.min(PROFILE_IMAGE_SIZE, side);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d", { alpha: true });
+    if (!context) return file;
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image.source, sx, sy, side, side, 0, 0, size, size);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, OPTIMIZED_IMAGE_TYPE, OPTIMIZED_IMAGE_QUALITY);
+    });
+    if (!blob) return file;
+    return new File([blob], optimizedProfileFileName(file.name), {
+      type: OPTIMIZED_IMAGE_TYPE,
+      lastModified: Date.now(),
+    });
+  } catch {
+    return file;
+  } finally {
+    image?.cleanup();
+  }
+}
+
+async function loadImageSource(file: File) {
+  if ("createImageBitmap" in window) {
+    try {
+      const bitmap = await createImageBitmap(file, {
+        imageOrientation: "from-image",
+      } as ImageBitmapOptions);
+      return {
+        source: bitmap,
+        width: bitmap.width,
+        height: bitmap.height,
+        cleanup: () => bitmap.close(),
+      };
+    } catch {
+      // Fall through to img element path.
+    }
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Could not read image"));
+      img.src = objectUrl;
+    });
+    return {
+      source: image,
+      width: image.naturalWidth || image.width,
+      height: image.naturalHeight || image.height,
+      cleanup: () => URL.revokeObjectURL(objectUrl),
+    };
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl);
+    throw error;
+  }
+}
+
+function optimizedProfileFileName(name: string) {
+  const base = name.replace(/\.[^.]+$/, "") || "shop-profile";
+  return `${base}.webp`;
 }
 
 function Field({

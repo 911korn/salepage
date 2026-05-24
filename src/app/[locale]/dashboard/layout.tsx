@@ -23,6 +23,7 @@ export default async function DashboardLayout({ children, params }: Props) {
     slug: s.slug,
     name: s.name,
     logoText: s.logoText,
+    logoUrl: s.logoUrl,
     themeColor: s.themeColor,
     status: s.status,
   }));

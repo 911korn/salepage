@@ -25,6 +25,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       slug: true,
       name: true,
       logoText: true,
+      logoUrl: true,
       themeColor: true,
       verified: true,
       status: true,
@@ -49,6 +50,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           slug: string;
           name: string;
           logoText: string | null;
+          logoUrl: string | null;
           themeColor: string;
           verified: boolean;
         };
@@ -79,6 +81,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           slug: shop.slug,
           name: shop.name,
           logoText: shop.logoText,
+          logoUrl: shop.logoUrl,
           themeColor: shop.themeColor,
           verified: shop.verified,
         },
@@ -109,6 +112,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           slug: demoShop.slug,
           name: demoShop.name,
           logoText: demoShop.logo,
+          logoUrl: null,
           themeColor: demoShop.themeColor,
           verified: demoShop.verified,
         },
@@ -207,10 +211,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   className="flex items-center gap-2 text-sm text-zinc-600 hover:text-[color:var(--color-fg)]"
                 >
                   <span
-                    className="grid size-7 place-items-center rounded-lg font-display text-xs font-bold text-white"
+                    className="grid size-7 place-items-center overflow-hidden rounded-lg font-display text-xs font-bold text-white"
                     style={{ background: shopView.themeColor }}
                   >
-                    {shopView.logoText ?? shopView.name.slice(0, 1)}
+                    {shopView.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={shopView.logoUrl} alt="" className="size-full object-cover" />
+                    ) : (
+                      shopView.logoText ?? shopView.name.slice(0, 1)
+                    )}
                   </span>
                   <span className="font-medium">{shopView.name}</span>
                   {shopView.verified ? (

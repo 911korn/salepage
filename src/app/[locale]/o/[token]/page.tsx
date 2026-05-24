@@ -29,6 +29,7 @@ export default async function OrderTrackingPage({ params }: PageProps) {
           slug: true,
           name: true,
           logoText: true,
+          logoUrl: true,
           themeColor: true,
           verified: true,
           promptpayId: true,
@@ -224,10 +225,15 @@ export default async function OrderTrackingPage({ params }: PageProps) {
             )}
           >
             <span
-              className="grid size-10 shrink-0 place-items-center rounded-xl font-display font-bold text-white"
+              className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl font-display font-bold text-white"
               style={{ background: order.shop.themeColor }}
             >
-              {order.shop.logoText ?? order.shop.name.slice(0, 1)}
+              {order.shop.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={order.shop.logoUrl} alt="" className="size-full object-cover" />
+              ) : (
+                order.shop.logoText ?? order.shop.name.slice(0, 1)
+              )}
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">

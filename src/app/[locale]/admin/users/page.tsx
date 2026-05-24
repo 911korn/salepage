@@ -3,7 +3,9 @@ import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/admin/page-header";
-import { db, PlanKey, UserRole } from "@/lib/db";
+import { UserTierSelect } from "@/components/admin/user-tier-select";
+import { requireAdmin } from "@/lib/admin";
+import { db, PlanKey, SubscriptionStatus, UserRole } from "@/lib/db";
 
 const PAGE_SIZE = 50;
 
@@ -19,6 +21,7 @@ interface Props {
 }
 
 export default async function AdminUsersPage({ searchParams }: Props) {
+  const viewer = await requireAdmin();
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const role = sp.role && Object.values(UserRole).includes(sp.role as UserRole)
@@ -54,7 +57,13 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         role: true,
         suspended: true,
         createdAt: true,
-        subscription: { select: { plan: true, status: true } },
+        subscription: {
+          select: {
+            plan: true,
+            status: true,
+            currentPeriodEnd: true,
+          },
+        },
         _count: { select: { shops: true } },
       },
     }),
@@ -171,6 +180,19 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                   </td>
                   <td className="px-4 py-3">
                     <PlanBadge plan={u.subscription?.plan ?? PlanKey.FREE} />
+                    {u.subscription && effectivePlan(u.subscription) === PlanKey.FREE ? (
+                      <Badge tone="neutral" className="ml-1.5 text-[10px]">
+                        inactive
+                      </Badge>
+                    ) : null}
+                    <div className="mt-2 max-w-52">
+                      <UserTierSelect
+                        userId={u.id}
+                        currentPlan={effectivePlan(u.subscription)}
+                        disabled={!viewer.isSuperAdmin}
+                        compact
+                      />
+                    </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-[13px] text-zinc-600">
                     {u._count.shops}
@@ -205,7 +227,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
               key={u.id}
               className="overflow-hidden rounded-2xl border border-zinc-200 bg-white"
             >
-              <Link href={`/admin/users/${u.id}`} className="block px-4 py-3">
+              <div className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-zinc-200 text-sm font-semibold uppercase text-zinc-600">
                     {u.image ? (
@@ -216,9 +238,12 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                     )}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">
+                    <Link
+                      href={`/admin/users/${u.id}`}
+                      className="block truncate font-medium hover:text-[color:var(--color-brand-700)]"
+                    >
                       {u.name ?? u.email.split("@")[0]}
-                    </p>
+                    </Link>
                     <p className="truncate text-[12px] text-zinc-500">
                       {u.email}
                     </p>
@@ -226,7 +251,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   <RoleBadge role={u.role} />
-                  <PlanBadge plan={u.subscription?.plan ?? PlanKey.FREE} />
+                  <PlanBadge plan={effectivePlan(u.subscription)} />
                   {u.suspended ? (
                     <Badge tone="warning" className="text-[10px]">
                       <UserX className="size-3" />
@@ -237,7 +262,14 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                     {u._count.shops} shops · {u.createdAt.toLocaleDateString("th-TH")}
                   </span>
                 </div>
-              </Link>
+                <div className="mt-3">
+                  <UserTierSelect
+                    userId={u.id}
+                    currentPlan={effectivePlan(u.subscription)}
+                    disabled={!viewer.isSuperAdmin}
+                  />
+                </div>
+              </div>
             </li>
           ))
         )}
@@ -284,6 +316,29 @@ function PlanBadge({ plan }: { plan: PlanKey }) {
       {plan}
     </Badge>
   );
+}
+
+function effectivePlan(
+  sub:
+    | {
+        plan: PlanKey;
+        status: SubscriptionStatus;
+        currentPeriodEnd: Date | null;
+      }
+    | null
+    | undefined,
+) {
+  if (!sub) return PlanKey.FREE;
+  if (
+    sub.status !== SubscriptionStatus.ACTIVE &&
+    sub.status !== SubscriptionStatus.TRIALING
+  ) {
+    return PlanKey.FREE;
+  }
+  if (sub.currentPeriodEnd && sub.currentPeriodEnd.getTime() < Date.now()) {
+    return PlanKey.FREE;
+  }
+  return sub.plan;
 }
 
 function Pagination({

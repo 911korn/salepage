@@ -52,6 +52,7 @@ export default async function SettingsPage({
           category: shop.category,
           themeColor: shop.themeColor,
           logoText: shop.logoText,
+          logoUrl: shop.logoUrl,
           promptpayId: shop.promptpayId,
           contact: shop.contact as { phone?: string; line?: string; facebook?: string } | null,
           policies: shop.policies as { returnPolicy?: string; shippingTime?: string } | null,

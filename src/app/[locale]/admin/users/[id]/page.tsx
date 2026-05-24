@@ -4,8 +4,9 @@ import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/admin/page-header";
 import { UserActions } from "@/components/admin/user-actions";
+import { UserTierSelect } from "@/components/admin/user-tier-select";
 import { requireAdmin } from "@/lib/admin";
-import { db, OrderStatus, PlanKey, UserRole } from "@/lib/db";
+import { db, OrderStatus, PlanKey, SubscriptionStatus, UserRole } from "@/lib/db";
 import { storefrontLabel } from "@/lib/storefront-url";
 
 interface Props {
@@ -129,7 +130,16 @@ export default async function AdminUserDetailPage({ params }: Props) {
 
       {/* Subscription */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <h2 className="font-display text-base font-semibold">Subscription</h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="font-display text-base font-semibold">Subscription</h2>
+          <div className="w-full sm:w-72">
+            <UserTierSelect
+              userId={user.id}
+              currentPlan={effectivePlan(user.subscription)}
+              disabled={!viewer.isSuperAdmin}
+            />
+          </div>
+        </div>
         {user.subscription ? (
           <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             <div>
@@ -248,5 +258,25 @@ export default async function AdminUserDetailPage({ params }: Props) {
 // Hint to Next: never cache an admin detail page.
 export const dynamic = "force-dynamic";
 
-// Suppress unused import: PlanKey is re-exported for consistency but not used here directly.
-void PlanKey;
+function effectivePlan(
+  sub:
+    | {
+        plan: PlanKey;
+        status: SubscriptionStatus;
+        currentPeriodEnd: Date | null;
+      }
+    | null
+    | undefined,
+) {
+  if (!sub) return PlanKey.FREE;
+  if (
+    sub.status !== SubscriptionStatus.ACTIVE &&
+    sub.status !== SubscriptionStatus.TRIALING
+  ) {
+    return PlanKey.FREE;
+  }
+  if (sub.currentPeriodEnd && sub.currentPeriodEnd.getTime() < Date.now()) {
+    return PlanKey.FREE;
+  }
+  return sub.plan;
+}

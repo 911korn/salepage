@@ -27,6 +27,7 @@ const PatchBody = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color like #e11d48")
     .optional(),
   logoText: z.string().max(2).optional().nullable(),
+  logoUrl: z.string().url().max(500).optional().nullable(),
   promptpayId: z.string().min(9).max(20).optional().nullable(),
   contact: z
     .object({
@@ -66,6 +67,7 @@ export async function GET(
       name: true,
       description: true,
       logoText: true,
+      logoUrl: true,
       category: true,
       themeColor: true,
       verified: true,
@@ -84,6 +86,7 @@ export async function GET(
       name: shop.name,
       description: shop.description,
       logo: shop.logoText,
+      logoUrl: shop.logoUrl,
       category: shop.category,
       themeColor: shop.themeColor,
       verified: shop.verified,
@@ -170,6 +173,7 @@ export async function PATCH(
         ? { themeColor: input.themeColor }
         : {}),
       ...(input.logoText !== undefined ? { logoText: input.logoText } : {}),
+      ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
       ...(input.promptpayId !== undefined
         ? { promptpayId: input.promptpayId }
         : {}),

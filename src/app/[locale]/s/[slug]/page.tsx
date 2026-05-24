@@ -36,6 +36,7 @@ interface ShopView {
   name: string;
   description: string;
   logoText: string;
+  logoUrl: string | null;
   category: string;
   themeColor: string;
   verified: boolean;
@@ -123,6 +124,7 @@ export default async function StorefrontPage({ params }: PageProps) {
       name: dbShop.name,
       description: dbShop.description ?? "",
       logoText: dbShop.logoText ?? dbShop.name.slice(0, 1).toUpperCase(),
+      logoUrl: dbShop.logoUrl,
       category: dbShop.category ?? "",
       themeColor: dbShop.themeColor,
       verified: dbShop.verified,
@@ -156,6 +158,7 @@ export default async function StorefrontPage({ params }: PageProps) {
         name: demo.name,
         description: demo.description,
         logoText: demo.logo,
+        logoUrl: null,
         category: demo.category,
         themeColor: demo.themeColor,
         verified: demo.verified,
@@ -229,10 +232,15 @@ export default async function StorefrontPage({ params }: PageProps) {
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex items-end gap-4">
                 <div
-                  className="grid size-20 place-items-center rounded-2xl border-4 border-white font-display text-3xl font-bold text-white shadow-lg sm:size-24 sm:text-4xl"
+                  className="grid size-20 place-items-center overflow-hidden rounded-2xl border-4 border-white font-display text-3xl font-bold text-white shadow-lg sm:size-24 sm:text-4xl"
                   style={{ background: shop.themeColor }}
                 >
-                  {shop.logoText}
+                  {shop.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={shop.logoUrl} alt="" className="size-full object-cover" />
+                  ) : (
+                    shop.logoText
+                  )}
                 </div>
                 <div className="pb-1">
                   <div className="flex items-center gap-1.5">

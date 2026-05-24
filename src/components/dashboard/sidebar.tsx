@@ -32,6 +32,7 @@ export interface DashboardShopOption {
   slug: string;
   name: string;
   logoText: string | null;
+  logoUrl: string | null;
   themeColor: string;
   status: string;
 }
@@ -180,12 +181,7 @@ function DashboardSidebarInner({
           <span className="flex min-w-0 items-center gap-2.5">
             {activeShop ? (
               <>
-                <span
-                  className="grid size-9 shrink-0 place-items-center rounded-xl font-display text-sm font-bold text-white"
-                  style={{ background: activeShop.themeColor }}
-                >
-                  {activeShop.logoText ?? activeShop.name.slice(0, 1).toUpperCase()}
-                </span>
+                <ShopAvatar shop={activeShop} className="size-9 rounded-xl text-sm" />
                 <span className="min-w-0 text-left">
                   <span className="block truncate text-sm font-semibold">
                     {activeShop.name}
@@ -221,12 +217,7 @@ function DashboardSidebarInner({
                   s.slug === currentShopSlug && "bg-[color:var(--color-brand-50)] font-medium",
                 )}
               >
-                <span
-                  className="grid size-6 shrink-0 place-items-center rounded-md font-display text-[10px] font-bold text-white"
-                  style={{ background: s.themeColor }}
-                >
-                  {s.logoText ?? s.name.slice(0, 1).toUpperCase()}
-                </span>
+                <ShopAvatar shop={s} className="size-6 rounded-md text-[10px]" />
                 <span className="truncate">{s.name}</span>
               </Link>
             ))}
@@ -384,6 +375,31 @@ export function DashboardBottomNav() {
         );
       })}
     </nav>
+  );
+}
+
+function ShopAvatar({
+  shop,
+  className,
+}: {
+  shop: Pick<DashboardShopOption, "name" | "logoText" | "logoUrl" | "themeColor">;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "grid shrink-0 place-items-center overflow-hidden font-display font-bold text-white",
+        className,
+      )}
+      style={{ background: shop.themeColor }}
+    >
+      {shop.logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={shop.logoUrl} alt="" className="size-full object-cover" />
+      ) : (
+        shop.logoText ?? shop.name.slice(0, 1).toUpperCase()
+      )}
+    </span>
   );
 }
 
