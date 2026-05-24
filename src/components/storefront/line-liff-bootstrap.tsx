@@ -8,7 +8,6 @@ import {
   fetchLineConfig,
   hasLiffReturnParam,
   initLineLiff,
-  isLiffActiveSession,
   isLineInAppBrowser,
   markLiffActive,
 } from "@/lib/line-liff-client";
@@ -18,9 +17,7 @@ export function LineLiffBootstrap() {
     const params = new URL(window.location.href).searchParams;
     const returnedFromLiff = hasLiffReturnParam();
     const lineBrowser = isLineInAppBrowser();
-    const activeLiffSession = isLiffActiveSession();
-    const shouldInit =
-      params.has("liff.state") || returnedFromLiff || lineBrowser || activeLiffSession;
+    const shouldInit = params.has("liff.state") || returnedFromLiff || lineBrowser;
     if (!shouldInit) return;
 
     if (returnedFromLiff) {
@@ -33,12 +30,12 @@ export function LineLiffBootstrap() {
       .then((config) => {
         if (cancelled || !config.configured || !config.liffId) return null;
 
-        if (lineBrowser && !returnedFromLiff && !activeLiffSession) {
+        if (lineBrowser && !returnedFromLiff) {
           window.location.replace(buildLiffUrl(config.liffId, window.location.href));
           return null;
         }
 
-        if (returnedFromLiff || lineBrowser || activeLiffSession) {
+        if (returnedFromLiff || lineBrowser) {
           markLiffActive();
         }
 

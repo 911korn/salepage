@@ -19,9 +19,8 @@ import {
   buildLiffRedirectUri,
   buildLineOpenBridgePath,
   fetchLineConfig,
-  hasLiffReturnParam,
+  hasUsableLiffContext,
   initLineLiff,
-  isLiffActiveSession,
   isLineInAppBrowser,
   type LiffClient,
   type LineConfig,
@@ -149,9 +148,7 @@ export function LineOrdersApp({ shopSlug }: Props) {
 
   useEffect(() => {
     if (!config?.liffId || autoLineLookupAttempted.current) return;
-    if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
-      return;
-    }
+    if (!hasUsableLiffContext()) return;
 
     let cancelled = false;
     autoLineLookupAttempted.current = true;
@@ -185,7 +182,7 @@ export function LineOrdersApp({ shopSlug }: Props) {
     if (!config?.liffId) return;
     setLineLoading(true);
     try {
-      if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
+      if (!hasUsableLiffContext()) {
         window.location.assign(buildLineOpenBridgePath());
         return;
       }

@@ -39,6 +39,10 @@ export function hasLiffReturnParam(): boolean {
   return new URL(window.location.href).searchParams.get(LIFF_RETURN_PARAM) === "1";
 }
 
+export function hasUsableLiffContext(): boolean {
+  return isLineInAppBrowser() || hasLiffReturnParam();
+}
+
 export function markLiffActive() {
   try {
     window.sessionStorage.setItem(LIFF_ACTIVE_KEY, "1");
@@ -120,9 +124,7 @@ export async function initLineLiff(
 }
 
 export async function getLineIdTokenIfAvailable(): Promise<string | null> {
-  if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
-    return null;
-  }
+  if (!hasUsableLiffContext()) return null;
 
   const config = await fetchLineConfig();
   if (!config.configured || !config.liffId) return null;

@@ -8,9 +8,8 @@ import {
   buildLiffRedirectUri,
   buildLineOpenBridgePath,
   fetchLineConfig,
-  hasLiffReturnParam,
+  hasUsableLiffContext,
   initLineLiff,
-  isLiffActiveSession,
   isLineInAppBrowser,
   type LiffClient,
   type LineConfig,
@@ -80,9 +79,7 @@ export function LineOrderLinker({
 
   useEffect(() => {
     if (!config?.liffId || linked || autoLinkAttempted.current) return;
-    if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
-      return;
-    }
+    if (!hasUsableLiffContext()) return;
 
     let cancelled = false;
     autoLinkAttempted.current = true;
@@ -117,7 +114,7 @@ export function LineOrderLinker({
     if (!config?.liffId || busy) return;
     setBusy(true);
     try {
-      if (!isLineInAppBrowser() && !isLiffActiveSession() && !hasLiffReturnParam()) {
+      if (!hasUsableLiffContext()) {
         window.location.assign(buildLineOpenBridgePath());
         return;
       }
