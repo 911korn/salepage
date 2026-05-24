@@ -95,7 +95,7 @@ async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult
   }
 
   const body: Record<string, unknown> = { log: false };
-  if (input.qrPayload) body.payload = input.qrPayload;
+  if (input.qrPayload) body.data = input.qrPayload;
   else if (input.imageBase64) body.data = input.imageBase64;
   if (input.expectAmount !== undefined) body.amount = input.expectAmount;
 
