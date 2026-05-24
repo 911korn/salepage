@@ -32,7 +32,7 @@ interface Props {
 
 interface AddressSuggestion {
   id: string;
-  source: "local" | "server";
+  source: "local" | "server" | "line";
   label?: string | null;
   customerName?: string | null;
   customerEmail?: string | null;
@@ -48,6 +48,16 @@ interface ThaiAddressOption {
   subdistrict: string;
   district: string;
   province: string;
+}
+
+interface CheckoutProfileResponse {
+  customer?: {
+    name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+  } | null;
+  addresses?: Array<Omit<AddressSuggestion, "source">>;
 }
 
 export function CheckoutPanel({ shopSlug, product }: Props) {
@@ -83,6 +93,13 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
     useState<ThaiAddressOption | null>(null);
   const [addressDetail, setAddressDetail] = useState("");
   const addressDetailRef = useRef("");
+  const linePrefillAttempted = useRef(false);
+  const fieldValuesRef = useRef({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+  });
 
   const subtotal = product.priceBaht * qty;
   const shipping = 0; // v1: shop sets per-product shipping later
@@ -94,6 +111,76 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
   const soldOut = product.stock === 0;
   const cleanPhone = normalizePhoneForCheckout(phone);
   const phoneReady = cleanPhone.length >= 9;
+
+  useEffect(() => {
+    fieldValuesRef.current = { name, phone, email, address };
+  }, [address, email, name, phone]);
+
+  useEffect(() => {
+    if (!expanded || linePrefillAttempted.current) return;
+
+    let cancelled = false;
+    linePrefillAttempted.current = true;
+
+    async function prefillFromLine() {
+      let lineIdToken: string | null = null;
+      for (let attempt = 0; attempt < 5 && !cancelled; attempt += 1) {
+        lineIdToken = await getLineIdTokenIfAvailable().catch(() => null);
+        if (lineIdToken) break;
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
+      }
+      if (cancelled || !lineIdToken) return;
+
+      const res = await fetch(
+        `/api/v1/shops/${encodeURIComponent(shopSlug)}/checkout-profile`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ idToken: lineIdToken }),
+        },
+      );
+      const json = (await res.json().catch(() => null)) as
+        | { ok?: boolean; data?: CheckoutProfileResponse }
+        | null;
+      if (cancelled || !res.ok || !json?.ok || !json.data) return;
+
+      const customer = json.data.customer;
+      const lineAddresses = (json.data.addresses ?? []).map((item) => ({
+        ...item,
+        source: "line" as const,
+      }));
+      const primaryAddress = customer?.address || lineAddresses[0]?.address || "";
+
+      if (!fieldValuesRef.current.phone.trim() && customer?.phone) {
+        setPhone(customer.phone);
+      }
+      if (!fieldValuesRef.current.name.trim() && customer?.name) {
+        setName(customer.name);
+      }
+      if (!fieldValuesRef.current.email.trim() && customer?.email) {
+        setEmail(customer.email);
+      }
+      if (needsAddress && !fieldValuesRef.current.address.trim() && primaryAddress) {
+        setAddress(primaryAddress);
+        setPostcode(extractPostcodeFromAddress(primaryAddress));
+        addressDetailRef.current = "";
+        setAddressDetail("");
+        setAddressOptions([]);
+        setSelectedThaiAddress(null);
+      }
+      if (lineAddresses.length > 0) {
+        setAddressSuggestions((current) =>
+          mergeAddressSuggestions([...lineAddresses, ...current]).slice(0, 3),
+        );
+      }
+    }
+
+    void prefillFromLine();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [expanded, needsAddress, shopSlug]);
 
   // Look up loyalty wallet when phone has 9+ digits
   useEffect(() => {
