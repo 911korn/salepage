@@ -99,13 +99,19 @@ export async function fetchLineConfig(): Promise<LineConfig> {
   return configPromise;
 }
 
-export async function initLineLiff(liffId: string): Promise<LiffClient> {
+export async function initLineLiff(
+  liffId: string,
+  opts: { withLoginOnExternalBrowser?: boolean } = {},
+): Promise<LiffClient> {
   if (liffInit?.id === liffId) return liffInit.promise;
 
   liffInit = {
     id: liffId,
     promise: loadLiffSdk().then(async (liff) => {
-      await liff.init({ liffId, withLoginOnExternalBrowser: true });
+      await liff.init({
+        liffId,
+        withLoginOnExternalBrowser: opts.withLoginOnExternalBrowser ?? false,
+      });
       return liff;
     }),
   };

@@ -42,7 +42,9 @@ export function LineLiffBootstrap() {
           markLiffActive();
         }
 
-        return initLineLiff(config.liffId);
+        return initLineLiff(config.liffId, {
+          withLoginOnExternalBrowser: lineBrowser || returnedFromLiff,
+        });
       })
       .then((liff) => {
         if (cancelled || !liff) return;
