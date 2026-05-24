@@ -156,7 +156,7 @@ async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult
     verified: !receiverUnreadable && mismatch.length === 0,
     provider: "slipok",
     errorCode: receiverUnreadable ? "receiver_unreadable" : undefined,
-    ref: pickString(data, ["transRef", "transactionId"]),
+    ref: pickString(data, ["transRef", "transactionId"]) ?? input.qrPayload,
     amount: pickNumber(data, ["amount"]),
     transferredAt: pickString(data, ["transTimestamp", "transferredAt"]),
     sender: {
