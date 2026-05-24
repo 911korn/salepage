@@ -172,7 +172,7 @@ export default async function DashboardOverviewPage({
             <p className="mt-1 text-[13px] text-zinc-500">{t("noOrdersDesc")}</p>
             <Link
               href={storefrontPath(activeShop.slug)}
-              target="_blank"
+              prefetch={false}
               className={cn(buttonStyles({ size: "sm", variant: "outline" }), "mt-4")}
             >
               {tCommon("viewShop")}

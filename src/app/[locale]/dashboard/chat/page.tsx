@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { MessageCircle, Sparkles } from "lucide-react";
 import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
@@ -24,8 +25,9 @@ export default async function ChatPage({
   setRequestLocale(locale);
 
   const { user, shops } = await requireDashboardSession();
+  if (shops.length === 0) redirect("/dashboard/create-shop");
   const activeShop = resolveDashboardShop(shops, shopParam);
-  if (!activeShop) return null;
+  if (!activeShop) redirect("/dashboard/create-shop");
 
   const eligible = await hasBusinessPlan(user.id);
 

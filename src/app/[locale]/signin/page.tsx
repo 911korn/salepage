@@ -7,10 +7,12 @@ import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
   params: Promise<{ locale: Locale }>;
+  searchParams: Promise<{ callbackUrl?: string | string[] }>;
 }
 
-export default async function SignInPage({ params }: PageProps) {
+export default async function SignInPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
+  const { callbackUrl } = await searchParams;
   setRequestLocale(locale);
   const t = await getTranslations("auth.signIn");
 
@@ -38,7 +40,11 @@ export default async function SignInPage({ params }: PageProps) {
             </div>
 
             <div className="mt-7">
-              <SignInForm hasGoogle={hasGoogle} hasEmail={hasResend} />
+              <SignInForm
+                callbackUrl={Array.isArray(callbackUrl) ? callbackUrl[0] : callbackUrl}
+                hasGoogle={hasGoogle}
+                hasEmail={hasResend}
+              />
             </div>
 
             <p className="mt-6 text-balance text-center text-[12px] leading-relaxed text-zinc-500">

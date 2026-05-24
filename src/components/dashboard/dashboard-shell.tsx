@@ -60,7 +60,7 @@ export function DashboardShell({
           {children}
         </main>
       </div>
-      <DashboardBottomNav />
+      <DashboardBottomNav activeShopSlug={currentShopSlug} />
     </div>
   );
 }

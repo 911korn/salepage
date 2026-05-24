@@ -334,11 +334,15 @@ function DashboardSidebarInner({
   );
 }
 
-export function DashboardBottomNav() {
+export function DashboardBottomNav({
+  activeShopSlug,
+}: {
+  activeShopSlug: string | null;
+}) {
   const t = useTranslations("dashboard");
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentShopSlug = searchParams.get("shop");
+  const currentShopSlug = searchParams.get("shop") ?? activeShopSlug;
   const isActive = (href: string) =>
     pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
 

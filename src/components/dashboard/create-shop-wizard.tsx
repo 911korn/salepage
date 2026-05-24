@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
+import { dashboardHref } from "@/lib/dashboard-routing";
 import { storefrontLabel } from "@/lib/storefront-url";
 
 type CategoryKey =
@@ -137,7 +138,7 @@ export function CreateShopWizard() {
             url: storefrontLabel(json.data.shop.slug),
           }),
         });
-        router.push("/dashboard");
+        router.push(dashboardHref("/dashboard", json.data.shop.slug));
         router.refresh();
       } catch (e) {
         toast.error(t("errors.createFailed"), {

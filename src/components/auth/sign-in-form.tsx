@@ -10,13 +10,18 @@ import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/ui/google-icon";
 
 interface Props {
+  callbackUrl?: string | null;
   hasGoogle: boolean;
   hasEmail: boolean;
 }
 
-export function SignInForm({ hasGoogle, hasEmail }: Props) {
+export function SignInForm({ callbackUrl: callbackUrlParam, hasGoogle, hasEmail }: Props) {
   const t = useTranslations("auth.signIn");
   const locale = useLocale();
+  const callbackUrl = normalizeCallbackUrl(
+    callbackUrlParam ?? null,
+    locale,
+  );
   const [email, setEmail] = useState("");
   const [pending, startTransition] = useTransition();
   const [submitting, setSubmitting] = useState(false);
@@ -29,7 +34,7 @@ export function SignInForm({ hasGoogle, hasEmail }: Props) {
       try {
         const res = await signIn("resend", {
           email,
-          callbackUrl: `/${locale === "th" ? "" : `${locale}/`}dashboard`,
+          callbackUrl,
           redirect: false,
         });
         if (res?.error) {
@@ -55,7 +60,7 @@ export function SignInForm({ hasGoogle, hasEmail }: Props) {
           className="w-full"
           onClick={() =>
             signIn("google", {
-              callbackUrl: `/${locale === "th" ? "" : `${locale}/`}dashboard`,
+              callbackUrl,
             })
           }
         >
@@ -110,4 +115,20 @@ export function SignInForm({ hasGoogle, hasEmail }: Props) {
       ) : null}
     </div>
   );
+}
+
+function normalizeCallbackUrl(value: string | null, locale: string) {
+  const dashboardPath = `/${locale === "th" ? "" : `${locale}/`}dashboard`;
+  if (!value) return dashboardPath;
+
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin) return dashboardPath;
+    if (!url.pathname.startsWith("/dashboard") && !url.pathname.startsWith("/en/dashboard")) {
+      return dashboardPath;
+    }
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return dashboardPath;
+  }
 }

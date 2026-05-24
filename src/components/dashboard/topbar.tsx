@@ -76,7 +76,7 @@ export function DashboardTopbar({ shop, onOpenMenu }: Props) {
                 buttonStyles({ size: "sm" }),
                 "h-11 px-3 sm:h-9 sm:px-3.5",
               )}
-              target="_blank"
+              prefetch={false}
             >
               <ExternalLink className="size-4" />
               <span className="text-[13px] sm:text-sm">

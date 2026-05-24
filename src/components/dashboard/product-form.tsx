@@ -8,6 +8,7 @@ import { useRouter, Link } from "@/i18n/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { dashboardHref } from "@/lib/dashboard-routing";
 
 type Mode = "create" | "edit";
 
@@ -41,6 +42,7 @@ interface Props {
 export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Props) {
   const t = useTranslations("dashboard.products.form");
   const router = useRouter();
+  const productsHref = dashboardHref("/dashboard/products", shopSlug);
   const [pending, startTransition] = useTransition();
   const [deletePending, startDelete] = useTransition();
 
@@ -236,7 +238,7 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
         cleanupRemovedInitialImages(images);
         uploadedThisSessionRef.current.clear();
         toast.success(mode === "create" ? t("submitNew") : t("submit"));
-        router.push("/dashboard/products");
+        router.push(productsHref);
         router.refresh();
       } catch (e) {
         toast.error(t("errors.createFailed"), {
@@ -261,7 +263,7 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
           return;
         }
         toast.success(t("deleted"));
-        router.push("/dashboard/products");
+        router.push(productsHref);
         router.refresh();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "delete error");
@@ -276,7 +278,7 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
     >
       <header className="flex items-center gap-3">
         <Link
-          href="/dashboard/products"
+          href={productsHref}
           className="grid size-9 place-items-center rounded-lg border border-[color:var(--color-border)] bg-white hover:bg-[color:var(--color-soft)]"
         >
           <ArrowLeft className="size-4" />
@@ -494,7 +496,7 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
         )}
         <div className="flex items-center gap-2">
           <Link
-            href="/dashboard/products"
+            href={productsHref}
             className={cn(
               "rounded-xl border border-[color:var(--color-border)] bg-white px-5 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50",
             )}

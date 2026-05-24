@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Ticket } from "lucide-react";
 import { setRequestLocale } from "next-intl/server";
 import { db } from "@/lib/db";
@@ -21,8 +22,9 @@ export default async function CouponsPage({
   setRequestLocale(locale);
 
   const { shops } = await requireDashboardSession();
+  if (shops.length === 0) redirect("/dashboard/create-shop");
   const activeShop = resolveDashboardShop(shops, shopParam);
-  if (!activeShop) return null;
+  if (!activeShop) redirect("/dashboard/create-shop");
 
   const coupons = await db.coupon.findMany({
     where: { shopId: activeShop.id },
