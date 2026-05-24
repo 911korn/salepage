@@ -217,14 +217,7 @@ export default async function StorefrontPage({ params }: PageProps) {
             }))}
           >
             {ownerDashboardHref ? (
-              <>
-                <span className="sm:hidden">
-                  {locale === "th" ? "จัดการร้าน" : "Manage"}
-                </span>
-                <span className="hidden sm:inline">
-                  {locale === "th" ? "จัดการร้าน" : tCommon("dashboard")}
-                </span>
-              </>
+              locale === "th" ? "จัดการร้าน" : tCommon("dashboard")
             ) : (
               <>
                 <span className="sm:hidden">สร้างร้าน</span>
