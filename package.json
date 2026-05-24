@@ -34,6 +34,7 @@
     "sonner": "^2.0.7",
     "stripe": "^22.1.1",
     "tailwind-merge": "^3.6.0",
+    "thai-data": "^3.0.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {

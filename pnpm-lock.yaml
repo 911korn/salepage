@@ -80,6 +80,9 @@ importers:
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
+      thai-data:
+        specifier: ^3.0.2
+        version: 3.0.2
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -3548,6 +3551,10 @@ packages:
     resolution: {integrity: sha512-J/9An6vs9Us6wKRriSFXBWdRZapREHqFzdNUKk0pmu804EMR6dr6winwo7e5JDxN4xahxQsuysyYFwlwj4XN/Q==}
     engines: {node: '>=10'}
     hasBin: true
+
+  thai-data@3.0.2:
+    resolution: {integrity: sha512-qBWlE0zyBz7TLMOLzjn7WnU8YqnvoGsie7zzQvVfrKRXnmVBC12VCSLQHpSKUSRtmZfrZapRednUxS2mXEgkFg==}
+    engines: {node: '>=14.0.0'}
 
   throttleit@2.1.0:
     resolution: {integrity: sha512-nt6AMGKW1p/70DF/hGBdJB57B8Tspmbp5gfJ8ilhLnt7kkr2ye7hzD6NVG8GGErk2HWF34igrL2CXmNIkzKqKw==}
@@ -7287,6 +7294,8 @@ snapshots:
       acorn: 8.16.0
       commander: 2.20.3
       source-map-support: 0.5.21
+
+  thai-data@3.0.2: {}
 
   throttleit@2.1.0: {}
 

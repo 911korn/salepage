@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
+  Check,
   Clock,
   MapPin,
   Minus,
@@ -40,6 +41,14 @@ interface AddressSuggestion {
   lastUsedAt?: string;
 }
 
+interface ThaiAddressOption {
+  key: string;
+  postcode: string;
+  subdistrict: string;
+  district: string;
+  province: string;
+}
+
 export function CheckoutPanel({ shopSlug, product }: Props) {
   const t = useTranslations("order.checkout");
   const [pending, startTransition] = useTransition();
@@ -66,6 +75,13 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
   const [redeemPoints, setRedeemPoints] = useState(0);
   const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([]);
   const [addressLoading, setAddressLoading] = useState(false);
+  const [postcode, setPostcode] = useState("");
+  const [addressOptions, setAddressOptions] = useState<ThaiAddressOption[]>([]);
+  const [addressLookupLoading, setAddressLookupLoading] = useState(false);
+  const [selectedThaiAddress, setSelectedThaiAddress] =
+    useState<ThaiAddressOption | null>(null);
+  const [addressDetail, setAddressDetail] = useState("");
+  const addressDetailRef = useRef("");
 
   const subtotal = product.priceBaht * qty;
   const shipping = 0; // v1: shop sets per-product shipping later
@@ -147,6 +163,68 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
       cancelled = true;
     };
   }, [cleanPhone, needsAddress, phoneReady, shopSlug]);
+
+  useEffect(() => {
+    if (!needsAddress) return;
+    let cancelled = false;
+
+    if (postcode.length !== 5) {
+      queueMicrotask(() => {
+        if (cancelled) return;
+        setAddressOptions([]);
+        setAddressLookupLoading(false);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    queueMicrotask(() => {
+      if (!cancelled) setAddressLookupLoading(true);
+    });
+
+    fetch(`/api/v1/thai-address?postcode=${encodeURIComponent(postcode)}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled || !json.ok) return;
+        const options = (json.data.options as ThaiAddressOption[]) ?? [];
+        setAddressOptions(options);
+        if (options.length === 1) {
+          setSelectedThaiAddress(options[0]);
+          setAddress(composeThaiAddress(addressDetailRef.current, options[0]));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAddressOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAddressLookupLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [needsAddress, postcode]);
+
+  function setStructuredAddressDetail(value: string) {
+    addressDetailRef.current = value;
+    setAddressDetail(value);
+    setAddress(composeThaiAddress(value, selectedThaiAddress));
+  }
+
+  function selectThaiAddress(option: ThaiAddressOption) {
+    setSelectedThaiAddress(option);
+    setAddress(composeThaiAddress(addressDetail, option));
+  }
+
+  function resetStructuredAddress() {
+    setAddress("");
+    setPostcode("");
+    addressDetailRef.current = "";
+    setAddressDetail("");
+    setAddressOptions([]);
+    setSelectedThaiAddress(null);
+  }
 
   async function applyCoupon() {
     if (!couponCode.trim()) return;
@@ -298,6 +376,11 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
             selectedAddress={address}
             onUse={(suggestion) => {
               setAddress(suggestion.address);
+              setPostcode(suggestion.postcode ?? extractPostcodeFromAddress(suggestion.address));
+              addressDetailRef.current = "";
+              setAddressDetail("");
+              setAddressOptions([]);
+              setSelectedThaiAddress(null);
               if (!name.trim() && suggestion.customerName) {
                 setName(suggestion.customerName);
               }
@@ -305,7 +388,7 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
                 setEmail(suggestion.customerEmail);
               }
             }}
-            onNew={() => setAddress("")}
+            onNew={resetStructuredAddress}
           />
         ) : null}
         <FieldInput
@@ -325,16 +408,25 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
           autoComplete="email"
         />
         {needsAddress ? (
-          <Field label={t("address")}>
-            <textarea
-              required
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder={t("addressPlaceholder")}
-              rows={3}
-              className="w-full resize-y rounded-xl border border-[color:var(--color-border)] bg-white p-3 text-[15px] outline-none focus:border-[color:var(--color-brand-400)] focus:ring-2 focus:ring-[color:var(--color-brand-100)]"
-            />
-          </Field>
+          <ThaiAddressPicker
+            label={t("address")}
+            postcode={postcode}
+            selectedAddress={address}
+            selectedThaiAddress={selectedThaiAddress}
+            addressDetail={addressDetail}
+            options={addressOptions}
+            loading={addressLookupLoading}
+            onPostcodeChange={(value) => {
+              const clean = value.replace(/[^\d]/g, "").slice(0, 5);
+              setPostcode(clean);
+              setAddressOptions([]);
+              setSelectedThaiAddress(null);
+              setAddress("");
+            }}
+            onSelect={selectThaiAddress}
+            onDetailChange={setStructuredAddressDetail}
+            onClear={resetStructuredAddress}
+          />
         ) : null}
         <Field label={t("notes")}>
           <textarea
@@ -561,6 +653,163 @@ function AddressMemory({
   );
 }
 
+function ThaiAddressPicker({
+  label,
+  postcode,
+  selectedAddress,
+  selectedThaiAddress,
+  addressDetail,
+  options,
+  loading,
+  onPostcodeChange,
+  onSelect,
+  onDetailChange,
+  onClear,
+}: {
+  label: string;
+  postcode: string;
+  selectedAddress: string;
+  selectedThaiAddress: ThaiAddressOption | null;
+  addressDetail: string;
+  options: ThaiAddressOption[];
+  loading: boolean;
+  onPostcodeChange: (value: string) => void;
+  onSelect: (option: ThaiAddressOption) => void;
+  onDetailChange: (value: string) => void;
+  onClear: () => void;
+}) {
+  const hasSavedAddress =
+    selectedAddress.trim() && !addressDetail.trim() && !selectedThaiAddress;
+
+  return (
+    <div className="space-y-3 rounded-3xl border border-[color:var(--color-border)] bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[13px] font-bold text-zinc-900">{label}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">
+            เริ่มจากรหัสไปรษณีย์ แล้วเลือกตำบล/อำเภอ ระบบจะเติมจังหวัดให้เอง
+          </p>
+        </div>
+        {selectedAddress ? (
+          <button
+            type="button"
+            onClick={onClear}
+            className="min-h-9 shrink-0 rounded-xl px-3 text-xs font-semibold text-zinc-600 ring-1 ring-[color:var(--color-border)]"
+          >
+            เปลี่ยน
+          </button>
+        ) : null}
+      </div>
+
+      {hasSavedAddress ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-[13px]">
+          <span className="inline-flex items-center gap-1.5 font-bold text-emerald-800">
+            <Check className="size-4" />
+            ใช้ที่อยู่เดิมแล้ว
+          </span>
+          <p className="mt-1 whitespace-pre-line leading-relaxed text-emerald-900">
+            {selectedAddress}
+          </p>
+        </div>
+      ) : (
+        <>
+          <FieldInput
+            label="รหัสไปรษณีย์"
+            placeholder="เช่น 10110"
+            value={postcode}
+            onChange={onPostcodeChange}
+            inputMode="numeric"
+            autoComplete="postal-code"
+            maxLength={5}
+            required
+          />
+
+          {postcode.length === 5 ? (
+            <div className="space-y-2">
+              <p className="text-[12px] font-semibold text-zinc-600">
+                เลือกตำบล/อำเภอ
+              </p>
+              {loading ? (
+                <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-soft)] px-3.5 py-3 text-[13px] text-zinc-600">
+                  <Clock className="mr-1 inline-block size-4 animate-pulse text-[color:var(--color-brand-600)]" />
+                  กำลังค้นหาพื้นที่จากรหัสไปรษณีย์...
+                </div>
+              ) : options.length > 0 ? (
+                <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                  {options.map((option) => {
+                    const selected =
+                      selectedThaiAddress?.key === option.key;
+                    return (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => onSelect(option)}
+                        className={cn(
+                          "flex min-h-14 w-full items-center gap-3 rounded-2xl bg-white px-3.5 py-2.5 text-left ring-1 transition active:scale-[0.99]",
+                          selected
+                            ? "ring-[color:var(--color-brand-500)]"
+                            : "ring-[color:var(--color-border)]",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "grid size-7 shrink-0 place-items-center rounded-full border",
+                            selected
+                              ? "border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-600)] text-white"
+                              : "border-zinc-200 bg-zinc-50 text-transparent",
+                          )}
+                        >
+                          <Check className="size-4" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-bold text-zinc-900">
+                            {option.subdistrict}
+                          </span>
+                          <span className="block text-xs text-zinc-500">
+                            {option.district}, {option.province} {option.postcode}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13px] text-amber-800">
+                  ยังไม่พบพื้นที่ของรหัสนี้ ลองตรวจรหัสไปรษณีย์อีกครั้ง
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-soft)] px-3.5 py-3 text-[13px] text-zinc-600">
+              ใส่รหัสไปรษณีย์ 5 หลักก่อน ระบบจะจำกัดตัวเลือกให้อัตโนมัติ
+            </div>
+          )}
+
+          <Field label="บ้านเลขที่ / หมู่บ้าน / ถนน">
+            <textarea
+              required
+              value={addressDetail}
+              onChange={(e) => onDetailChange(e.target.value)}
+              placeholder="เช่น 99/9 หมู่บ้าน..., ซอย..., ถนน..."
+              rows={3}
+              className="w-full resize-y rounded-xl border border-[color:var(--color-border)] bg-white p-3 text-[15px] outline-none focus:border-[color:var(--color-brand-400)] focus:ring-2 focus:ring-[color:var(--color-brand-100)]"
+            />
+          </Field>
+
+          {selectedAddress ? (
+            <div className="rounded-2xl bg-[color:var(--color-soft)] px-3.5 py-3 text-[13px] text-zinc-700">
+              <span className="font-semibold text-zinc-900">ที่อยู่จัดส่ง</span>
+              <p className="mt-1 whitespace-pre-line leading-relaxed">
+                {selectedAddress}
+              </p>
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
 function Field({
   label,
   children,
@@ -631,6 +880,19 @@ function normalizePhoneForCheckout(value: string) {
     return `0${digits.slice(2)}`;
   }
   return digits;
+}
+
+function composeThaiAddress(detail: string, option: ThaiAddressOption | null) {
+  const cleanDetail = detail.replace(/\s+/g, " ").trim();
+  if (!cleanDetail || !option) return "";
+  return [
+    cleanDetail,
+    `${option.subdistrict} ${option.district} ${option.province} ${option.postcode}`,
+  ].join("\n");
+}
+
+function extractPostcodeFromAddress(address: string) {
+  return address.match(/\b\d{5}\b/)?.[0] ?? "";
 }
 
 function normalizeText(value: string) {
