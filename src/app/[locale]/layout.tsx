@@ -5,7 +5,6 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing, type Locale } from "@/i18n/routing";
-import { CookieConsent } from "@/components/cookie-consent";
 import { PlatformBanner } from "@/components/platform-banner";
 import "../globals.css";
 
@@ -92,7 +91,6 @@ export default async function LocaleLayout({
         <NextIntlClientProvider>
           <PlatformBanner />
           {children}
-          <CookieConsent />
           <Toaster
             richColors
             position="top-center"

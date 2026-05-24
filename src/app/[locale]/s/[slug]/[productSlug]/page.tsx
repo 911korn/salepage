@@ -5,8 +5,8 @@ import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { CheckoutPanel } from "@/components/storefront/checkout-panel";
+import { ProductImageGallery } from "@/components/storefront/product-image-gallery";
 import { ShareButton } from "@/components/storefront/share-button";
-import { cn } from "@/lib/cn";
 import { getStorefrontProductView } from "@/lib/storefront-product-view";
 import {
   absoluteStorefrontUrl,
@@ -122,58 +122,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
       <div className="container-page py-6 lg:py-10">
         <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr] lg:gap-10">
-          {/* Image gallery */}
-          <div className="overflow-hidden rounded-3xl border border-[color:var(--color-border)] bg-white">
-            <div className="relative aspect-square w-full bg-zinc-100">
-              {product.imageUrls[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={product.imageUrls[0]}
-                  alt={product.name}
-                  className="size-full object-cover"
-                />
-              ) : (
-                <div
-                  className="size-full"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, var(--color-brand-100), var(--color-brand-300))",
-                  }}
-                />
-              )}
-              {product.badge ? (
-                <span
-                  className={cn(
-                    "absolute left-3 top-3 rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white",
-                    product.badge === "HOT" && "bg-orange-500",
-                    product.badge === "NEW" && "bg-emerald-500",
-                    product.badge === "SALE" &&
-                      "bg-[color:var(--color-brand-600)]",
-                  )}
-                >
-                  {product.badge}
-                </span>
-              ) : null}
-              {discountPct > 0 ? (
-                <span className="absolute right-3 top-3 rounded-md bg-black/80 px-2.5 py-1 text-[11px] font-bold text-white">
-                  -{discountPct}%
-                </span>
-              ) : null}
-            </div>
-            {product.imageUrls.length > 1 ? (
-              <div className="flex gap-2 overflow-x-auto p-3">
-                {product.imageUrls.map((url, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={i}
-                    src={url}
-                    alt={`${product.name} ${i + 1}`}
-                    className="size-20 shrink-0 rounded-lg object-cover ring-1 ring-[color:var(--color-border)]"
-                  />
-                ))}
-              </div>
-            ) : null}
-          </div>
+          <ProductImageGallery
+            images={product.imageUrls}
+            productName={product.name}
+            badge={product.badge}
+            discountPct={discountPct}
+          />
 
           {/* Detail + checkout */}
           <div>
