@@ -34,15 +34,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "meta" });
+  const canonicalUrl =
+    locale === routing.defaultLocale
+      ? "https://salepage.in.th"
+      : `https://salepage.in.th/${locale}`;
+  const ogImageUrl = `https://salepage.in.th/api/v1/og/home?locale=${locale === "en" ? "en" : "th"}&v=20260525`;
+  const ogTitle = t("ogTitle");
+  const ogDescription = t("ogDescription");
+
   return {
     metadataBase: new URL("https://salepage.in.th"),
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical:
-        locale === routing.defaultLocale
-          ? "https://salepage.in.th"
-          : `https://salepage.in.th/${locale}`,
+      canonical: canonicalUrl,
       languages: {
         th: "https://salepage.in.th",
         en: "https://salepage.in.th/en",
@@ -50,15 +55,27 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      title: t("ogTitle"),
-      description: t("ogDescription"),
-      url:
-        locale === routing.defaultLocale
-          ? "https://salepage.in.th"
-          : `https://salepage.in.th/${locale}`,
+      title: ogTitle,
+      description: ogDescription,
+      url: canonicalUrl,
       siteName: "SalePage",
       type: "website",
       locale: locale === "th" ? "th_TH" : "en_US",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: ogTitle,
+          type: "image/png",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: ogTitle,
+      description: ogDescription,
+      images: [ogImageUrl],
     },
   };
 }
