@@ -1,6 +1,7 @@
 import createMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "./i18n/routing";
+import { ensureLiffReturnParam, resolveLiffStateTarget } from "@/lib/liff-url";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -15,40 +16,30 @@ function redirectLiffState(request: NextRequest) {
   const state = request.nextUrl.searchParams.get("liff.state");
   if (!state) return null;
 
+  if (!isLiffStateShellPath(request.nextUrl.pathname)) {
+    const currentTarget = new URL(request.nextUrl.toString());
+    currentTarget.searchParams.delete("liff.state");
+    const cleanTarget = ensureLiffReturnParam(currentTarget);
+    return NextResponse.redirect(cleanTarget, 307);
+  }
+
   const target = resolveLiffStateTarget(state, request.url);
   if (!target) return null;
-  if (!target.searchParams.has("sp_liff")) {
-    target.searchParams.set("sp_liff", "1");
-  }
-  return NextResponse.redirect(target, 307);
-}
-
-function resolveLiffStateTarget(state: string, requestUrl: string) {
-  const base = new URL(requestUrl);
-  let target: URL;
-
-  try {
-    if (state.startsWith("/") && !state.startsWith("//")) {
-      target = new URL(state, base);
-    } else if (/^https?:\/\//i.test(state)) {
-      target = new URL(state);
-      if (target.origin !== base.origin) return null;
-    } else {
-      return null;
-    }
-  } catch {
-    return null;
-  }
+  const cleanTarget = ensureLiffReturnParam(target);
 
   if (
-    target.pathname.startsWith("/api") ||
-    target.pathname.startsWith("/_next") ||
-    target.pathname.startsWith("/_vercel")
+    cleanTarget.pathname.startsWith("/api") ||
+    cleanTarget.pathname.startsWith("/_next") ||
+    cleanTarget.pathname.startsWith("/_vercel")
   ) {
     return null;
   }
 
-  return target;
+  return NextResponse.redirect(cleanTarget, 307);
+}
+
+function isLiffStateShellPath(pathname: string) {
+  return pathname === "/" || pathname === "/th" || pathname === "/en";
 }
 
 export const config = {

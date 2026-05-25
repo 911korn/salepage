@@ -1,6 +1,14 @@
 "use client";
 
-export const LIFF_RETURN_PARAM = "sp_liff";
+import {
+  LIFF_RETURN_PARAM,
+  LIFF_STATE_PARAM,
+  ensureLiffReturnParam,
+  sanitizeLiffTargetUrl,
+  toPathWithSearchAndHash,
+} from "@/lib/liff-url";
+
+export { LIFF_RETURN_PARAM } from "@/lib/liff-url";
 
 const LIFF_ACTIVE_KEY = "salepage:line-liff-active";
 
@@ -66,21 +74,28 @@ export function cleanLiffReturnParam() {
   window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
+export function cleanLiffStateParam(): boolean {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(LIFF_STATE_PARAM)) return false;
+
+  const target = ensureLiffReturnParam(sanitizeLiffTargetUrl(url.toString()));
+  window.location.replace(toPathWithSearchAndHash(target));
+  return true;
+}
+
 export function buildLiffUrl(liffId: string, targetHref: string): string {
-  const target = new URL(targetHref);
-  target.searchParams.set(LIFF_RETURN_PARAM, "1");
-  return `https://liff.line.me/${encodeURIComponent(liffId)}${target.pathname}${target.search}${target.hash}`;
+  const target = ensureLiffReturnParam(sanitizeLiffTargetUrl(targetHref));
+  return `https://liff.line.me/${encodeURIComponent(liffId)}${toPathWithSearchAndHash(target)}`;
 }
 
 export function buildLiffRedirectUri(targetHref = window.location.href): string {
-  const target = new URL(targetHref);
-  target.searchParams.set(LIFF_RETURN_PARAM, "1");
+  const target = ensureLiffReturnParam(sanitizeLiffTargetUrl(targetHref));
   return target.toString();
 }
 
 export function buildLineOpenBridgePath(targetHref = window.location.href): string {
-  const target = new URL(targetHref);
-  const path = `${target.pathname}${target.search}${target.hash}`;
+  const target = sanitizeLiffTargetUrl(targetHref);
+  const path = toPathWithSearchAndHash(target);
   return `/line/open?to=${encodeURIComponent(path)}`;
 }
 

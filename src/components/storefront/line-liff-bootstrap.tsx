@@ -5,6 +5,7 @@ import {
   buildLiffRedirectUri,
   buildLiffUrl,
   cleanLiffReturnParam,
+  cleanLiffStateParam,
   fetchLineConfig,
   hasLiffReturnParam,
   initLineLiff,
@@ -14,6 +15,8 @@ import {
 
 export function LineLiffBootstrap() {
   useEffect(() => {
+    if (cleanLiffStateParam()) return;
+
     const params = new URL(window.location.href).searchParams;
     const returnedFromLiff = hasLiffReturnParam();
     const lineBrowser = isLineInAppBrowser();

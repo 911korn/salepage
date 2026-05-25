@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  ensureLiffReturnParam,
+  sanitizeLiffTargetUrl,
+  toPathWithSearchAndHash,
+} from "@/lib/liff-url";
 
 interface Props {
   liffId: string;
   targetPath: string;
 }
-
-const LIFF_RETURN_PARAM = "sp_liff";
 
 export function LineOpenBridge({ liffId, targetPath }: Props) {
   const [showFallback, setShowFallback] = useState(false);
@@ -71,9 +74,10 @@ export function LineOpenBridge({ liffId, targetPath }: Props) {
 }
 
 function buildLineOpenUrls(liffId: string, targetPath: string) {
-  const target = new URL(targetPath, "https://salepage.in.th");
-  target.searchParams.set(LIFF_RETURN_PARAM, "1");
-  const path = `${target.pathname}${target.search}${target.hash}`;
+  const target = ensureLiffReturnParam(
+    sanitizeLiffTargetUrl(targetPath, "https://salepage.in.th"),
+  );
+  const path = toPathWithSearchAndHash(target);
 
   return {
     liffUrl: `https://liff.line.me/${encodeURIComponent(liffId)}${path}`,
