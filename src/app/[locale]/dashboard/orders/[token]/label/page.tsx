@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
 import { dashboardHref } from "@/lib/dashboard-routing";
 import { buildOrderRef } from "@/lib/orders";
+import { formatParcelWeight, formatShippingFeeBaht } from "@/lib/shipping";
 import type { Locale } from "@/i18n/routing";
 
 export default async function ShippingLabelPage({
@@ -115,7 +116,7 @@ export default async function ShippingLabelPage({
           </div>
 
           <div className="grid grid-cols-2 gap-3 pt-3 text-xs">
-            <Info label="น้ำหนัก" value={`${shipment.parcelWeightGram ?? 500}g`} />
+            <Info label="น้ำหนัก" value={formatParcelWeight(shipment.parcelWeightGram)} />
             <Info
               label="ขนาด"
               value={
@@ -125,7 +126,7 @@ export default async function ShippingLabelPage({
               }
             />
             <Info label="วิธีส่ง" value={shipment.handoff === "PICKUP" ? "เรียกรับ" : "ฝากส่ง"} />
-            <Info label="ค่าส่ง" value={shipment.shippingFeeSatang ? `฿${Math.round(shipment.shippingFeeSatang / 100).toLocaleString()}` : "-"} />
+            <Info label="ค่าส่ง" value={formatShippingFeeBaht(shipment.shippingFeeSatang)} />
           </div>
         </section>
       </main>

@@ -11,6 +11,7 @@ import {
   SHIPMENT_HANDOFFS,
   estimateShippingFeeSatang,
   getCourierOption,
+  normalizeParcelWeightGram,
 } from "@/lib/shipping";
 
 interface Ctx {
@@ -117,9 +118,10 @@ export async function POST(request: Request, ctx: Ctx) {
   const shouldMarkShipping = input.markShipping && order.status !== OrderStatus.SHIPPING;
   const shipmentStatus = trackingNumber ? "IN_TRANSIT" : "READY_TO_SHIP";
   const labelUrl = `/dashboard/orders/${token}/label`;
+  const parcelWeightGram = normalizeParcelWeightGram(input.parcelWeightGram);
   const shippingFeeSatang =
     input.shippingFeeSatang ??
-    estimateShippingFeeSatang(input.courierCode, input.parcelWeightGram);
+    estimateShippingFeeSatang(input.courierCode, parcelWeightGram);
 
   const result = await db.$transaction(async (tx) => {
     const shipment = await tx.shipment.upsert({
@@ -143,7 +145,7 @@ export async function POST(request: Request, ctx: Ctx) {
         receiverPhone: input.receiverPhone?.trim() || order.customerPhone,
         receiverAddress: input.receiverAddress?.trim() || order.customerAddress,
         receiverPostcode: input.receiverPostcode?.trim() || null,
-        parcelWeightGram: input.parcelWeightGram ?? 500,
+        parcelWeightGram,
         parcelWidthCm: input.parcelWidthCm ?? null,
         parcelLengthCm: input.parcelLengthCm ?? null,
         parcelHeightCm: input.parcelHeightCm ?? null,
@@ -169,7 +171,7 @@ export async function POST(request: Request, ctx: Ctx) {
         receiverPhone: input.receiverPhone?.trim() || order.customerPhone,
         receiverAddress: input.receiverAddress?.trim() || order.customerAddress,
         receiverPostcode: input.receiverPostcode?.trim() || null,
-        parcelWeightGram: input.parcelWeightGram ?? 500,
+        parcelWeightGram,
         parcelWidthCm: input.parcelWidthCm ?? null,
         parcelLengthCm: input.parcelLengthCm ?? null,
         parcelHeightCm: input.parcelHeightCm ?? null,

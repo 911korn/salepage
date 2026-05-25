@@ -14,7 +14,15 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
-import { COURIER_OPTIONS, estimateShippingFeeSatang } from "@/lib/shipping";
+import {
+  COURIER_OPTIONS,
+  DEFAULT_PARCEL_SIZE_TEXT,
+  DEFAULT_PARCEL_WEIGHT_GRAM,
+  estimateShippingFeeSatang,
+  formatParcelWeight,
+  formatShippingFeeBaht,
+  normalizeParcelWeightGram,
+} from "@/lib/shipping";
 import { useRouter } from "@/i18n/navigation";
 
 type OrderStatus =
@@ -66,6 +74,11 @@ const PACKAGE_PRESETS = [
   { label: "กล่องใหญ่", weight: 2000, size: "40x30x20" },
 ] as const;
 
+function satangToInputBaht(feeSatang: number | null | undefined) {
+  if (feeSatang === null || feeSatang === undefined) return "";
+  return String(Math.round(feeSatang / 100));
+}
+
 export function ShippingWorkflow({
   token,
   currentStatus,
@@ -88,14 +101,18 @@ export function ShippingWorkflow({
   const [tracking, setTracking] = useState(
     shipment?.trackingNumber ?? trackingNumber ?? "",
   );
-  const [weightGram, setWeightGram] = useState(
-    String(shipment?.parcelWeightGram ?? 500),
+  const [weightKg, setWeightKg] = useState(
+    gramToKgInput(shipment?.parcelWeightGram ?? DEFAULT_PARCEL_WEIGHT_GRAM),
   );
   const [sizeText, setSizeText] = useState(
     shipment?.parcelLengthCm && shipment.parcelWidthCm && shipment.parcelHeightCm
       ? `${shipment.parcelLengthCm}x${shipment.parcelWidthCm}x${shipment.parcelHeightCm}`
-      : "20x15x5",
+      : DEFAULT_PARCEL_SIZE_TEXT,
   );
+  const [shippingFeeBaht, setShippingFeeBaht] = useState(
+    satangToInputBaht(shipment?.shippingFeeSatang),
+  );
+  const [feeTouched, setFeeTouched] = useState(Boolean(shipment?.shippingFeeSatang));
   const [senderName, setSenderName] = useState(shipment?.senderName ?? shopName);
   const [senderPhone, setSenderPhone] = useState(shipment?.senderPhone ?? "");
   const [senderAddress, setSenderAddress] = useState(shipment?.senderAddress ?? "");
@@ -108,7 +125,11 @@ export function ShippingWorkflow({
     () => COURIER_OPTIONS.find((option) => option.code === courierCode) ?? COURIER_OPTIONS[0],
     [courierCode],
   );
-  const estimatedFee = estimateShippingFeeSatang(courierCode, Number(weightGram) || 500);
+  const normalizedWeightGram = kgInputToGram(weightKg);
+  const estimatedFee = estimateShippingFeeSatang(courierCode, normalizedWeightGram);
+  const shippingFeeSatang = feeTouched
+    ? bahtInputToSatang(shippingFeeBaht)
+    : estimatedFee;
   const [lengthCm, widthCm, heightCm] = parseSize(sizeText);
   const canWork =
     currentStatus === "PAID" ||
@@ -143,11 +164,11 @@ export function ShippingWorkflow({
             receiverName: customerName,
             receiverPhone: customerPhone,
             receiverAddress: receiverAddress.trim(),
-            parcelWeightGram: Number(weightGram) || 500,
+            parcelWeightGram: normalizedWeightGram,
             parcelLengthCm: lengthCm,
             parcelWidthCm: widthCm,
             parcelHeightCm: heightCm,
-            shippingFeeSatang: estimatedFee,
+            shippingFeeSatang,
             note: note.trim() || null,
             markShipping,
           }),
@@ -270,25 +291,34 @@ export function ShippingWorkflow({
                 type="button"
                 disabled={!canWork || pending}
                 onClick={() => {
-                  setWeightGram(String(preset.weight));
+                  setWeightKg(gramToKgInput(preset.weight));
                   setSizeText(preset.size);
+                  if (!feeTouched) setShippingFeeBaht("");
                 }}
                 className="min-h-12 rounded-xl border border-[color:var(--color-border)] bg-white px-3 text-left text-[12px] disabled:opacity-50"
               >
                 <span className="block font-semibold text-zinc-800">
                   {preset.label}
                 </span>
-                <span className="text-zinc-500">{preset.weight}g · {preset.size}cm</span>
+                <span className="text-zinc-500">
+                  {formatParcelWeight(preset.weight)} · {preset.size}cm
+                </span>
               </button>
             ))}
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <Input
-              value={weightGram}
-              onChange={(e) => setWeightGram(e.target.value.replace(/[^\d]/g, ""))}
-              inputMode="numeric"
+              value={weightKg}
+              onChange={(e) => {
+                const next = e.target.value.replace(/[^\d.]/g, "");
+                setWeightKg(next);
+                if (!feeTouched) setShippingFeeBaht("");
+              }}
+              onBlur={() => setWeightKg(gramToKgInput(normalizedWeightGram))}
+              inputMode="decimal"
               disabled={!canWork || pending}
-              placeholder="น้ำหนัก g"
+              placeholder="น้ำหนัก (กก.)"
+              maxLength={5}
             />
             <Input
               value={sizeText}
@@ -297,11 +327,39 @@ export function ShippingWorkflow({
               placeholder="ยxกxส cm"
             />
           </div>
-          {estimatedFee !== null ? (
-            <p className="mt-1.5 text-[12px] text-zinc-500">
-              ค่าส่งประมาณ ฿{Math.round(estimatedFee / 100).toLocaleString()}
+          <div className="mt-2 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-soft)] p-3">
+            <div className="flex items-start justify-between gap-3 text-[12px]">
+              <div>
+                <p className="font-semibold text-zinc-800">เรทแนะนำ</p>
+                <p className="mt-0.5 text-zinc-500">
+                  {courier.code === "other"
+                    ? "ขนส่งอื่นไม่มีเรทอัตโนมัติ"
+                    : `${courier.name} · ${formatParcelWeight(normalizedWeightGram)}`}
+                </p>
+              </div>
+              <p className="shrink-0 text-base font-black text-[color:var(--color-brand-700)]">
+                {formatShippingFeeBaht(estimatedFee)}
+              </p>
+            </div>
+            <label className="mt-3 block text-[12px] font-semibold text-zinc-700">
+              ค่าส่งที่จะบันทึก (บาท)
+            </label>
+            <Input
+              value={feeTouched ? shippingFeeBaht : satangToInputBaht(estimatedFee)}
+              onChange={(e) => {
+                setFeeTouched(true);
+                setShippingFeeBaht(e.target.value.replace(/[^\d]/g, "").slice(0, 4));
+              }}
+              disabled={!canWork || pending}
+              inputMode="numeric"
+              placeholder={estimatedFee ? satangToInputBaht(estimatedFee) : "ใส่เอง"}
+              className="mt-1 bg-white"
+            />
+            <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-500">
+              ระบบนี้ยังเป็น manual shipping: เรทแนะนำใช้ช่วยตัดสินใจเท่านั้น
+              ร้านแก้ค่าส่งจริงก่อนบันทึกได้
             </p>
-          ) : null}
+          </div>
         </div>
 
         <div className="rounded-2xl bg-[color:var(--color-soft)] p-3">
@@ -444,4 +502,24 @@ function parseSize(value: string) {
     .map((part) => Number(part.trim()))
     .filter((part) => Number.isFinite(part) && part > 0);
   return [parts[0] ?? null, parts[1] ?? null, parts[2] ?? null] as const;
+}
+
+function bahtInputToSatang(value: string) {
+  const baht = Number(value.replace(/[^\d]/g, ""));
+  if (!Number.isFinite(baht) || baht <= 0) return null;
+  return Math.min(1000, Math.round(baht)) * 100;
+}
+
+function kgInputToGram(value: string) {
+  const kg = Number(value.replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(kg) || kg <= 0) return DEFAULT_PARCEL_WEIGHT_GRAM;
+  return normalizeParcelWeightGram(Math.round(kg * 1000));
+}
+
+function gramToKgInput(weightGram: number | null | undefined) {
+  const kg = normalizeParcelWeightGram(weightGram) / 1000;
+  return kg.toLocaleString("en-US", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: kg < 1 ? 1 : 0,
+  });
 }
