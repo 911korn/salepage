@@ -29,7 +29,7 @@ export function useLineSignIn() {
       await setAuthToken(session.token);
       // Best-effort push registration — not critical to login flow.
       void registerPushToken().catch(() => undefined);
-      router.replace(opts.redirectAfter ?? "/");
+      router.replace((opts.redirectAfter ?? "/") as never);
     } catch (err) {
       if (err instanceof LineLoginCancelledError) return;
       const msg =

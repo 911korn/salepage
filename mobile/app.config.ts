@@ -99,6 +99,9 @@ const config: ExpoConfig = {
     "expo-notifications",
     "@sentry/react-native",
     "expo-video",
+    // Required as explicit plugins from SDK 54 onwards (previously implicit).
+    "expo-font",
+    "expo-web-browser",
   ],
   experiments: {
     typedRoutes: true,
@@ -110,16 +113,27 @@ const config: ExpoConfig = {
     // resolve to the live site even when apiBaseUrl points at a LAN IP in dev.
     webBaseUrl:
       process.env.EXPO_PUBLIC_WEB_BASE_URL ?? "https://salepage.in.th",
-    lineLiffId: process.env.EXPO_PUBLIC_LINE_LIFF_ID ?? null,
-    lineLoginChannelId:
-      process.env.EXPO_PUBLIC_LINE_LOGIN_CHANNEL_ID ?? null,
+    // Optional client config — only include fields when the env var is set.
+    // We previously used `?? null` here, but Expo's manifest serializer turned
+    // null into `{}` which broke fs.lstat in downstream plugins (`The "path"
+    // argument must be of type string. Received an instance of Object`).
+    // The env.ts reader does a `typeof === "string"` guard so missing keys
+    // safely fall through to null on the client.
+    ...(process.env.EXPO_PUBLIC_LINE_LIFF_ID
+      ? { lineLiffId: process.env.EXPO_PUBLIC_LINE_LIFF_ID }
+      : {}),
+    ...(process.env.EXPO_PUBLIC_LINE_LOGIN_CHANNEL_ID
+      ? { lineLoginChannelId: process.env.EXPO_PUBLIC_LINE_LOGIN_CHANNEL_ID }
+      : {}),
     // CET TELEMETRY FIRST law: ship the DSN so init can fire on every cold
     // start. Without this, native crashes go uninvestigatable per the STOP
     // GUESSING crash debug rule.
-    sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? null,
-    eas: {
-      projectId: process.env.EAS_PROJECT_ID ?? null,
-    },
+    ...(process.env.EXPO_PUBLIC_SENTRY_DSN
+      ? { sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN }
+      : {}),
+    ...(process.env.EAS_PROJECT_ID
+      ? { eas: { projectId: process.env.EAS_PROJECT_ID } }
+      : {}),
   },
 };
 

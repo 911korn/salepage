@@ -11,7 +11,7 @@ import { router } from "expo-router";
  * without touching layout files.
  */
 
-type TabKey = "discover" | "search" | "orders" | "me";
+type TabKey = "home" | "shops" | "orders" | "me";
 
 interface Props {
   active: TabKey;
@@ -24,8 +24,9 @@ const TABS: Array<{
   iconActive: string;
   iconInactive: string;
 }> = [
-  { key: "discover", href: "/", label: "ค้นพบ", iconActive: "🛍", iconInactive: "🛒" },
-  { key: "search", href: "/search", label: "ค้นหา", iconActive: "🔍", iconInactive: "🔎" },
+  // V1.1: home = product feed (Shopee-style), shops = old discovery + search.
+  { key: "home", href: "/", label: "หน้าหลัก", iconActive: "🏠", iconInactive: "🏡" },
+  { key: "shops", href: "/search", label: "ร้าน", iconActive: "🛍", iconInactive: "🛒" },
   { key: "orders", href: "/orders", label: "คำสั่งซื้อ", iconActive: "📦", iconInactive: "📋" },
   { key: "me", href: "/me", label: "ฉัน", iconActive: "👤", iconInactive: "👥" },
 ];

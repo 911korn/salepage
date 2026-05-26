@@ -905,7 +905,7 @@ export const api = {
   },
 
   feed: {
-    /// V1: discovery feed. Personalized when authenticated, popular otherwise.
+    /// V1: shops discovery feed. Personalized when authenticated, popular otherwise.
     list: (params: {
       cursor?: string;
       category?: string;
@@ -917,6 +917,45 @@ export const api = {
         shops: ShopSummary[];
         nextCursor: string | null;
       }>("/api/v1/feed", { query: params, anonymous: !params.tab || params.tab !== "following" }),
+  },
+
+  /**
+   * V1.1: product-first feed for the Shopee-style mobile home. Returns a
+   * paginated mix of products from every ACTIVE non-suspended shop. We use
+   * this on the home tab — the shop feed (`api.feed.list`) lives on the
+   * shops/discovery tab.
+   */
+  productsFeed: {
+    list: (
+      params: {
+        cursor?: string;
+        category?: string;
+        sort?: "relevance" | "sold" | "newest" | "price-asc" | "price-desc";
+        /** V1.5: restrict feed to KYC-verified shops only. */
+        verified?: boolean;
+      } = {},
+    ) =>
+      apiFetch<{
+        products: Array<{
+          id: string;
+          slug: string;
+          shopSlug: string;
+          shopName: string;
+          shopLogoText: string | null;
+          shopLogoUrl: string | null;
+          shopThemeColor: string;
+          shopKycStatus: KycStatus;
+          shopTrustScore: number;
+          shopRating: number;
+          name: string;
+          priceSatang: number;
+          compareAtSatang: number | null;
+          imageUrl: string | null;
+          badge: "HOT" | "NEW" | "SALE" | null;
+          sold: number;
+        }>;
+        nextCursor: string | null;
+      }>("/api/v1/products-feed", { query: params, anonymous: true }),
   },
 
   search: (params: {
@@ -1105,6 +1144,33 @@ export const api = {
         kycStatus: "PENDING";
         kycSubmittedAt: string;
       }>(`/api/v1/shops/${slug}/kyc`, { method: "POST", body: input }),
+
+    /**
+     * Owner-only edit of shop info — banner upload, logo, theme color,
+     * name, description, contact. Server enforces shop ownership.
+     */
+    update: (
+      slug: string,
+      input: {
+        name?: string;
+        description?: string | null;
+        themeColor?: string;
+        logoText?: string | null;
+        logoUrl?: string | null;
+        /** Up to 3 banner image URLs. Empty array = fall back to themeColor. */
+        bannerUrls?: string[];
+        announcement?: string | null;
+        contact?: {
+          phone?: string | null;
+          line?: string | null;
+          facebook?: string | null;
+        };
+      },
+    ) =>
+      apiFetch<{ shop: { id: string; slug: string } }>(
+        `/api/v1/shops/${slug}`,
+        { method: "PATCH", body: input },
+      ),
 
     /**
      * Seller create-product (mobile). Mirrors the web product-form payload —

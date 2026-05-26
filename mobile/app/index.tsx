@@ -14,14 +14,12 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Screen } from "@/components/ui/screen";
 import { TabBar } from "@/components/ui/tab-bar";
-import { VerifiedBadge, TrustMeter } from "@/components/trust-badge";
+import { VerifiedBadge } from "@/components/trust-badge";
 import { StoriesRail } from "@/components/stories-rail";
 import { DiscoveryRails } from "@/components/discovery-rails";
 import { LiveRail } from "@/components/live-rail";
 import { api } from "@/lib/api";
-import type { ShopSummary } from "@/types/api";
-
-type Tab = "for-you" | "new" | "following";
+import { formatBaht } from "@/lib/format";
 
 const CATEGORIES: Array<{ key: string; label: string; emoji: string }> = [
   { key: "fashion", label: "แฟชั่น", emoji: "👗" },
@@ -36,48 +34,42 @@ const CATEGORIES: Array<{ key: string; label: string; emoji: string }> = [
   { key: "other", label: "อื่นๆ", emoji: "✨" },
 ];
 
+type Sort = "relevance" | "sold" | "newest";
+
 /**
- * Discover feed (V1.0 home).
+ * Home tab (V1.1) — Shopee-style product grid. Two columns, each card shows
+ * product image, name, price, and a small shop chip. Tapping the card opens
+ * the product detail; tapping the shop chip opens the shop page.
  *
- * Three tabs: For You / New / Following. Categories rail under the header.
- * Tap a shop card to open `/s/[slug]`.
- *
- * The old V0.5 launcher (slug input / track-by-token) was moved into the
- * profile tab as a power-user shortcut.
+ * Above the grid: stories rail + live rail + flash sale rail + categories.
+ * The shops-first discovery (the old home content) moved to the /search tab.
  */
-export default function DiscoverScreen() {
-  const [tab, setTab] = useState<Tab>("for-you");
+export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  // V1.5: "Verified only" toggle. Sticky-default OFF so unverified shops still
-  // get exposure on the For-You tab — they need surface area to build trust.
+  const [sort, setSort] = useState<Sort>("relevance");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
 
-  // Infinite feed — React Query manages pages keyed by cursor. Pull-to-
-  // refresh resets the pages; near-bottom-of-scroll triggers fetchNextPage.
   const feedQuery = useInfiniteQuery({
-    queryKey: ["feed", tab, selectedCategory, verifiedOnly],
+    queryKey: ["products-feed", selectedCategory, sort, verifiedOnly],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
-      api.feed.list({
-        tab,
+      api.productsFeed.list({
         category: selectedCategory ?? undefined,
+        sort,
         verified: verifiedOnly || undefined,
         cursor: pageParam,
       }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 
-  // Flatten paginated shops into a single list for rendering.
-  const allShops = feedQuery.data?.pages.flatMap((p) => p.shops) ?? [];
+  const allProducts = feedQuery.data?.pages.flatMap((p) => p.products) ?? [];
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    // Trigger next page when within 600px of the bottom — generous buffer
-    // so the user rarely hits an empty state mid-scroll.
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
     const distanceFromBottom =
       contentSize.height - layoutMeasurement.height - contentOffset.y;
     if (
-      distanceFromBottom < 600 &&
+      distanceFromBottom < 800 &&
       feedQuery.hasNextPage &&
       !feedQuery.isFetchingNextPage
     ) {
@@ -105,30 +97,46 @@ export default function DiscoverScreen() {
             Sale<Text className="text-brand-600">Page</Text>
           </Text>
           <Text className="mt-0.5 text-[13px] text-muted">
-            ร้านที่จ่ายตรง — ของถูกกว่า ไม่หัก%
+            ของจริง ราคาดี ส่งตรงจากร้าน — ไม่หัก%
           </Text>
         </View>
 
-        {/* Tab strip + Verified toggle */}
+        {/* Quick search bar — taps land in /search */}
+        <Pressable
+          onPress={() => router.push("/search")}
+          className="mx-5 mt-3 flex-row items-center gap-2 rounded-full border border-border bg-white px-4 py-2.5"
+        >
+          <Text className="text-[14px] text-muted">🔍</Text>
+          <Text className="flex-1 text-[13px] text-muted">
+            ค้นหาสินค้าหรือร้าน
+          </Text>
+        </Pressable>
+
+        {/* Sort + verified toggle */}
         <View className="mt-3 flex-row items-center gap-2 px-5">
-          {(["for-you", "new", "following"] as const).map((t) => (
+          {(
+            [
+              { key: "relevance", label: "แนะนำ" },
+              { key: "sold", label: "ขายดี" },
+              { key: "newest", label: "ใหม่" },
+            ] as const
+          ).map((s) => (
             <Pressable
-              key={t}
-              onPress={() => setTab(t)}
+              key={s.key}
+              onPress={() => setSort(s.key)}
               className={`rounded-full px-3.5 py-1.5 ${
-                tab === t ? "bg-brand-600" : "border border-border bg-white"
+                sort === s.key ? "bg-brand-600" : "border border-border bg-white"
               }`}
             >
               <Text
                 className={`text-[12px] font-semibold ${
-                  tab === t ? "text-white" : "text-fg"
+                  sort === s.key ? "text-white" : "text-fg"
                 }`}
               >
-                {t === "for-you" ? "แนะนำ" : t === "new" ? "ใหม่" : "ติดตาม"}
+                {s.label}
               </Text>
             </Pressable>
           ))}
-          {/* Verified-only filter — pushes to the right edge */}
           <Pressable
             onPress={() => setVerifiedOnly((v) => !v)}
             accessibilityRole="switch"
@@ -152,13 +160,9 @@ export default function DiscoverScreen() {
           </Pressable>
         </View>
 
-        {/* V2 Stories rail — only renders if any shop has active stories */}
+        {/* Above-the-fold rails (self-hide when empty) */}
         <StoriesRail />
-
-        {/* V2 Live shopping rail — self-hides when nothing is live */}
         <LiveRail />
-
-        {/* V1.0 Featured shops + Flash Sale rails (curated picks above main feed) */}
         <DiscoveryRails />
 
         {/* Categories rail */}
@@ -184,35 +188,142 @@ export default function DiscoverScreen() {
           ))}
         </ScrollView>
 
-        {/* Feed */}
+        {/* Product grid */}
         {feedQuery.isLoading ? (
           <View className="py-16">
             <ActivityIndicator color="#e11d48" />
           </View>
         ) : feedQuery.error ? (
           <ErrorState error={feedQuery.error} />
-        ) : allShops.length === 0 ? (
-          <EmptyState tab={tab} />
+        ) : allProducts.length === 0 ? (
+          <EmptyState category={selectedCategory} />
         ) : (
-          <View className="px-5 gap-3">
-            {allShops.map((shop) => (
-              <ShopCard key={shop.id} shop={shop} />
+          <View className="flex-row flex-wrap px-3">
+            {allProducts.map((p) => (
+              <ProductCard key={p.id} product={p} />
             ))}
-            {/* Inline pagination indicator */}
             {feedQuery.isFetchingNextPage ? (
-              <View className="py-4">
+              <View className="w-full py-4">
                 <ActivityIndicator color="#e11d48" />
               </View>
-            ) : !feedQuery.hasNextPage && allShops.length > 6 ? (
-              <Text className="py-4 text-center text-[11px] text-muted">
+            ) : !feedQuery.hasNextPage && allProducts.length > 8 ? (
+              <Text className="w-full py-4 text-center text-[11px] text-muted">
                 — ถึงท้ายรายการแล้ว —
               </Text>
             ) : null}
           </View>
         )}
       </ScrollView>
-      <TabBar active="discover" />
+      <TabBar active="home" />
     </Screen>
+  );
+}
+
+type ProductFeedItem = NonNullable<
+  Awaited<ReturnType<typeof api.productsFeed.list>>
+>["products"][number];
+
+function ProductCard({ product }: { product: ProductFeedItem }) {
+  const hasDiscount =
+    product.compareAtSatang !== null &&
+    product.compareAtSatang > product.priceSatang;
+  const discountPct = hasDiscount
+    ? Math.round(
+        ((product.compareAtSatang! - product.priceSatang) /
+          product.compareAtSatang!) *
+          100,
+      )
+    : 0;
+
+  return (
+    <Pressable
+      onPress={() => router.push(`/s/${product.shopSlug}/${product.slug}`)}
+      className="m-1 w-[48%] overflow-hidden rounded-2xl border border-border bg-white"
+    >
+      <View className="aspect-square w-full bg-brand-50">
+        {product.imageUrl ? (
+          <Image
+            source={{ uri: product.imageUrl }}
+            style={{ width: "100%", height: "100%" }}
+            contentFit="cover"
+          />
+        ) : (
+          <View className="size-full items-center justify-center">
+            <Text className="text-[40px]">🛍</Text>
+          </View>
+        )}
+        {/* Badge overlay (HOT / NEW / SALE / discount %) */}
+        {product.badge || hasDiscount ? (
+          <View className="absolute left-1.5 top-1.5 flex-row gap-1">
+            {product.badge ? (
+              <View
+                className={`rounded px-1.5 py-0.5 ${
+                  product.badge === "HOT"
+                    ? "bg-rose-600"
+                    : product.badge === "NEW"
+                      ? "bg-emerald-600"
+                      : "bg-amber-500"
+                }`}
+              >
+                <Text className="text-[9px] font-bold uppercase tracking-wider text-white">
+                  {product.badge}
+                </Text>
+              </View>
+            ) : null}
+            {hasDiscount ? (
+              <View className="rounded bg-brand-600 px-1.5 py-0.5">
+                <Text className="text-[9px] font-bold text-white">
+                  -{discountPct}%
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+      <View className="p-2.5">
+        <Text className="text-[13px] font-medium text-fg" numberOfLines={2}>
+          {product.name}
+        </Text>
+        <View className="mt-1 flex-row items-baseline gap-1.5">
+          <Text className="text-[15px] font-bold text-brand-700">
+            {formatBaht(product.priceSatang)}
+          </Text>
+          {hasDiscount ? (
+            <Text className="text-[10px] text-muted line-through">
+              {formatBaht(product.compareAtSatang!)}
+            </Text>
+          ) : null}
+        </View>
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation();
+            router.push(`/s/${product.shopSlug}`);
+          }}
+          className="mt-1.5 flex-row items-center gap-1.5"
+          hitSlop={4}
+        >
+          <Text
+            className="flex-1 text-[10px] text-muted"
+            numberOfLines={1}
+          >
+            {product.shopName}
+          </Text>
+          <VerifiedBadge kycStatus={product.shopKycStatus} compact />
+        </Pressable>
+        <View className="mt-1 flex-row items-center gap-2">
+          {product.shopRating > 0 ? (
+            <Text className="text-[9px] text-muted">
+              ⭐ {product.shopRating.toFixed(1)}
+            </Text>
+          ) : null}
+          {product.sold > 0 ? (
+            <Text className="text-[9px] text-muted">
+              ขายแล้ว {product.sold.toLocaleString()}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -244,91 +355,17 @@ function CategoryChip({
   );
 }
 
-function ShopCard({ shop }: { shop: ShopSummary }) {
-  return (
-    <Pressable
-      onPress={() => router.push(`/s/${shop.slug}`)}
-      className="overflow-hidden rounded-3xl border border-border bg-white"
-    >
-      {/* Banner */}
-      <View
-        className="h-24 w-full"
-        style={{ backgroundColor: shop.themeColor }}
-      >
-        {shop.bannerUrls[0] ? (
-          <Image
-            source={{ uri: shop.bannerUrls[0] }}
-            style={{ width: "100%", height: "100%" }}
-            contentFit="cover"
-          />
-        ) : null}
-      </View>
-      <View className="flex-row gap-3 p-4">
-        <View
-          className="-mt-10 size-14 items-center justify-center overflow-hidden rounded-2xl border-2 border-white"
-          style={{ backgroundColor: shop.themeColor }}
-        >
-          {shop.logoUrl ? (
-            <Image
-              source={{ uri: shop.logoUrl }}
-              style={{ width: "100%", height: "100%" }}
-              contentFit="cover"
-            />
-          ) : (
-            <Text className="text-xl font-bold text-white">
-              {shop.logoText ?? shop.name.slice(0, 1)}
-            </Text>
-          )}
-        </View>
-        <View className="flex-1">
-          <View className="flex-row flex-wrap items-center gap-1.5">
-            <Text className="text-[15px] font-semibold text-fg" numberOfLines={1}>
-              {shop.name}
-            </Text>
-            <VerifiedBadge kycStatus={shop.kycStatus} compact />
-          </View>
-          {shop.description ? (
-            <Text className="mt-0.5 text-[12px] text-muted" numberOfLines={2}>
-              {shop.description}
-            </Text>
-          ) : null}
-          <View className="mt-2 flex-row flex-wrap items-center gap-x-3 gap-y-1">
-            <TrustMeter score={shop.trustScore} variant="pill" />
-            {shop.rating > 0 ? (
-              <Text className="text-[11px] text-muted">⭐ {shop.rating.toFixed(1)}</Text>
-            ) : null}
-            {shop.totalSold > 0 ? (
-              <Text className="text-[11px] text-muted">
-                ขายแล้ว {shop.totalSold.toLocaleString()}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
-function EmptyState({ tab }: { tab: Tab }) {
-  const messages: Record<Tab, { title: string; sub: string }> = {
-    "for-you": {
-      title: "ยังไม่มีร้านในหมวดนี้",
-      sub: "เลือกหมวดอื่น หรือดู ร้านใหม่",
-    },
-    new: {
-      title: "ยังไม่มีร้านใหม่ในรอบ 30 วัน",
-      sub: "ไปดูร้านยอดนิยมก่อนได้",
-    },
-    following: {
-      title: "ยังไม่ได้ติดตามร้านไหน",
-      sub: "เปิดร้านแล้วกด 'ติดตาม' เพื่อรับข่าวสาร",
-    },
-  };
-  const m = messages[tab];
+function EmptyState({ category }: { category: string | null }) {
   return (
     <View className="mx-5 mt-6 rounded-3xl border border-dashed border-border bg-white p-8">
-      <Text className="text-center text-[15px] font-semibold text-fg">{m.title}</Text>
-      <Text className="mt-1 text-center text-[12px] text-muted">{m.sub}</Text>
+      <Text className="text-center text-[15px] font-semibold text-fg">
+        {category
+          ? "ยังไม่มีสินค้าในหมวดนี้"
+          : "ยังไม่มีสินค้าในระบบ"}
+      </Text>
+      <Text className="mt-1 text-center text-[12px] text-muted">
+        ลองดูร้านในแท็บ &quot;ร้าน&quot; หรือดึงลงเพื่อรีโหลด
+      </Text>
     </View>
   );
 }

@@ -12,7 +12,7 @@ import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { VerifiedBadge } from "@/components/trust-badge";

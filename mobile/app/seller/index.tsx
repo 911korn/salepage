@@ -319,9 +319,15 @@ export default function SellerHomeScreen() {
               onPress={() => router.push(`/s/${activeSlug}`)}
             />
             <ActionRow
+              icon="🎨"
+              title="หน้าร้าน + ปก"
+              subtitle="แต่งปก โลโก้ สี ให้ดูมืออาชีพ"
+              onPress={() => router.push("/seller/shop-settings")}
+            />
+            <ActionRow
               icon="⚙️"
-              title="ตั้งค่าร้าน + KYC"
-              subtitle="แก้ไขที่ Dashboard เว็บ"
+              title="KYC + บัตรประชาชน"
+              subtitle="ยืนยันตัวตน + รับ badge ✓"
               onPress={() => router.push("/me/kyc")}
             />
           </View>

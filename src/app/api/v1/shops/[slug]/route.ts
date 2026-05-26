@@ -28,6 +28,11 @@ const PatchBody = z.object({
     .optional(),
   logoText: z.string().max(2).optional().nullable(),
   logoUrl: z.string().url().max(500).optional().nullable(),
+  /**
+   * Up to 3 banner image URLs. Renders on the home shop card + the shop page
+   * hero. Owners can clear the array to fall back to the brand themeColor.
+   */
+  bannerUrls: z.array(z.string().url().max(500)).max(3).optional(),
   promptpayId: z.string().min(9).max(20).optional().nullable(),
   contact: z
     .object({
@@ -281,6 +286,9 @@ export async function PATCH(
         : {}),
       ...(input.logoText !== undefined ? { logoText: input.logoText } : {}),
       ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
+      ...(input.bannerUrls !== undefined
+        ? { bannerUrls: input.bannerUrls }
+        : {}),
       ...(input.promptpayId !== undefined
         ? { promptpayId: input.promptpayId }
         : {}),

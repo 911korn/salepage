@@ -187,6 +187,10 @@ function RootLayout() {
               name="seller/products/new"
               options={{ title: "เพิ่มสินค้า" }}
             />
+            <Stack.Screen
+              name="seller/shop-settings"
+              options={{ title: "หน้าร้าน + ปก" }}
+            />
             <Stack.Screen name="seller/stories" options={{ title: "สตอรี่ร้าน" }} />
             <Stack.Screen
               name="seller/stories/new"
