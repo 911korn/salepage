@@ -17,6 +17,18 @@ import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 import { useSellerMode } from "@/store/seller-mode";
 import { useTranslation } from "react-i18next";
+import {
+  Package,
+  ShoppingBag,
+  Camera,
+  Radio,
+  Users,
+  MessageSquare,
+  Globe,
+  Palette,
+  ShieldCheck,
+  type LucideIcon,
+} from "lucide-react-native";
 
 /**
  * /seller — Seller dashboard home.
@@ -273,37 +285,37 @@ export default function SellerHomeScreen() {
           </Text>
           <View className="mt-2 gap-2">
             <ActionRow
-              icon="📦"
+              Icon={Package}
               title={t("home.actions.orders")}
               subtitle={t("home.actions.ordersSub")}
               onPress={() => router.push("/seller/orders")}
             />
             <ActionRow
-              icon="🛍"
+              Icon={ShoppingBag}
               title={t("home.actions.products")}
               subtitle={t("home.actions.productsSub")}
               onPress={() => router.push("/seller/products")}
             />
             <ActionRow
-              icon="📸"
+              Icon={Camera}
               title={t("home.actions.stories")}
               subtitle={t("home.actions.storiesSub")}
               onPress={() => router.push("/seller/stories")}
             />
             <ActionRow
-              icon="🔴"
+              Icon={Radio}
               title={t("home.actions.live")}
               subtitle={t("home.actions.liveSub")}
               onPress={() => router.push("/seller/live")}
             />
             <ActionRow
-              icon="🧧"
+              Icon={Users}
               title={t("home.actions.groupBuy")}
               subtitle={t("home.actions.groupBuySub")}
               onPress={() => router.push("/seller/group-buys")}
             />
             <ActionRow
-              icon="💬"
+              Icon={MessageSquare}
               title={t("home.actions.chat")}
               subtitle={
                 statsQuery.data?.unreadConversationCount
@@ -314,19 +326,19 @@ export default function SellerHomeScreen() {
               onPress={() => router.push("/seller/chat")}
             />
             <ActionRow
-              icon="🌐"
+              Icon={Globe}
               title={t("home.actions.openShop")}
               subtitle={t("home.actions.openShopSub")}
               onPress={() => router.push(`/s/${activeSlug}`)}
             />
             <ActionRow
-              icon="🎨"
+              Icon={Palette}
               title={t("home.actions.shopSettings")}
               subtitle={t("home.actions.shopSettingsSub")}
               onPress={() => router.push("/seller/shop-settings")}
             />
             <ActionRow
-              icon="⚙️"
+              Icon={ShieldCheck}
               title={t("home.actions.kyc")}
               subtitle={t("home.actions.kycSub")}
               onPress={() => router.push("/me/kyc")}
@@ -383,13 +395,13 @@ function StatCard({
 }
 
 function ActionRow({
-  icon,
+  Icon,
   title,
   subtitle,
   badge,
   onPress,
 }: {
-  icon: string;
+  Icon: LucideIcon;
   title: string;
   subtitle: string;
   badge?: number;
@@ -400,7 +412,9 @@ function ActionRow({
       onPress={onPress}
       className="flex-row items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3.5"
     >
-      <Text className="text-[24px]">{icon}</Text>
+      <View className="size-10 items-center justify-center rounded-2xl bg-brand-50">
+        <Icon size={20} color="#e11d48" strokeWidth={2} />
+      </View>
       <View className="flex-1">
         <Text className="text-[14px] font-semibold text-fg">{title}</Text>
         <Text className="text-[11px] text-muted" numberOfLines={1}>

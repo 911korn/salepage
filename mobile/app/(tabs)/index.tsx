@@ -18,11 +18,29 @@ import { VerifiedBadge } from "@/components/trust-badge";
 import { StoriesRail } from "@/components/stories-rail";
 import { DiscoveryRails } from "@/components/discovery-rails";
 import { LiveRail } from "@/components/live-rail";
+import { AppLogo } from "@/components/brand/app-logo";
+import { Search } from "lucide-react-native";
 import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 
-// Category emojis stay literal — the labels resolve through i18n. Keep the
-// keys in sync with `common.categories.*` so a new locale just needs the JSON.
+// Category icons are Lucide line-art glyphs (no emojis — emojis make the
+// app look amateurish per the CET "official logos / proper icons only" rule).
+// Labels resolve through `common.categories.*` so a new locale just needs JSON.
+import {
+  Shirt,
+  UtensilsCrossed,
+  Smartphone,
+  Sparkles,
+  HeartPulse,
+  Sofa,
+  PawPrint,
+  Book,
+  Dumbbell,
+  Box,
+  Star,
+} from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
+
 const CATEGORY_KEYS = [
   "fashion",
   "food",
@@ -35,17 +53,17 @@ const CATEGORY_KEYS = [
   "sport",
   "other",
 ] as const;
-const CATEGORY_EMOJI: Record<(typeof CATEGORY_KEYS)[number], string> = {
-  fashion: "👗",
-  food: "🍜",
-  tech: "📱",
-  beauty: "💄",
-  health: "💊",
-  furniture: "🛋",
-  pets: "🐱",
-  books: "📚",
-  sport: "⚽",
-  other: "✨",
+const CATEGORY_ICONS: Record<(typeof CATEGORY_KEYS)[number], LucideIcon> = {
+  fashion: Shirt,
+  food: UtensilsCrossed,
+  tech: Smartphone,
+  beauty: Sparkles,
+  health: HeartPulse,
+  furniture: Sofa,
+  pets: PawPrint,
+  books: Book,
+  sport: Dumbbell,
+  other: Box,
 };
 
 type Sort = "relevance" | "sold" | "newest";
@@ -106,12 +124,10 @@ export default function HomeScreen() {
         onScroll={handleScroll}
         scrollEventThrottle={120}
       >
-        {/* Header */}
+        {/* Header — horizontal SalePage lockup */}
         <View className="px-5 pt-10 pb-2">
-          <Text className="text-[24px] font-bold tracking-tight text-fg">
-            Sale<Text className="text-brand-600">Page</Text>
-          </Text>
-          <Text className="mt-0.5 text-[13px] text-muted">{t("tagline")}</Text>
+          <AppLogo size={28} hero />
+          <Text className="mt-1.5 text-[13px] text-muted">{t("tagline")}</Text>
         </View>
 
         {/* Quick search bar — taps land in /search */}
@@ -119,7 +135,7 @@ export default function HomeScreen() {
           onPress={() => router.push("/search")}
           className="mx-5 mt-3 flex-row items-center gap-2 rounded-full border border-border bg-white px-4 py-2.5"
         >
-          <Text className="text-[14px] text-muted">🔍</Text>
+          <Search size={16} color="#737373" strokeWidth={2} />
           <Text className="flex-1 text-[13px] text-muted">
             {t("home:searchPlaceholder")}
           </Text>
@@ -185,7 +201,7 @@ export default function HomeScreen() {
           contentContainerClassName="px-5 py-4 gap-3"
         >
           <CategoryChip
-            emoji="🌟"
+            Icon={Star}
             label={t("filters.all")}
             active={selectedCategory === null}
             onPress={() => setSelectedCategory(null)}
@@ -193,7 +209,7 @@ export default function HomeScreen() {
           {CATEGORY_KEYS.map((key) => (
             <CategoryChip
               key={key}
-              emoji={CATEGORY_EMOJI[key]}
+              Icon={CATEGORY_ICONS[key]}
               label={t(`categories.${key}`)}
               active={selectedCategory === key}
               onPress={() => setSelectedCategory(key)}
@@ -340,12 +356,12 @@ function ProductCard({ product }: { product: ProductFeedItem }) {
 }
 
 function CategoryChip({
-  emoji,
+  Icon,
   label,
   active,
   onPress,
 }: {
-  emoji: string;
+  Icon: LucideIcon;
   label: string;
   active: boolean;
   onPress: () => void;
@@ -357,7 +373,11 @@ function CategoryChip({
         active ? "bg-brand-50 border border-brand-200" : "bg-white border border-border"
       }`}
     >
-      <Text className="text-[18px]">{emoji}</Text>
+      <Icon
+        size={20}
+        color={active ? "#e11d48" : "#0a0a0a"}
+        strokeWidth={active ? 2.2 : 1.8}
+      />
       <Text
         className={`mt-1 text-[11px] ${active ? "font-semibold text-brand-700" : "text-fg"}`}
       >

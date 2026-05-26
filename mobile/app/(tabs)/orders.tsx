@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
+import { AppLogo } from "@/components/brand/app-logo";
 import { api, ApiClientError } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth";
 import { formatBaht, orderStatusLabel, formatRelativeTime } from "@/lib/format";
@@ -54,7 +55,8 @@ export default function OrdersScreen() {
     <Screen>
       <ScrollView contentContainerClassName="pb-32">
         <View className="px-5 pt-10">
-          <Text className="text-[24px] font-bold text-fg">{t("tabTitle")}</Text>
+          <AppLogo size={22} />
+          <Text className="mt-3 text-[24px] font-bold text-fg">{t("tabTitle")}</Text>
           <Text className="mt-0.5 text-[13px] text-muted">{t("subtitle")}</Text>
         </View>
 

@@ -28,12 +28,15 @@
     "shopSettings": "Shop page + cover"
   },
   "signin": {
-    "title": "Sign in",
-    "subtitle": "Save addresses + see all your orders in one place.",
+    "title": "Welcome to SalePage",
+    "subtitle": "Sign in to track orders, save addresses, and earn loyalty rewards across every shop.",
     "lineBtn": "Continue with LINE",
     "googleBtn": "Continue with Google",
-    "emailBtn": "Email (magic link)",
+    "emailBtn": "Continue with email",
     "or": "or",
+    "valueOrders": "Track every order",
+    "valueAddresses": "Save addresses",
+    "valueLoyalty": "Loyalty rewards",
     "termsAccept": "By signing in you accept the",
     "terms": "Terms",
     "and": "and",

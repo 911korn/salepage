@@ -37,6 +37,36 @@ import * as Linking from "expo-linking";
 import { registerPushToken, deepLinkFromNotification } from "@/lib/push";
 import { setAuthToken } from "@/lib/auth";
 import { saveReferrer } from "@/lib/affiliate";
+import { AppLogo } from "@/components/brand/app-logo";
+import { View, Text } from "react-native";
+
+/**
+ * Stack header title with the SalePage horizontal lockup centered + the
+ * screen name beneath it. Used everywhere via `headerTitle: brandHeader(...)`
+ * so brand presence is consistent regardless of which screen the user lands
+ * on (911korn 2026-05-26: "ใส่ Logo แอพแนวนอน ไว้ด้วย ทุกหน้า").
+ */
+function brandHeader(captionKey: string) {
+  return function HeaderTitle() {
+    return (
+      <View style={{ alignItems: "center", justifyContent: "center" }}>
+        <AppLogo size={20} />
+        <Text
+          style={{
+            fontFamily: "Kanit-Bold",
+            fontSize: 11,
+            color: "#737373",
+            marginTop: 2,
+            letterSpacing: 0.2,
+          }}
+          numberOfLines={1}
+        >
+          {tnav(captionKey)}
+        </Text>
+      </View>
+    );
+  };
+}
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Already hidden — fine
@@ -151,6 +181,14 @@ function RootLayout() {
               headerTitleStyle: { fontFamily: "Kanit-Bold", fontSize: 16 },
               headerShadowVisible: false,
               contentStyle: { backgroundColor: "#fafafa" },
+              // Every Stack header shows the SalePage horizontal lockup as
+              // the title, with the screen-specific name as a small caption
+              // underneath. Keeping the back button intact (the default
+              // `headerLeft` is preserved when `headerTitle` is a function).
+              // Screens that need a full-bleed UI (tabs, stories, live, the
+              // product detail page) override this with `headerShown: false`.
+              headerTitleAlign: "center",
+              headerBackTitle: " ",
             }}
           >
             {/* The 4 bottom-tab screens live in `app/(tabs)/` with their
@@ -159,41 +197,50 @@ function RootLayout() {
                 normally, but tapping between Home / Shops / Orders / Me
                 is instant (Shopee-style) because <Tabs> pre-mounts them. */}
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="signin" options={{ title: tnav("signin") }} />
+            <Stack.Screen name="signin" options={{ headerShown: false }} />
             <Stack.Screen name="s/[slug]/index" options={{ headerShown: false }} />
             <Stack.Screen
               name="s/[slug]/[productSlug]"
-              options={{ headerTransparent: true, title: "" }}
+              options={{ headerTransparent: true, headerTitle: "" }}
             />
-            <Stack.Screen name="cart" options={{ title: tnav("cart") }} />
+            <Stack.Screen name="cart" options={{ headerTitle: brandHeader("cart") }} />
             <Stack.Screen
               name="checkout/[token]"
-              options={{ title: tnav("checkout"), headerBackVisible: false }}
+              options={{ headerTitle: brandHeader("checkout"), headerBackVisible: false }}
             />
             <Stack.Screen
               name="checkout/multi"
-              options={{ title: tnav("checkoutMulti"), headerBackVisible: false }}
+              options={{ headerTitle: brandHeader("checkoutMulti"), headerBackVisible: false }}
             />
-            <Stack.Screen name="o/[token]" options={{ title: tnav("orderTracking") }} />
+            <Stack.Screen
+              name="o/[token]"
+              options={{ headerTitle: brandHeader("orderTracking") }}
+            />
             <Stack.Screen
               name="me/notifications"
-              options={{ title: tnav("meNotifications") }}
+              options={{ headerTitle: brandHeader("meNotifications") }}
             />
-            <Stack.Screen name="me/kyc" options={{ title: tnav("meKyc") }} />
-            <Stack.Screen name="me/addresses" options={{ title: tnav("meAddresses") }} />
-            <Stack.Screen name="me/wallet" options={{ title: tnav("meWallet") }} />
-            <Stack.Screen name="me/earnings" options={{ title: tnav("meEarnings") }} />
+            <Stack.Screen name="me/kyc" options={{ headerTitle: brandHeader("meKyc") }} />
+            <Stack.Screen
+              name="me/addresses"
+              options={{ headerTitle: brandHeader("meAddresses") }}
+            />
+            <Stack.Screen name="me/wallet" options={{ headerTitle: brandHeader("meWallet") }} />
+            <Stack.Screen
+              name="me/earnings"
+              options={{ headerTitle: brandHeader("meEarnings") }}
+            />
             <Stack.Screen
               name="o/[token]/dispute"
-              options={{ title: tnav("dispute") }}
+              options={{ headerTitle: brandHeader("dispute") }}
             />
             <Stack.Screen
               name="o/[token]/review"
-              options={{ title: tnav("review") }}
+              options={{ headerTitle: brandHeader("review") }}
             />
             <Stack.Screen
               name="c/[slug]"
-              options={{ title: tnav("category") }}
+              options={{ headerTitle: brandHeader("category") }}
             />
             <Stack.Screen
               name="stories/[slug]"
@@ -203,26 +250,41 @@ function RootLayout() {
                 animation: "fade",
               }}
             />
-            <Stack.Screen name="seller/index" options={{ title: tnav("sellerHome") }} />
-            <Stack.Screen name="seller/orders" options={{ title: tnav("sellerOrders") }} />
-            <Stack.Screen name="seller/products" options={{ title: tnav("sellerProducts") }} />
+            <Stack.Screen
+              name="seller/index"
+              options={{ headerTitle: brandHeader("sellerHome") }}
+            />
+            <Stack.Screen
+              name="seller/orders"
+              options={{ headerTitle: brandHeader("sellerOrders") }}
+            />
+            <Stack.Screen
+              name="seller/products"
+              options={{ headerTitle: brandHeader("sellerProducts") }}
+            />
             <Stack.Screen
               name="seller/products/new"
-              options={{ title: tnav("sellerProductsNew") }}
+              options={{ headerTitle: brandHeader("sellerProductsNew") }}
             />
             <Stack.Screen
               name="seller/shop-settings"
-              options={{ title: tnav("shopSettings") }}
+              options={{ headerTitle: brandHeader("shopSettings") }}
             />
-            <Stack.Screen name="seller/stories" options={{ title: tnav("sellerStories") }} />
+            <Stack.Screen
+              name="seller/stories"
+              options={{ headerTitle: brandHeader("sellerStories") }}
+            />
             <Stack.Screen
               name="seller/stories/new"
-              options={{ title: tnav("sellerStoriesNew") }}
+              options={{ headerTitle: brandHeader("sellerStoriesNew") }}
             />
-            <Stack.Screen name="seller/live" options={{ title: tnav("sellerLive") }} />
+            <Stack.Screen
+              name="seller/live"
+              options={{ headerTitle: brandHeader("sellerLive") }}
+            />
             <Stack.Screen
               name="seller/live/new"
-              options={{ title: tnav("sellerLiveNew") }}
+              options={{ headerTitle: brandHeader("sellerLiveNew") }}
             />
             <Stack.Screen
               name="live/[id]"
@@ -232,22 +294,22 @@ function RootLayout() {
                 animation: "fade",
               }}
             />
-            <Stack.Screen name="seller/chat" options={{ title: tnav("sellerChat") }} />
             <Stack.Screen
-              name="seller/chat/[id]"
-              options={{ title: "" }}
+              name="seller/chat"
+              options={{ headerTitle: brandHeader("sellerChat") }}
             />
+            <Stack.Screen name="seller/chat/[id]" options={{ headerTitle: "" }} />
             <Stack.Screen
               name="seller/group-buys"
-              options={{ title: tnav("sellerGroupBuys") }}
+              options={{ headerTitle: brandHeader("sellerGroupBuys") }}
             />
             <Stack.Screen
               name="seller/group-buys/new"
-              options={{ title: tnav("sellerGroupBuysNew") }}
+              options={{ headerTitle: brandHeader("sellerGroupBuysNew") }}
             />
             <Stack.Screen
               name="group-buy/[id]"
-              options={{ title: tnav("groupBuy") }}
+              options={{ headerTitle: brandHeader("groupBuy") }}
             />
           </Stack>
         </QueryClientProvider>

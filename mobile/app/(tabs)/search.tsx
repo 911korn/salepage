@@ -18,6 +18,8 @@ import { Screen } from "@/components/ui/screen";
 import { VerifiedBadge, TrustMeter } from "@/components/trust-badge";
 import { ShopCover } from "@/components/shop-cover";
 import { DiscoveryRails } from "@/components/discovery-rails";
+import { AppLogo } from "@/components/brand/app-logo";
+import { Search, SlidersHorizontal, X } from "lucide-react-native";
 import {
   SearchFilterSheet,
   DEFAULT_FILTERS,
@@ -152,11 +154,14 @@ export default function ShopsScreen() {
 
   return (
     <Screen>
-      {/* Search bar + filter button */}
+      {/* Header — logo + search bar + filter button */}
       <View className="px-5 pt-10 pb-3">
+        <View className="mb-3">
+          <AppLogo size={22} />
+        </View>
         <View className="flex-row items-center gap-2">
           <View className="flex-1 flex-row items-center gap-2 rounded-full border border-border bg-white px-4 py-2.5">
-            <Text className="text-[16px] text-muted">🔍</Text>
+            <Search size={16} color="#737373" strokeWidth={2} />
             <TextInput
               value={q}
               onChangeText={setQ}
@@ -168,7 +173,7 @@ export default function ShopsScreen() {
             />
             {q.length > 0 ? (
               <Pressable onPress={() => setQ("")} hitSlop={8}>
-                <Text className="text-[16px] text-muted">×</Text>
+                <X size={16} color="#737373" strokeWidth={2.2} />
               </Pressable>
             ) : null}
           </View>
@@ -181,7 +186,11 @@ export default function ShopsScreen() {
                   : "border-border bg-white"
               }`}
             >
-              <Text className="text-[16px]">☰</Text>
+              <SlidersHorizontal
+                size={16}
+                color={activeFilterCount > 0 ? "#e11d48" : "#0a0a0a"}
+                strokeWidth={2}
+              />
               {activeFilterCount > 0 ? (
                 <View className="absolute -right-1 -top-1 size-5 items-center justify-center rounded-full bg-brand-600">
                   <Text className="text-[10px] font-bold text-white">

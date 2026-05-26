@@ -1,8 +1,9 @@
-import { Pressable, Text, ActivityIndicator } from "react-native";
+import { Pressable, Text, ActivityIndicator, View } from "react-native";
 import { cssInterop } from "nativewind";
 
 cssInterop(Pressable, { className: "style" });
 cssInterop(Text, { className: "style" });
+cssInterop(View, { className: "style" });
 
 type Variant = "primary" | "outline" | "ghost" | "danger" | "line" | "google";
 type Size = "sm" | "md" | "lg";
@@ -14,6 +15,8 @@ interface Props {
   variant?: Variant;
   size?: Size;
   children: React.ReactNode;
+  /** Optional brand or icon SVG rendered to the left of the label. */
+  leftIcon?: React.ReactNode;
   className?: string;
 }
 
@@ -40,7 +43,7 @@ const VARIANT: Record<Variant, { box: string; text: string }> = {
     text: "text-white",
   },
   // Google sign-in — white background + dark text + thin border per Google's
-  // brand guidelines. The "G" mark is rendered as a child node.
+  // brand guidelines. Pair with <GoogleGMark /> as `leftIcon`.
   google: {
     box: "border border-border bg-white active:bg-soft",
     text: "text-fg",
@@ -60,6 +63,7 @@ export function Button({
   variant = "primary",
   size = "md",
   children,
+  leftIcon,
   className = "",
 }: Props) {
   const v = VARIANT[variant];
@@ -72,11 +76,15 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
-      className={`flex-row items-center justify-center gap-2 ${v.box} ${s.box} ${
+      className={`flex-row items-center justify-center gap-2.5 ${v.box} ${s.box} ${
         disabled || loading ? "opacity-60" : ""
       } ${className}`}
     >
-      {loading ? <ActivityIndicator color={spinnerColor} /> : null}
+      {loading ? (
+        <ActivityIndicator color={spinnerColor} />
+      ) : leftIcon ? (
+        <View className="items-center justify-center">{leftIcon}</View>
+      ) : null}
       <Text className={`${v.text} ${s.text}`}>{children}</Text>
     </Pressable>
   );

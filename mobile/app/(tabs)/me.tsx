@@ -14,6 +14,7 @@ import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
+import { AppLogo } from "@/components/brand/app-logo";
 import { api } from "@/lib/api";
 import { getAuthToken, clearAuthToken } from "@/lib/auth";
 import { unregisterPushToken } from "@/lib/push";
@@ -78,7 +79,8 @@ export default function MeScreen() {
     <Screen>
       <ScrollView contentContainerClassName="pb-32">
         <View className="px-5 pt-10 pb-4">
-          <Text className="text-[24px] font-bold text-fg">{t("me:title")}</Text>
+          <AppLogo size={22} />
+          <Text className="mt-3 text-[24px] font-bold text-fg">{t("me:title")}</Text>
         </View>
 
         {!authed ? (
