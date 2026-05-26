@@ -32,10 +32,15 @@ export function useLineSignIn() {
       // swap the modal's content, leaving the parent screen with stale
       // auth state. Dismiss all modals first, then navigate the parent
       // stack so the tabs re-mount with the new token.
+      //
+      // `canDismiss()` guards against the POP_TO_TOP dev warning that
+      // React Navigation prints when dismissAll runs on an empty stack
+      // (e.g. when the deep-link auto-return route already took us out
+      // of the modal).
       try {
-        router.dismissAll();
+        if (router.canDismiss()) router.dismissAll();
       } catch {
-        // No modals open — fine.
+        // Older expo-router versions don't expose canDismiss — fine.
       }
       if (opts.redirectAfter) {
         router.replace(opts.redirectAfter as never);

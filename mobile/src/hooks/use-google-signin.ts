@@ -62,10 +62,11 @@ export function useGoogleSignIn() {
       // Signin is a modal — `router.replace` inside it just swaps the
       // modal's content, leaving the parent screen with stale auth.
       // Dismiss the modal first, then navigate the parent stack.
+      // `canDismiss()` guards against the POP_TO_TOP dev warning.
       try {
-        router.dismissAll();
+        if (router.canDismiss()) router.dismissAll();
       } catch {
-        // No modals open — fine.
+        // Older expo-router versions — fine.
       }
       router.replace(dest as never);
     } catch (err) {

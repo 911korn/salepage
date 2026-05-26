@@ -99,9 +99,9 @@ export default function EmailSignIn() {
       // parent /me would still read getAuthToken()===null from its
       // initial mount.
       try {
-        router.dismissAll();
+        if (router.canDismiss()) router.dismissAll();
       } catch {
-        // No modal open — fine.
+        // Older expo-router versions — fine.
       }
       router.replace((redirect ?? "/me") as never);
     } catch (err) {
