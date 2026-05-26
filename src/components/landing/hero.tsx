@@ -15,7 +15,7 @@ import { Link } from "@/i18n/navigation";
 import { buttonStyles } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
-import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
+import { storefrontLabel } from "@/lib/storefront-url";
 
 interface TickerOrder {
   id: string;
@@ -98,14 +98,14 @@ export function Hero() {
                 <ArrowRight className="size-5" />
               </Link>
               <Link
-                href={storefrontPath("siam-snack")}
+                href="/shops"
                 className={cn(
                   buttonStyles({ variant: "outline", size: "xl" }),
                   "w-full sm:w-auto",
                 )}
               >
                 <ShoppingBag className="size-5" />{" "}
-                {tCommon("viewExample")}
+                {tCommon("startShopping")}
               </Link>
             </motion.div>
 
