@@ -171,7 +171,7 @@ export default function ShopsScreen() {
   return (
     <Screen safeTop>
       {/* Header — logo + search bar + filter button */}
-      <View className="px-5 pt-10 pb-3">
+      <View className="px-5 pt-2 pb-3">
         <View className="mb-3">
           <AppLogo size={22} />
         </View>

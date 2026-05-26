@@ -88,7 +88,7 @@ export default function MeScreen() {
         {/* Brand only — the tab bar already names this tab, so showing
             "Me / ฉัน" here as a heading was redundant (911korn 2026-05-26
             "เอาคำว่า me ซ้ายบนออก"). */}
-        <View className="px-5 pt-10 pb-4">
+        <View className="px-5 pt-2 pb-4">
           <AppLogo size={22} />
         </View>
 

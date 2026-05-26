@@ -105,8 +105,12 @@ export default function HomeScreen() {
   // it only re-renders when sort/verifiedOnly/selectedCategory change.
   const ListHeader = (
     <View>
-      {/* Header — horizontal SalePage lockup */}
-      <View className="px-5 pt-10 pb-2">
+      {/* Header — horizontal SalePage lockup. `pt-2` (8px) aligns the
+          logo's vertical center with the floating GlobalCartButton at
+          insets.top + 8, so the top chrome reads as a single balanced
+          row instead of two unrelated elements stacked at different
+          heights (911korn 2026-05-27 "วางให้ Balance ห้ามชุ่ย"). */}
+      <View className="px-5 pt-2 pb-2">
         <AppLogo size={28} hero />
         <Text className="mt-1.5 text-[13px] text-muted">{t("tagline")}</Text>
       </View>
