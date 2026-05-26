@@ -1,154 +1,306 @@
-import { setRequestLocale } from "next-intl/server";
+import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { ShieldCheck, Store } from "lucide-react";
+import { ShieldCheck, Store, Shirt, UtensilsCrossed, Smartphone, Sparkles, HeartPulse, Sofa, PawPrint, Book, Dumbbell, Box, Check } from "lucide-react";
 import type { Locale } from "@/i18n/routing";
 import type { Metadata } from "next";
-import { getDiscoveryFeed, type FeedShop } from "@/lib/feed-shared";
-import { KycStatus } from "@/lib/db";
+import { getProductsFeed, type FeedSort } from "@/lib/products-feed-shared";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "ร้านค้าทั้งหมด · SalePage",
-    description: "ค้นพบร้านค้าจริง ของจริง ส่งตรงจากผู้ขาย ไม่หัก%",
+    description: "ของจริง ราคาดี ส่งตรงจากร้าน — ไม่หัก%",
   };
 }
 
+const CATEGORY_KEYS = [
+  "fashion",
+  "food",
+  "tech",
+  "beauty",
+  "health",
+  "furniture",
+  "pets",
+  "books",
+  "sport",
+  "other",
+] as const;
+type CategoryKey = (typeof CATEGORY_KEYS)[number];
+
+const CATEGORY_ICONS: Record<CategoryKey, typeof Shirt> = {
+  fashion: Shirt,
+  food: UtensilsCrossed,
+  tech: Smartphone,
+  beauty: Sparkles,
+  health: HeartPulse,
+  furniture: Sofa,
+  pets: PawPrint,
+  books: Book,
+  sport: Dumbbell,
+  other: Box,
+};
+
+const SORT_TABS: Array<{ key: FeedSort; label: string }> = [
+  { key: "relevance", label: "แนะนำ" },
+  { key: "sold", label: "ขายดี" },
+  { key: "newest", label: "ใหม่" },
+];
+
 interface PageProps {
   params: Promise<{ locale: Locale }>;
-  searchParams: Promise<{ category?: string; verified?: string }>;
+  searchParams: Promise<{
+    sort?: string;
+    category?: string;
+    verified?: string;
+  }>;
 }
 
 export default async function ShopsListPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   const sp = await searchParams;
   setRequestLocale(locale);
+  const tCats = await getTranslations("categories");
 
-  // Share the EXACT same query path as /api/v1/feed so mobile + web stay
-  // in lockstep. Bumped pageSize to 60 to reduce pagination noise on web
-  // — the API default is 20 (mobile uses cursor pagination, web shows a
-  // single big grid for now).
-  const { shops } = await getDiscoveryFeed({
-    category: sp.category,
-    verified: sp.verified === "true",
-    pageSize: 60,
+  const sort = (SORT_TABS.find((t) => t.key === sp.sort)?.key ?? "relevance") as FeedSort;
+  const category = sp.category && CATEGORY_KEYS.includes(sp.category as CategoryKey)
+    ? (tCats(sp.category as CategoryKey) as string)
+    : undefined;
+  const verified = sp.verified === "true";
+
+  const { products } = await getProductsFeed({
+    sort,
+    category,
+    verified,
+    pageSize: 40,
   });
 
   return (
-    <div className="container-page py-8">
-      <div className="mb-6 flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-[color:var(--color-fg)]">
-            ร้านค้าทั้งหมด
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {shops.length === 60
-              ? "แสดง 60 ร้านแรก"
-              : `ทั้งหมด ${shops.length} ร้าน`}
-          </p>
-        </div>
-        <FilterChips active={sp.verified === "true"} />
+    <div className="container-page py-6">
+      {/* Header — wordmark + tagline mirrors the mobile Home tab so the
+          marketplace surface reads the same on both platforms. */}
+      <div className="mb-4">
+        <p className="text-xs text-zinc-500">
+          ของจริง ราคาดี ส่งตรงจากร้าน — ไม่หัก%
+        </p>
       </div>
 
-      {shops.length === 0 ? (
+      {/* Sort + verified-only filter row */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {SORT_TABS.map((tab) => {
+          const params = new URLSearchParams();
+          if (tab.key !== "relevance") params.set("sort", tab.key);
+          if (sp.category) params.set("category", sp.category);
+          if (sp.verified === "true") params.set("verified", "true");
+          const href = params.toString() ? `/shops?${params.toString()}` : "/shops";
+          const isActive = sort === tab.key;
+          return (
+            <Link
+              key={tab.key}
+              href={href}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium ${
+                isActive
+                  ? "bg-[color:var(--color-brand)] text-white"
+                  : "border border-[color:var(--color-border)] bg-white text-zinc-700 hover:border-[color:var(--color-brand)]/30"
+              }`}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+        <VerifiedToggle active={verified} sort={sort} category={sp.category} />
+      </div>
+
+      {/* Category chips */}
+      <div className="-mx-2 mb-6 flex gap-2 overflow-x-auto px-2 pb-2">
+        <CategoryChip
+          label="ทั้งหมด"
+          icon={<Store size={20} />}
+          href={buildHref({ sort, verified })}
+          isActive={!sp.category}
+        />
+        {CATEGORY_KEYS.map((key) => {
+          const Icon = CATEGORY_ICONS[key];
+          return (
+            <CategoryChip
+              key={key}
+              label={tCats(key)}
+              icon={<Icon size={20} />}
+              href={buildHref({ sort, verified, category: key })}
+              isActive={sp.category === key}
+            />
+          );
+        })}
+      </div>
+
+      {/* Product grid */}
+      {products.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-[color:var(--color-border)] bg-white p-12 text-center">
           <Store size={36} className="mx-auto text-zinc-400" />
-          <p className="mt-3 text-sm text-zinc-500">ยังไม่มีร้านค้าในตัวกรองนี้</p>
+          <p className="mt-3 text-sm text-zinc-500">ยังไม่มีสินค้าในตัวกรองนี้</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {shops.map((shop) => (
-            <ShopCard key={shop.id} shop={shop} />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {products.map((p) => (
+            <ProductCard key={p.id} product={p} />
           ))}
         </div>
       )}
+
+      <div className="mt-10 text-center">
+        <p className="text-xs text-zinc-500">
+          แสดง {products.length} สินค้าแรก — สนใจเลื่อนไปยังร้านแบบเต็มหน้าได้ที่{" "}
+          <Link href="/" className="text-[color:var(--color-brand)] underline">
+            หน้าแรก
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
 
-function FilterChips({ active }: { active: boolean }) {
-  return (
-    <div className="flex gap-2">
-      <Link
-        href="/shops"
-        className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
-          !active
-            ? "border-[color:var(--color-brand)]/40 bg-[color:var(--color-brand)]/10 text-[color:var(--color-brand)]"
-            : "border-[color:var(--color-border)] bg-white text-zinc-700"
-        }`}
-      >
-        ทั้งหมด
-      </Link>
-      <Link
-        href="/shops?verified=true"
-        className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium ${
-          active
-            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-            : "border-[color:var(--color-border)] bg-white text-zinc-700"
-        }`}
-      >
-        <ShieldCheck size={12} />
-        เฉพาะร้านที่ยืนยันตัวตน
-      </Link>
-    </div>
-  );
+function buildHref({
+  sort,
+  verified,
+  category,
+}: {
+  sort: FeedSort;
+  verified: boolean;
+  category?: string;
+}) {
+  const params = new URLSearchParams();
+  if (sort !== "relevance") params.set("sort", sort);
+  if (verified) params.set("verified", "true");
+  if (category) params.set("category", category);
+  return params.toString() ? `/shops?${params.toString()}` : "/shops";
 }
 
-function ShopCard({ shop }: { shop: FeedShop }) {
-  const banner = shop.bannerUrls[0];
-  const verified = shop.kycStatus === KycStatus.VERIFIED;
+function VerifiedToggle({
+  active,
+  sort,
+  category,
+}: {
+  active: boolean;
+  sort: FeedSort;
+  category?: string;
+}) {
+  const params = new URLSearchParams();
+  if (sort !== "relevance") params.set("sort", sort);
+  if (category) params.set("category", category);
+  if (!active) params.set("verified", "true");
+  const href = params.toString() ? `/shops?${params.toString()}` : "/shops";
   return (
     <Link
-      href={`/s/${shop.slug}`}
-      className="group overflow-hidden rounded-3xl border border-[color:var(--color-border)] bg-white transition hover:-translate-y-0.5 hover:border-[color:var(--color-brand)]/30 hover:shadow-md"
+      href={href}
+      className={`ml-auto inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium ${
+        active
+          ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
+          : "border border-[color:var(--color-border)] bg-white text-zinc-700"
+      }`}
     >
-      <div
-        className="h-28 w-full"
-        style={{
-          backgroundColor: shop.themeColor,
-          backgroundImage: banner ? `url(${banner})` : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      />
-      <div className="-mt-7 px-4 pb-4">
-        <div
-          className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border-4 border-white"
-          style={{ backgroundColor: shop.themeColor }}
-        >
-          {shop.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={shop.logoUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="text-xl font-bold text-white">
-              {shop.logoText ?? shop.name.slice(0, 1)}
+      {active ? <Check size={12} /> : <ShieldCheck size={12} />}
+      ยืนยันแล้ว
+    </Link>
+  );
+}
+
+function CategoryChip({
+  label,
+  icon,
+  href,
+  isActive,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  href: string;
+  isActive: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex shrink-0 flex-col items-center justify-center rounded-2xl border px-4 py-2.5 text-xs ${
+        isActive
+          ? "border-[color:var(--color-brand)]/40 bg-[color:var(--color-brand)]/10 text-[color:var(--color-brand)]"
+          : "border-[color:var(--color-border)] bg-white text-zinc-700 hover:border-[color:var(--color-brand)]/30"
+      }`}
+    >
+      <span className={isActive ? "" : "text-zinc-700"}>{icon}</span>
+      <span className="mt-1 whitespace-nowrap text-[11px] font-medium">{label}</span>
+    </Link>
+  );
+}
+
+interface ProductCardProps {
+  product: {
+    id: string;
+    slug: string;
+    shopSlug: string;
+    shopName: string;
+    name: string;
+    priceSatang: number;
+    compareAtSatang: number | null;
+    imageUrl: string | null;
+    badge: string | null;
+    sold: number;
+    shopRating: number;
+  };
+}
+
+function ProductCard({ product }: ProductCardProps) {
+  const discountPct =
+    product.compareAtSatang && product.compareAtSatang > product.priceSatang
+      ? Math.round(
+          ((product.compareAtSatang - product.priceSatang) / product.compareAtSatang) * 100,
+        )
+      : 0;
+  return (
+    <Link
+      href={`/s/${product.shopSlug}/${product.slug}`}
+      className="group overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-white transition hover:-translate-y-0.5 hover:shadow-md"
+    >
+      <div className="relative aspect-square w-full overflow-hidden bg-[color:var(--color-soft)]">
+        {product.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition group-hover:scale-105"
+          />
+        ) : null}
+        <div className="absolute left-2 top-2 flex gap-1">
+          {product.badge ? (
+            <span className="rounded-md bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+              {product.badge.toUpperCase()}
             </span>
-          )}
-        </div>
-        <div className="mt-3 flex items-center gap-1.5">
-          <h3 className="flex-1 truncate text-[15px] font-semibold text-[color:var(--color-fg)]">
-            {shop.name}
-          </h3>
-          {verified ? (
-            <ShieldCheck size={14} className="shrink-0 text-emerald-600" />
+          ) : null}
+          {discountPct > 0 ? (
+            <span className="rounded-md bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+              -{discountPct}%
+            </span>
           ) : null}
         </div>
-        {shop.category ? (
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500">
-            {shop.category}
-          </p>
-        ) : null}
-        {shop.description ? (
-          <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-zinc-600">
-            {shop.description}
-          </p>
-        ) : null}
-        <div className="mt-3 flex items-center gap-3 text-[11px] text-zinc-500">
-          {shop.totalSold > 0 ? <span>ขายแล้ว {shop.totalSold.toLocaleString()}</span> : null}
-          {shop.rating > 0 ? (
-            <span>★ {shop.rating.toFixed(1)}</span>
+      </div>
+      <div className="p-3">
+        <p className="line-clamp-2 min-h-[2.5rem] text-[13px] leading-tight text-[color:var(--color-fg)]">
+          {product.name}
+        </p>
+        <div className="mt-1 flex items-baseline gap-2">
+          <span className="text-base font-bold text-[color:var(--color-brand)]">
+            ฿{(product.priceSatang / 100).toLocaleString()}
+          </span>
+          {product.compareAtSatang && product.compareAtSatang > product.priceSatang ? (
+            <span className="text-xs text-zinc-400 line-through">
+              ฿{(product.compareAtSatang / 100).toLocaleString()}
+            </span>
           ) : null}
+        </div>
+        <p className="mt-1 truncate text-[11px] text-zinc-500">
+          {product.shopName}
+        </p>
+        <div className="mt-1 flex items-center gap-2 text-[10px] text-zinc-500">
+          {product.shopRating > 0 ? <span>★ {product.shopRating.toFixed(1)}</span> : null}
+          {product.sold > 0 ? <span>ขายแล้ว {product.sold}</span> : null}
         </div>
       </div>
     </Link>
