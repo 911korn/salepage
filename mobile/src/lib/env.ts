@@ -10,6 +10,8 @@ interface AppEnv {
   webBaseUrl: string;
   lineLiffId: string | null;
   lineLoginChannelId: string | null;
+  /** Sentry DSN — null disables capture entirely (Expo Go / dev without DSN). */
+  sentryDsn: string | null;
 }
 
 /**
@@ -35,6 +37,10 @@ export function getEnv(): AppEnv {
     lineLoginChannelId:
       typeof extra.lineLoginChannelId === "string" && extra.lineLoginChannelId
         ? extra.lineLoginChannelId
+        : null,
+    sentryDsn:
+      typeof extra.sentryDsn === "string" && extra.sentryDsn
+        ? extra.sentryDsn
         : null,
   };
 }

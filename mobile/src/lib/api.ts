@@ -1102,6 +1102,39 @@ export const api = {
         kycSubmittedAt: string;
       }>(`/api/v1/shops/${slug}/kyc`, { method: "POST", body: input }),
 
+    /**
+     * Seller create-product (mobile). Mirrors the web product-form payload —
+     * server slugifies the name when `slug` is omitted. Image uploads are a
+     * two-step flow (upload first → pass the resulting URLs in `imageUrls`).
+     */
+    createProduct: (
+      slug: string,
+      input: {
+        name: string;
+        slug?: string;
+        description?: string;
+        priceBaht: number;
+        compareAtBaht?: number;
+        imageUrls?: string[];
+        badge?: "HOT" | "NEW" | "SALE" | null;
+        type?: "PHYSICAL" | "DIGITAL";
+        stock?: number;
+      },
+    ) =>
+      apiFetch<{
+        product: {
+          id: string;
+          slug: string;
+          name: string;
+          priceSatang: number;
+          imageUrls: string[];
+          status: string;
+        };
+      }>(`/api/v1/shops/${slug}/products`, {
+        method: "POST",
+        body: input,
+      }),
+
     /** Seller dashboard summary — counts + revenue rollups. */
     stats: (slug: string) =>
       apiFetch<{

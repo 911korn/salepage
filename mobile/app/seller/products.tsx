@@ -73,17 +73,29 @@ export default function SellerProductsScreen() {
           <Text className="mt-1 text-[12px] text-muted">
             {products.length} รายการ · ดูเฉพาะที่เปิดขายอยู่
           </Text>
-          <Pressable
-            onPress={() =>
-              Linking.openURL(`https://salepage.in.th/dashboard/${slug}/products`)
-            }
-            className="mt-3 flex-row items-center gap-2 self-start rounded-full bg-brand-600 px-4 py-2"
-          >
-            <Text className="text-[12px] font-semibold text-white">
-              + เพิ่ม / แก้ไขที่เว็บ
-            </Text>
-            <Text className="text-[10px] text-brand-100">↗</Text>
-          </Pressable>
+          <View className="mt-3 flex-row gap-2">
+            <Pressable
+              onPress={() => router.push("/seller/products/new")}
+              className="flex-row items-center gap-2 rounded-full bg-brand-600 px-4 py-2"
+            >
+              <Text className="text-[12px] font-semibold text-white">
+                + เพิ่มสินค้าในแอป
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                Linking.openURL(
+                  `https://salepage.in.th/dashboard/${slug}/products`,
+                )
+              }
+              className="flex-row items-center gap-2 rounded-full border border-border bg-white px-4 py-2"
+            >
+              <Text className="text-[12px] font-semibold text-fg">
+                แก้ไขที่เว็บ
+              </Text>
+              <Text className="text-[10px] text-muted">↗</Text>
+            </Pressable>
+          </View>
         </View>
 
         {shopQuery.isLoading ? (

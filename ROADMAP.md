@@ -163,7 +163,7 @@
 
 #### QA & Release
 - [ ] EAS Build internal testing (TestFlight + Play Internal)
-- [ ] Sentry RN integration (re-use Sentry org)
+- [x] Sentry RN integration — `@sentry/react-native` installed, `mobile/src/lib/sentry.ts` initialized in `_layout.tsx` before any other module, env-gated on `EXPO_PUBLIC_SENTRY_DSN`, `Sentry.wrap()` mounts an ErrorBoundary at the root. CET TELEMETRY FIRST law satisfied.
 - [ ] Privacy policy update for mobile (camera, push, location)
 - [ ] App Store + Play Store listing (Thai + English)
 
@@ -258,7 +258,7 @@
 - [x] `/seller/products` — read-only list, deep link to web for edit/create
 - [x] `/seller/chat` + `/seller/chat/[id]` (Business+ only)
 - [ ] Analytics screen (full charts — V1.6)
-- [ ] Camera → upload product flow on mobile (Vercel Blob + AI describe)
+- [x] Camera → upload product flow on mobile — `/seller/products/new` with up to 5 image slots, per-slot uploading state, compress via `compressForSlipUpload()`, POST to `/api/v1/upload` (base64 JSON) then to `/api/v1/shops/:slug/products`. AI describe deferred.
 - [x] Push notification เมื่อ slip incoming — `notifyShopNewOrder` fires in slip-verify route when PENDING→PAID, deep-links to seller dashboard
 
 ---

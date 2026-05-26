@@ -97,6 +97,7 @@ const config: ExpoConfig = {
     ],
     "expo-secure-store",
     "expo-notifications",
+    "@sentry/react-native",
   ],
   experiments: {
     typedRoutes: true,
@@ -111,6 +112,10 @@ const config: ExpoConfig = {
     lineLiffId: process.env.EXPO_PUBLIC_LINE_LIFF_ID ?? null,
     lineLoginChannelId:
       process.env.EXPO_PUBLIC_LINE_LOGIN_CHANNEL_ID ?? null,
+    // CET TELEMETRY FIRST law: ship the DSN so init can fire on every cold
+    // start. Without this, native crashes go uninvestigatable per the STOP
+    // GUESSING crash debug rule.
+    sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? null,
     eas: {
       projectId: process.env.EAS_PROJECT_ID ?? null,
     },

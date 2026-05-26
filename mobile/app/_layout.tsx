@@ -1,5 +1,11 @@
 import "../global.css";
 
+// CET TELEMETRY FIRST law: init telemetry BEFORE any other module so JS
+// errors thrown during early imports/hooks still surface in Sentry. Side-effect
+// import order matters — Sentry.init() runs at module load when DSN is set.
+import { initSentry, Sentry } from "@/lib/sentry";
+initSentry();
+
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -27,7 +33,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
+function RootLayout() {
   // Kanit (Thai + Latin) — same family as the web (src/app/[locale]/layout.tsx).
   // Loaded via expo-font so we don't ship a Google Fonts request at runtime.
   const [fontsLoaded] = useFonts({
@@ -171,6 +177,10 @@ export default function RootLayout() {
             <Stack.Screen name="seller/index" options={{ title: "โหมดผู้ขาย" }} />
             <Stack.Screen name="seller/orders" options={{ title: "คำสั่งซื้อ" }} />
             <Stack.Screen name="seller/products" options={{ title: "สินค้า" }} />
+            <Stack.Screen
+              name="seller/products/new"
+              options={{ title: "เพิ่มสินค้า" }}
+            />
             <Stack.Screen name="seller/stories" options={{ title: "สตอรี่ร้าน" }} />
             <Stack.Screen
               name="seller/stories/new"
@@ -194,9 +204,26 @@ export default function RootLayout() {
               name="seller/chat/[id]"
               options={{ title: "" }}
             />
+            <Stack.Screen
+              name="seller/group-buys"
+              options={{ title: "Group Buy" }}
+            />
+            <Stack.Screen
+              name="seller/group-buys/new"
+              options={{ title: "สร้างแคมเปญ" }}
+            />
+            <Stack.Screen
+              name="group-buy/[id]"
+              options={{ title: "Group Buy" }}
+            />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
+
+// `Sentry.wrap` mounts an ErrorBoundary at the root + native-crash reporter.
+// When DSN is missing it falls back to a pass-through wrapper so dev/Expo Go
+// stays unaffected.
+export default Sentry.wrap(RootLayout);
