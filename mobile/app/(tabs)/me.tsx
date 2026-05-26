@@ -20,6 +20,7 @@ import { api } from "@/lib/api";
 import { getAuthToken, clearAuthToken } from "@/lib/auth";
 import { unregisterPushToken } from "@/lib/push";
 import { useSellerMode } from "@/store/seller-mode";
+import { useCart } from "@/store/cart";
 import { setAppLang, type AppLang, SUPPORTED_LANGS } from "@/lib/i18n";
 
 export default function MeScreen() {
@@ -63,6 +64,13 @@ export default function MeScreen() {
         onPress: async () => {
           await unregisterPushToken();
           await clearAuthToken();
+          // Reset per-user device state so the next sign-in starts clean
+          // (911korn 2026-05-27: "ทดลอง Logout แล้ว Login with LINE
+          // แต่ของในตระกร้า ยังค้าง"). The Zustand cart + seller-mode
+          // stores are persisted to AsyncStorage and survived logout
+          // otherwise. React Query cache cleared right after.
+          useCart.getState().clear();
+          useSellerMode.setState({ mode: "buyer", activeShopSlug: null });
           queryClient.clear();
           setAuthed(false);
         },
