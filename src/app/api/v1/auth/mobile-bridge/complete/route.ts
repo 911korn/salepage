@@ -66,10 +66,16 @@ export async function GET(request: Request) {
 
 function successPage(origin: string) {
   void origin;
-  // Try the custom-scheme deep link to auto-close the in-app browser. Many
-  // platforms ignore it; we always render the visible "Return to app" CTA
-  // as a fallback, and the mobile app dismisses the browser itself once
-  // /poll returns the token.
+  // No auto-redirect to salepage://... — Expo Go uses the `exp://` scheme
+  // and doesn't register `salepage://` as a handler, so Safari followed
+  // the redirect, found nothing, and landed on about:blank (911korn
+  // 2026-05-26: "Login With google หลังจากเลือกเมลเจอหน้าขาว").
+  //
+  // The mobile app polls /poll concurrently with the OAuth flow and
+  // calls WebBrowser.dismissBrowser() as soon as the token row is
+  // populated, so this page is only ever visible for a beat. The visible
+  // CTA is a manual fallback for users on platforms where dismissBrowser
+  // can't fire (rare).
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -77,26 +83,27 @@ function successPage(origin: string) {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Signed in - SalePage</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; color: #111827; }
+  html, body { margin: 0; height: 100%; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; color: #111827; }
   body { display: flex; align-items: center; justify-content: center; padding: 24px; }
   .card { max-width: 320px; text-align: center; }
-  .check { width: 56px; height: 56px; border-radius: 50%; background: #10b981; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
-  .check svg { width: 28px; height: 28px; color: #fff; }
-  h1 { font-size: 18px; margin: 0 0 8px; }
+  .check { width: 64px; height: 64px; border-radius: 50%; background: #10b981; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 4px 14px rgba(16,185,129,0.32); }
+  .check svg { width: 30px; height: 30px; color: #fff; }
+  h1 { font-size: 20px; margin: 0 0 8px; font-weight: 700; }
   p { color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
-  a.btn { display: inline-block; background: #111827; color: #fff; padding: 12px 20px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 14px; }
+  .spinner { display: inline-flex; align-items: center; gap: 8px; color: #6b7280; font-size: 13px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #6b7280; animation: pulse 1.2s infinite ease-in-out; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
 </style>
 </head>
 <body>
 <div class="card">
   <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
   <h1>You're signed in</h1>
-  <p>Return to the SalePage app to continue. This window will close automatically.</p>
-  <a class="btn" href="salepage://auth/google?ok=1">Return to app</a>
+  <p>Returning you to the SalePage app...</p>
+  <div class="spinner"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
 </div>
-<script>
-  setTimeout(() => { location.href = "salepage://auth/google?ok=1"; }, 200);
-</script>
 </body>
 </html>`;
   return new NextResponse(html, {
