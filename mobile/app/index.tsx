@@ -12,6 +12,7 @@ import {
 import { router } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { TabBar } from "@/components/ui/tab-bar";
 import { VerifiedBadge } from "@/components/trust-badge";
@@ -21,18 +22,32 @@ import { LiveRail } from "@/components/live-rail";
 import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 
-const CATEGORIES: Array<{ key: string; label: string; emoji: string }> = [
-  { key: "fashion", label: "แฟชั่น", emoji: "👗" },
-  { key: "food", label: "อาหาร", emoji: "🍜" },
-  { key: "tech", label: "เทคโนโลยี", emoji: "📱" },
-  { key: "beauty", label: "ความงาม", emoji: "💄" },
-  { key: "health", label: "สุขภาพ", emoji: "💊" },
-  { key: "furniture", label: "เฟอร์นิเจอร์", emoji: "🛋" },
-  { key: "pets", label: "สัตว์เลี้ยง", emoji: "🐱" },
-  { key: "books", label: "หนังสือ", emoji: "📚" },
-  { key: "sport", label: "กีฬา", emoji: "⚽" },
-  { key: "other", label: "อื่นๆ", emoji: "✨" },
-];
+// Category emojis stay literal — the labels resolve through i18n. Keep the
+// keys in sync with `common.categories.*` so a new locale just needs the JSON.
+const CATEGORY_KEYS = [
+  "fashion",
+  "food",
+  "tech",
+  "beauty",
+  "health",
+  "furniture",
+  "pets",
+  "books",
+  "sport",
+  "other",
+] as const;
+const CATEGORY_EMOJI: Record<(typeof CATEGORY_KEYS)[number], string> = {
+  fashion: "👗",
+  food: "🍜",
+  tech: "📱",
+  beauty: "💄",
+  health: "💊",
+  furniture: "🛋",
+  pets: "🐱",
+  books: "📚",
+  sport: "⚽",
+  other: "✨",
+};
 
 type Sort = "relevance" | "sold" | "newest";
 
@@ -45,6 +60,7 @@ type Sort = "relevance" | "sold" | "newest";
  * The shops-first discovery (the old home content) moved to the /search tab.
  */
 export default function HomeScreen() {
+  const { t } = useTranslation(["common", "home"]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>("relevance");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
@@ -96,9 +112,7 @@ export default function HomeScreen() {
           <Text className="text-[24px] font-bold tracking-tight text-fg">
             Sale<Text className="text-brand-600">Page</Text>
           </Text>
-          <Text className="mt-0.5 text-[13px] text-muted">
-            ของจริง ราคาดี ส่งตรงจากร้าน — ไม่หัก%
-          </Text>
+          <Text className="mt-0.5 text-[13px] text-muted">{t("tagline")}</Text>
         </View>
 
         {/* Quick search bar — taps land in /search */}
@@ -108,7 +122,7 @@ export default function HomeScreen() {
         >
           <Text className="text-[14px] text-muted">🔍</Text>
           <Text className="flex-1 text-[13px] text-muted">
-            ค้นหาสินค้าหรือร้าน
+            {t("home:searchPlaceholder")}
           </Text>
         </Pressable>
 
@@ -116,9 +130,9 @@ export default function HomeScreen() {
         <View className="mt-3 flex-row items-center gap-2 px-5">
           {(
             [
-              { key: "relevance", label: "แนะนำ" },
-              { key: "sold", label: "ขายดี" },
-              { key: "newest", label: "ใหม่" },
+              { key: "relevance", labelKey: "filters.recommended" },
+              { key: "sold", labelKey: "filters.bestSelling" },
+              { key: "newest", labelKey: "filters.newest" },
             ] as const
           ).map((s) => (
             <Pressable
@@ -133,7 +147,7 @@ export default function HomeScreen() {
                   sort === s.key ? "text-white" : "text-fg"
                 }`}
               >
-                {s.label}
+                {t(s.labelKey)}
               </Text>
             </Pressable>
           ))}
@@ -155,7 +169,7 @@ export default function HomeScreen() {
                 verifiedOnly ? "text-emerald-700" : "text-muted"
               }`}
             >
-              ยืนยันแล้ว
+              {t("filters.verified")}
             </Text>
           </Pressable>
         </View>
@@ -173,17 +187,17 @@ export default function HomeScreen() {
         >
           <CategoryChip
             emoji="🌟"
-            label="ทั้งหมด"
+            label={t("filters.all")}
             active={selectedCategory === null}
             onPress={() => setSelectedCategory(null)}
           />
-          {CATEGORIES.map((c) => (
+          {CATEGORY_KEYS.map((key) => (
             <CategoryChip
-              key={c.key}
-              emoji={c.emoji}
-              label={c.label}
-              active={selectedCategory === c.key}
-              onPress={() => setSelectedCategory(c.key)}
+              key={key}
+              emoji={CATEGORY_EMOJI[key]}
+              label={t(`categories.${key}`)}
+              active={selectedCategory === key}
+              onPress={() => setSelectedCategory(key)}
             />
           ))}
         </ScrollView>
@@ -208,7 +222,7 @@ export default function HomeScreen() {
               </View>
             ) : !feedQuery.hasNextPage && allProducts.length > 8 ? (
               <Text className="w-full py-4 text-center text-[11px] text-muted">
-                — ถึงท้ายรายการแล้ว —
+                {t("states.endOfList")}
               </Text>
             ) : null}
           </View>
@@ -356,25 +370,26 @@ function CategoryChip({
 }
 
 function EmptyState({ category }: { category: string | null }) {
+  const { t } = useTranslation("home");
   return (
     <View className="mx-5 mt-6 rounded-3xl border border-dashed border-border bg-white p-8">
       <Text className="text-center text-[15px] font-semibold text-fg">
-        {category
-          ? "ยังไม่มีสินค้าในหมวดนี้"
-          : "ยังไม่มีสินค้าในระบบ"}
+        {category ? t("emptyCategory") : t("emptyAll")}
       </Text>
       <Text className="mt-1 text-center text-[12px] text-muted">
-        ลองดูร้านในแท็บ &quot;ร้าน&quot; หรือดึงลงเพื่อรีโหลด
+        {t("emptyHint")}
       </Text>
     </View>
   );
 }
 
 function ErrorState({ error }: { error: unknown }) {
+  const { t } = useTranslation("common");
   return (
     <View className="mx-5 mt-6 rounded-3xl border border-rose-200 bg-rose-50 p-6">
       <Text className="text-center text-[14px] text-rose-700">
-        โหลดไม่สำเร็จ — {error instanceof Error ? error.message : "ไม่ทราบสาเหตุ"}
+        {t("states.loadFailed")} —{" "}
+        {error instanceof Error ? error.message : t("states.error")}
       </Text>
     </View>
   );

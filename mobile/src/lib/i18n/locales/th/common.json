@@ -1,0 +1,66 @@
+{
+  "appName": "SalePage",
+  "tagline": "ของจริง ราคาดี ส่งตรงจากร้าน — ไม่หัก%",
+  "actions": {
+    "save": "บันทึก",
+    "cancel": "ยกเลิก",
+    "confirm": "ยืนยัน",
+    "delete": "ลบ",
+    "edit": "แก้ไข",
+    "back": "กลับ",
+    "next": "ถัดไป",
+    "retry": "ลองอีกครั้ง",
+    "close": "ปิด",
+    "share": "แชร์",
+    "copy": "คัดลอก",
+    "search": "ค้นหา",
+    "loading": "กำลังโหลด...",
+    "loadMore": "โหลดเพิ่ม"
+  },
+  "states": {
+    "empty": "ไม่มีข้อมูล",
+    "error": "เกิดข้อผิดพลาด",
+    "loadFailed": "โหลดไม่สำเร็จ",
+    "tryAgain": "ลองใหม่อีกครั้ง",
+    "endOfList": "— ถึงท้ายรายการแล้ว —"
+  },
+  "tabs": {
+    "home": "หน้าหลัก",
+    "shops": "ร้าน",
+    "orders": "คำสั่งซื้อ",
+    "me": "ฉัน"
+  },
+  "filters": {
+    "all": "ทั้งหมด",
+    "verified": "ยืนยันแล้ว",
+    "recommended": "แนะนำ",
+    "bestSelling": "ขายดี",
+    "newest": "ใหม่",
+    "following": "ติดตาม"
+  },
+  "categories": {
+    "fashion": "แฟชั่น",
+    "food": "อาหาร",
+    "tech": "เทคโนโลยี",
+    "beauty": "ความงาม",
+    "health": "สุขภาพ",
+    "furniture": "เฟอร์นิเจอร์",
+    "pets": "สัตว์เลี้ยง",
+    "books": "หนังสือ",
+    "sport": "กีฬา",
+    "other": "อื่นๆ"
+  },
+  "money": {
+    "baht": "฿",
+    "discount": "ส่วนลด"
+  },
+  "auth": {
+    "signIn": "เข้าสู่ระบบ",
+    "signOut": "ออกจากระบบ"
+  },
+  "language": {
+    "label": "ภาษา",
+    "thai": "ไทย",
+    "english": "อังกฤษ"
+  }
+}

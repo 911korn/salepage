@@ -6,6 +6,12 @@ import "../global.css";
 import { initSentry, Sentry } from "@/lib/sentry";
 initSentry();
 
+// i18n hydrates the saved language from AsyncStorage on first render —
+// guard the splash hide until it resolves so the very first frame uses
+// the right locale (no TH→EN flash).
+import { initI18n } from "@/lib/i18n";
+const i18nReady = initI18n();
+
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -16,7 +22,7 @@ import {
   Kanit_400Regular,
   Kanit_700Bold,
 } from "@expo-google-fonts/kanit";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import * as Linking from "expo-linking";
@@ -38,6 +44,10 @@ const queryClient = new QueryClient({
 });
 
 function RootLayout() {
+  const [i18nLoaded, setI18nLoaded] = useState(false);
+  useEffect(() => {
+    void i18nReady.then(() => setI18nLoaded(true));
+  }, []);
   // Kanit (Thai + Latin) — same family as the web. We ship the font as an
   // npm dep (@expo-google-fonts/kanit) so the .ttf is bundled by Metro
   // without us needing to commit binary files to repo. Aliased to "Kanit" /
@@ -120,7 +130,7 @@ function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || !i18nLoaded) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

@@ -102,6 +102,7 @@ const config: ExpoConfig = {
     // Required as explicit plugins from SDK 54 onwards (previously implicit).
     "expo-font",
     "expo-web-browser",
+    "expo-localization",
   ],
   experiments: {
     typedRoutes: true,

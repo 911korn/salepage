@@ -1,0 +1,18 @@
+{
+  "title": "Me",
+  "guestHeadline": "Not signed in",
+  "guestSubtitle": "Sign in to view orders and earn loyalty points",
+  "menu": {
+    "orders": "Order history",
+    "wallet": "Loyalty wallet",
+    "earnings": "Affiliate earnings",
+    "favorites": "Favorite shops",
+    "following": "Following",
+    "notifications": "Notifications",
+    "addresses": "Address book",
+    "kyc": "Identity verification (KYC)",
+    "language": "Language",
+    "sellerMode": "Seller mode",
+    "signOut": "Sign out"
+  }
+}

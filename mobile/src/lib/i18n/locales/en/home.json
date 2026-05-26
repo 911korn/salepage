@@ -1,0 +1,8 @@
+{
+  "searchPlaceholder": "Search products or shops",
+  "emptyCategory": "No products in this category",
+  "emptyAll": "No products yet",
+  "emptyHint": "Try the \"Shops\" tab or pull to refresh",
+  "soldCount": "{{count}} sold",
+  "rating": "⭐ {{rating}}"
+}

@@ -1,0 +1,66 @@
+{
+  "appName": "SalePage",
+  "tagline": "Real shops, real prices, direct from sellers — 0% fee",
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "retry": "Retry",
+    "close": "Close",
+    "share": "Share",
+    "copy": "Copy",
+    "search": "Search",
+    "loading": "Loading...",
+    "loadMore": "Load more"
+  },
+  "states": {
+    "empty": "No data",
+    "error": "Something went wrong",
+    "loadFailed": "Failed to load",
+    "tryAgain": "Try again",
+    "endOfList": "— End of list —"
+  },
+  "tabs": {
+    "home": "Home",
+    "shops": "Shops",
+    "orders": "Orders",
+    "me": "Me"
+  },
+  "filters": {
+    "all": "All",
+    "verified": "Verified",
+    "recommended": "For you",
+    "bestSelling": "Best selling",
+    "newest": "Newest",
+    "following": "Following"
+  },
+  "categories": {
+    "fashion": "Fashion",
+    "food": "Food",
+    "tech": "Tech",
+    "beauty": "Beauty",
+    "health": "Health",
+    "furniture": "Furniture",
+    "pets": "Pets",
+    "books": "Books",
+    "sport": "Sport",
+    "other": "Other"
+  },
+  "money": {
+    "baht": "฿",
+    "discount": "off"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out"
+  },
+  "language": {
+    "label": "Language",
+    "thai": "Thai",
+    "english": "English"
+  }
+}
