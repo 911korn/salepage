@@ -36,11 +36,13 @@ export function ShopCoverFallback({
 
   return (
     <View
+      pointerEvents="box-none"
       className="w-full overflow-hidden"
       style={{ height, backgroundColor: themeColor }}
     >
       {/* Vertical gradient — themeColor at top, lighter at bottom. */}
       <LinearGradient
+        pointerEvents="none"
         colors={[themeColor, lighter]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0.6, y: 1 }}
@@ -49,8 +51,10 @@ export function ShopCoverFallback({
 
       {/* Decorative blobs — random-ish circles in low-opacity white so the
           cover doesn't read as flat. Sized + positioned to feel intentional
-          but stay out of the way of the centered logo. */}
+          but stay out of the way of the centered logo. pointerEvents=none
+          so they never swallow taps that should reach the shop card below. */}
       <View
+        pointerEvents="none"
         className="absolute rounded-full bg-white/20"
         style={{
           width: height * 0.9,
@@ -60,6 +64,7 @@ export function ShopCoverFallback({
         }}
       />
       <View
+        pointerEvents="none"
         className="absolute rounded-full bg-white/10"
         style={{
           width: height * 0.55,
@@ -69,6 +74,7 @@ export function ShopCoverFallback({
         }}
       />
       <View
+        pointerEvents="none"
         className="absolute rounded-full bg-white/15"
         style={{
           width: height * 0.3,

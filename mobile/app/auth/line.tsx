@@ -63,6 +63,7 @@ export default function AuthLineReturn() {
   return (
     <View style={{ flex: 1, backgroundColor: "#06C755" }}>
       <LinearGradient
+        pointerEvents="none"
         colors={["#06C755", "#05a946"]}
         style={{ position: "absolute", inset: 0 }}
       />

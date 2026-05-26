@@ -44,6 +44,7 @@ export default function SignIn() {
       {/* Full-bleed gradient — extends under the status bar so the back
           button (and the iOS time) sit on warm pink, not on white. */}
       <LinearGradient
+        pointerEvents="none"
         colors={["#ffe4e6", "#fff1f2", "#ffffff"]}
         locations={[0, 0.55, 1]}
         style={{

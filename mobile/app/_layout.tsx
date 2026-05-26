@@ -315,7 +315,17 @@ function RootLayout() {
             />
             <Stack.Screen
               name="s/[slug]/[productSlug]"
-              options={{ headerTransparent: true, headerTitle: "" }}
+              options={{
+                // Transparent header so the product gallery can bleed up,
+                // but ALWAYS show a visible back affordance. Without
+                // headerLeft the system chevron was invisible against
+                // saturated banner colors — 911korn 2026-05-27
+                // "ปุ่ม Back หลายเพจชอบกดไม่ได้".
+                headerTransparent: true,
+                headerTitle: "",
+                headerBackButtonDisplayMode: "minimal",
+                headerLeft: () => <BrandBackButton tone="light" />,
+              }}
             />
             <Stack.Screen name="cart" options={{ headerTitle: brandHeader("cart") }} />
             <Stack.Screen

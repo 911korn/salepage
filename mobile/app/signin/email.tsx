@@ -134,6 +134,7 @@ export default function EmailSignIn() {
   return (
     <View className="flex-1 bg-white">
       <LinearGradient
+        pointerEvents="none"
         colors={["#ffe4e6", "#fff1f2", "#ffffff"]}
         locations={[0, 0.55, 1]}
         style={{
