@@ -188,15 +188,20 @@ export default function CartScreen() {
   // shop, or removed one of the lines). Stale codes would error out on submit.
   // React 19: reset during render via a guard, not inside an effect, so we
   // don't trigger a second render pass.
-  const cartShapeKey = shopList
-    .map((s) => `${s.shopSlug}:${s.subtotalSatang}`)
-    .join("|");
+  const cartShapeKey = useMemo(
+    () =>
+      shopList.map((s) => `${s.shopSlug}:${s.subtotalSatang}`).join("|"),
+    [shopList],
+  );
   const [lastShapeKey, setLastShapeKey] = useState(cartShapeKey);
   if (lastShapeKey !== cartShapeKey) {
     setLastShapeKey(cartShapeKey);
-    setAppliedCoupons({});
-    setRedeemPointsByShop({});
-    setCouponInputs({});
+    // Only call the resets when there's something to clear — empty-object
+    // re-assignments still create a new reference and force another render
+    // pass for no gain.
+    if (Object.keys(appliedCoupons).length > 0) setAppliedCoupons({});
+    if (Object.keys(redeemPointsByShop).length > 0) setRedeemPointsByShop({});
+    if (Object.keys(couponInputs).length > 0) setCouponInputs({});
   }
 
   if (shopList.length === 0) {
