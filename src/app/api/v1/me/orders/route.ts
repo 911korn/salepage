@@ -71,8 +71,18 @@ export async function GET(request: Request) {
     });
   }
 
-  const where: Prisma.OrderWhereInput = {
+  // Exclude orders the user placed at their OWN shops — those belong in
+  // /seller/orders, not the buyer view. The mobile screenshot at 04:56
+  // showed a seller's own test purchase leaking into their /me/orders
+  // because the order's customerEmail matched the seller's email. Use a
+  // sub-query on `shop.ownerId` to drop those rows regardless of how the
+  // OR-matchers above claimed them (911korn 2026-05-27).
+  const baseWhere: Prisma.OrderWhereInput = {
     OR: orMatchers,
+    shop: { ownerId: { not: user.id } },
+  };
+  const where: Prisma.OrderWhereInput = {
+    ...baseWhere,
     ...(statusParam ? { status: statusParam } : {}),
   };
 
@@ -91,12 +101,11 @@ export async function GET(request: Request) {
     },
   });
 
-  // Counts per status — drives the tab badges. Single grouped query, scoped
-  // to the same OR matchers as the list so the buyer can see "you have 3
-  // pending" without paginating.
+  // Counts per status — drives the tab badges. Same exclusion as the
+  // main list so the badges don't promise an order that won't appear.
   const grouped = await db.order.groupBy({
     by: ["status"],
-    where: { OR: orMatchers },
+    where: baseWhere,
     _count: { status: true },
   });
   const countByStatus: Record<string, number> = {};
