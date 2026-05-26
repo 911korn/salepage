@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, ScrollView, Alert } from "react-native";
 import { router } from "expo-router";
 import { Image } from "expo-image";
@@ -6,11 +6,10 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
-import { useShallow } from "zustand/react/shallow";
 import {
   useCart,
   selectSubtotalSatang,
-  selectShopList,
+  shopsToList,
   selectShopCount,
   type CartLine,
 } from "@/store/cart";
@@ -23,12 +22,14 @@ import { getActiveReferrer } from "@/lib/affiliate";
 
 export default function CartScreen() {
   const { t } = useTranslation(["cart", "common"]);
-  // useShallow runs selectShopList through a shallow-equality check so a
-  // re-render doesn't see a "new" array every tick. Without it, Zustand
-  // v5's default Object.is compare treated each freshly-built array as
-  // changed → useCart triggered another re-render → infinite loop →
-  // "Maximum update depth exceeded" (911korn 2026-05-27 IMG_5241).
-  const shopList = useCart(useShallow(selectShopList));
+  // Subscribe to the raw shops map (reference-stable until the store
+  // actually mutates). Compute the derived shopList via useMemo so the
+  // array reference is stable across re-renders. Using selectShopList
+  // as a Zustand selector would loop (it builds new objects each call;
+  // Object.is would treat every call as a change) — 911korn 2026-05-27
+  // IMG_5241 "Maximum update depth exceeded".
+  const shops = useCart((s) => s.shops);
+  const shopList = useMemo(() => shopsToList(shops), [shops]);
   const shopCount = useCart(selectShopCount);
   const grandTotal = useCart(selectSubtotalSatang);
   const setQty = useCart((s) => s.setQty);

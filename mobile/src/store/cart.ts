@@ -172,9 +172,17 @@ export interface CartShopSummary {
 /**
  * Convert the shops map into a list with subtotals — stable order by shopSlug
  * so re-renders are deterministic across reorderings of unrelated shops.
+ *
+ * Call via `useMemo(() => shopsToList(shops), [shops])` from components
+ * (NOT directly as a Zustand selector). The function creates a fresh
+ * array+items on every call, so using it as a selector causes Zustand
+ * to see "changed" output every render and triggers an infinite loop
+ * (911korn 2026-05-27 IMG_5241).
  */
-export function selectShopList(state: CartState): CartShopSummary[] {
-  return Object.entries(state.shops)
+export function shopsToList(
+  shops: Record<string, CartShop>,
+): CartShopSummary[] {
+  return Object.entries(shops)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([shopSlug, shop]) => ({
       shopSlug,
@@ -185,4 +193,13 @@ export function selectShopList(state: CartState): CartShopSummary[] {
         0,
       ),
     }));
+}
+
+/**
+ * @deprecated Use `useCart((s) => s.shops)` + `useMemo(() => shopsToList(shops), [shops])`
+ * instead. This selector creates a new array on every call, which loops
+ * Zustand's render cycle. Kept for backward-compat with web routes.
+ */
+export function selectShopList(state: CartState): CartShopSummary[] {
+  return shopsToList(state.shops);
 }
