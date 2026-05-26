@@ -4,14 +4,14 @@ import { View, Text, ScrollView, ActivityIndicator, Pressable } from "react-nati
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X } from "lucide-react-native";
+import { X, ShoppingBag } from "lucide-react-native";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { ProductImageGallery } from "@/components/product-image-gallery";
 import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 import { shareProduct } from "@/lib/share";
-import { useCart } from "@/store/cart";
+import { useCart, selectItemCount } from "@/store/cart";
 
 /**
  * Floating close button — overlays the top-left of the product modal
@@ -45,6 +45,62 @@ function ProductCloseButton() {
   );
 }
 
+/**
+ * Floating cart shortcut — mirrors the close button's pill on the right
+ * so a buyer who taps "Add to cart" has an obvious "ดูตะกร้า" affordance
+ * without having to back all the way out of the modal (911korn 2026-05-27:
+ * "ตอนนี้มันมีปุ่ม add to cart แต่ไม่มีปุ่ม ดู cart · เอาไว้ขวาบน ดีมั้ย").
+ * Badge appears only when there's something in the bag.
+ */
+function ProductCartButton() {
+  const insets = useSafeAreaInsets();
+  const itemCount = useCart(selectItemCount);
+  return (
+    <Pressable
+      onPress={() => router.push("/cart")}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="View cart"
+      style={{
+        position: "absolute",
+        top: insets.top + 8,
+        right: 16,
+        zIndex: 10,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(15,15,15,0.5)",
+      }}
+    >
+      <ShoppingBag size={18} color="#ffffff" strokeWidth={2.4} />
+      {itemCount > 0 ? (
+        <View
+          style={{
+            position: "absolute",
+            top: -4,
+            right: -4,
+            minWidth: 18,
+            height: 18,
+            paddingHorizontal: 4,
+            borderRadius: 9,
+            backgroundColor: "#e11d48",
+            borderWidth: 2,
+            borderColor: "#ffffff",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: "#ffffff", fontSize: 10, fontWeight: "700" }}>
+            {itemCount > 99 ? "99+" : itemCount}
+          </Text>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
 export default function ProductScreen() {
   const { t } = useTranslation(["shop", "common"]);
   const { slug, productSlug } = useLocalSearchParams<{
@@ -67,6 +123,7 @@ export default function ProductScreen() {
     return (
       <Screen>
         <ProductCloseButton />
+        <ProductCartButton />
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#e11d48" />
         </View>
@@ -77,6 +134,7 @@ export default function ProductScreen() {
     return (
       <Screen>
         <ProductCloseButton />
+        <ProductCartButton />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-fg">{t("productNotFound")}</Text>
           <Button className="mt-4" variant="outline" onPress={() => router.back()}>
