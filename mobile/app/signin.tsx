@@ -1,5 +1,5 @@
 import { View, Text, Linking, ScrollView, Pressable } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -122,7 +122,12 @@ export default function SignIn() {
 
           <Pressable
             disabled={anyLoading}
-            onPress={() => Linking.openURL("https://salepage.in.th/signin?via=email")}
+            onPress={() => {
+              const dest = redirect
+                ? `/signin/email?redirect=${encodeURIComponent(redirect)}`
+                : "/signin/email";
+              router.push(dest as never);
+            }}
             className="flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-soft px-5 py-4 active:bg-border/40"
           >
             <Text className="text-[15px] font-semibold text-fg">

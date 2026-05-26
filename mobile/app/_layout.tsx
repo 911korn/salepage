@@ -283,6 +283,15 @@ function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="signin/email"
+              options={{
+                headerTransparent: true,
+                headerTitle: "",
+                headerBackButtonDisplayMode: "minimal",
+                headerLeft: () => <BrandBackButton tone="dark" />,
+              }}
+            />
+            <Stack.Screen
               name="s/[slug]/index"
               options={{
                 // Transparent header so the colored cover banner reaches

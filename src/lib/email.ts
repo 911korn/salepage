@@ -18,7 +18,7 @@ interface SendArgs {
 
 const RESEND_URL = "https://api.resend.com/emails";
 
-async function send({ to, subject, html, replyTo }: SendArgs): Promise<void> {
+export async function send({ to, subject, html, replyTo }: SendArgs): Promise<void> {
   const key = process.env.AUTH_RESEND_KEY;
   if (!key) {
     console.warn("[email] AUTH_RESEND_KEY not set — skipping email send");

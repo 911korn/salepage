@@ -355,6 +355,29 @@ export const api = {
       apiFetch<{ token: string; expiresAt: string; userId: string }>("/api/v1/auth/refresh", {
         method: "POST",
       }),
+
+    /// Inline email OTP — send a 6-digit code to the user's email.
+    /// Same User row as the web Auth.js Resend magic-link flow + the
+    /// Google/LINE bridges (find-or-create by lower-cased email).
+    emailOtpSend: (email: string) =>
+      apiFetch<{ sent: true; expiresAt: string }>("/api/v1/auth/email-otp/send", {
+        method: "POST",
+        body: { email },
+        anonymous: true,
+      }),
+
+    /// Verify a 6-digit code that was sent via emailOtpSend.
+    emailOtpVerify: (email: string, code: string) =>
+      apiFetch<{
+        token: string;
+        expiresAt: string;
+        userId: string;
+        user: { id: string; name: string | null; email: string; image: string | null };
+      }>("/api/v1/auth/email-otp/verify", {
+        method: "POST",
+        body: { email, code },
+        anonymous: true,
+      }),
   },
 
   me: {

@@ -63,6 +63,9 @@ model User {
 
   // V2.1 mobile bridge — rows minted while signing this user in on a phone.
   mobileAuthBridges MobileAuthBridge[] @relation("MobileAuthBridgeUser")
+
+  // V2.1 email-OTP login — code requests issued for this user's email.
+  emailOtps EmailLoginOtp[] @relation("EmailLoginOtpUser")
 }
 
 enum UserRole {
@@ -1157,6 +1160,45 @@ model MobileAuthBridge {
   consumedAt DateTime?
   createdAt DateTime @default(now())
 
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Email-OTP login — V2.1 inline mobile auth
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Short-lived (10 min) 6-digit code emailed to a user when they tap
+/// "Continue with email" in the mobile app. The OTP screen verifies the
+/// code, finds-or-creates the User by email, and mints a SalePage mobile
+/// JWT. No bouncing to the web — the whole flow runs inside the app
+/// (911korn 2026-05-26: "ทำงานจบได้ในแอพไม่ต้องเด้งไปที่อื่น").
+///
+/// Rate-limited by checking how many active rows exist for the same email
+/// (1-minute resend cooldown) and how many wrong attempts have been made
+/// against this row (5 max).
+model EmailLoginOtp {
+  id           String   @id @default(cuid())
+  email        String // lower-cased
+  // bcrypt-hashed 6-digit code. Plaintext is emailed once + never stored.
+  codeHash     String
+  // Number of /verify attempts so far. Locks at 5.
+  attempts     Int      @default(0)
+  // Set on successful verify so a stolen row can't be replayed.
+  consumedAt   DateTime?
+  // 10 minutes from createdAt.
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  // userId is null until first /verify match (or if email belongs to no
+  // existing User — we still mint a User row then).
+  userId       String?
+  user         User?    @relation("EmailLoginOtpUser", fields: [userId], references: [id], onDelete: Cascade)
+  // Optional IP / UA captured at /send for fraud audit. Not used by the
+  // verify flow — purely forensic.
+  requestIp    String?
+  requestUa    String?
+
+  @@index([email, createdAt])
   @@index([expiresAt])
   @@index([userId])
 }
