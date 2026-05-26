@@ -143,11 +143,21 @@ function bootstrapJs(liffId: string, bridge: string): string {
       return;
     }
     setMsg('Signed in! Returning to SalePage…');
-    // Close the LIFF window so the user is back in the SalePage app.
-    // The mobile app's poll loop will pick up the JWT and navigate home.
+    // Deep-link back to the SalePage native app so the user doesn't
+    // have to manually swipe from LINE → SalePage (911korn 2026-05-26
+    // "ไม่ยอม Back กลับมาแอพเอง ต้อง กด กลับมาเอง"). In EAS production
+    // builds the salepage:// scheme is registered and iOS hands off
+    // immediately; in Expo Go the scheme is unrecognised and the navigation
+    // no-ops — closeWindow() then puts the user back on the LINE chat
+    // list and they swipe back manually (acceptable for dev).
     setTimeout(() => {
-      try { window.liff.closeWindow(); } catch (e) { /* ignore */ }
-    }, 400);
+      try {
+        window.location.href = 'salepage://auth/line?ok=1';
+      } catch (e) { /* ignore */ }
+      setTimeout(() => {
+        try { window.liff.closeWindow(); } catch (e) { /* ignore */ }
+      }, 600);
+    }, 300);
   } catch (err) {
     setMsg('LINE sign-in error: ' + (err && err.message ? err.message : String(err)));
   }
