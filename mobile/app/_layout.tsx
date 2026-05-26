@@ -215,8 +215,32 @@ function RootLayout() {
                 normally, but tapping between Home / Shops / Orders / Me
                 is instant (Shopee-style) because <Tabs> pre-mounts them. */}
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="signin" options={{ headerShown: false }} />
-            <Stack.Screen name="s/[slug]/index" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="signin"
+              options={{
+                // Transparent header so the brand-tinted gradient on the
+                // signin screen still bleeds up to the status bar, but
+                // 911korn 2026-05-26 ("เพิ่ม ปุ่ม back ให้หน้านี้ด้วย")
+                // needs a back chevron — empty title, dark tint, no label.
+                headerTransparent: true,
+                headerTitle: "",
+                headerTintColor: "#0a0a0a",
+                headerBackButtonDisplayMode: "minimal",
+              }}
+            />
+            <Stack.Screen
+              name="s/[slug]/index"
+              options={{
+                // Brand header with back chevron — 911korn 2026-05-26
+                // "เพิ่มปุ่ม Back หน้านี้ด้วย". The banner sits flush below;
+                // an empty headerTitle keeps the bar minimal so the cover
+                // photo carries the page identity.
+                headerTransparent: true,
+                headerTitle: "",
+                headerTintColor: "#ffffff",
+                headerBackButtonDisplayMode: "minimal",
+              }}
+            />
             <Stack.Screen
               name="s/[slug]/[productSlug]"
               options={{ headerTransparent: true, headerTitle: "" }}

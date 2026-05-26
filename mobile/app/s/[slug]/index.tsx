@@ -9,12 +9,12 @@ import { VerifiedBadge, TrustMeter, RiskWarning } from "@/components/trust-badge
 import { ReviewsList } from "@/components/reviews-list";
 import { GroupBuyRail } from "@/components/group-buy-rail";
 import { ShopCover } from "@/components/shop-cover";
+import { Share2 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { i18n } from "@/lib/i18n";
 import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 import { shareShop } from "@/lib/share";
-import { useCart, selectItemCount } from "@/store/cart";
 
 export default function ShopScreen() {
   const { t } = useTranslation(["shop", "common"]);
@@ -24,7 +24,6 @@ export default function ShopScreen() {
     queryFn: () => api.shop.get(slug!),
     enabled: Boolean(slug),
   });
-  const cartCount = useCart(selectItemCount);
 
   if (isLoading) {
     return (
@@ -96,7 +95,7 @@ export default function ShopScreen() {
             className="size-9 items-center justify-center rounded-full border border-border bg-white"
             accessibilityLabel={t("share")}
           >
-            <Text className="text-[16px]">↑</Text>
+            <Share2 size={16} color="#0a0a0a" strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -188,17 +187,6 @@ export default function ShopScreen() {
         <ReviewsList slug={shop.slug} limit={6} />
       </View>
 
-      {/* Floating cart */}
-      {cartCount > 0 ? (
-        <Pressable
-          onPress={() => router.push("/cart")}
-          className="absolute bottom-8 right-5 flex-row items-center gap-2 rounded-full bg-brand-600 px-5 py-3 shadow-lg"
-        >
-          <Text className="font-semibold text-white">
-            {t("common:tabs.home", { defaultValue: "Cart" })} ({cartCount})
-          </Text>
-        </Pressable>
-      ) : null}
     </Screen>
   );
 }
