@@ -145,7 +145,27 @@ function RootLayout() {
               contentStyle: { backgroundColor: "#fafafa" },
             }}
           >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
+            {/* The 4 bottom-tab routes get `animation: "none"` so tapping a
+                tab snaps instantly (Shopee-style) instead of using the iOS
+                slide-from-right. Deeper screens (signin, shop, product,
+                checkout, etc.) keep the default slide so push/pop still
+                feels native. */}
+            <Stack.Screen
+              name="index"
+              options={{ headerShown: false, animation: "none" }}
+            />
+            <Stack.Screen
+              name="search"
+              options={{ headerShown: false, animation: "none" }}
+            />
+            <Stack.Screen
+              name="orders"
+              options={{ headerShown: false, animation: "none" }}
+            />
+            <Stack.Screen
+              name="me"
+              options={{ headerShown: false, animation: "none" }}
+            />
             <Stack.Screen name="signin" options={{ title: "เข้าสู่ระบบ" }} />
             <Stack.Screen name="s/[slug]/index" options={{ headerShown: false }} />
             <Stack.Screen
