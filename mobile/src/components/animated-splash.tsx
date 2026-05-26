@@ -1,70 +1,82 @@
 import { useEffect } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Dimensions } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withDelay,
   withTiming,
   withSequence,
+  withRepeat,
   withSpring,
   runOnJS,
   Easing,
 } from "react-native-reanimated";
-import Svg, {
-  Defs,
-  LinearGradient,
-  Stop,
-  Path,
-  Circle,
-} from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
+import { AppLogo } from "@/components/brand/app-logo";
 
 /**
  * Animated splash overlay that runs once on cold start, after the native
- * Expo splash hides. Choreography:
+ * Expo splash hides.
  *
- *   0ms     mark   scale 0.6 → 1.0 (spring), opacity 0 → 1 (160ms)
- *   220ms   sheen  diagonal white gloss sweeps across the mark
- *   360ms   word   "Sale|Page" slides up 12px + fades in (220ms)
- *   880ms   hold   beat to let the brand register
- *   1100ms  exit   whole overlay fades to 0 (260ms), then unmounts
+ * 911korn 2026-05-26 reviewed the previous version ("เอาอันนี้ออกไปใช้
+ * อนิเมชั่นแทน") — the old build wrapped the brand mark in a clipped
+ * `overflow: hidden` box + sheen, and on iOS react-native-svg lost its
+ * gradient fill so it rendered as a solid red square. This version drops
+ * the clip entirely and animates the canonical `<AppLogo />` (which is
+ * proven to render correctly on /home, /signin, headers, etc.).
  *
- * Replaces the Expo template's static magnifying-glass splash. The native
- * splash still shows for the first ~200ms (font + i18n load), then this
- * overlay sits on top of the app shell with a white background — so the
- * transition reads as one continuous brand moment.
+ * Choreography:
+ *   0ms     blob   radial brand-tinted blob fades in (180ms)
+ *   80ms    logo   AppLogo scales 0.5 → 1.0 spring, opacity 0 → 1 (220ms)
+ *   400ms   pulse  three brand-color dots scale up + ripple outward
+ *   1000ms  hold   beat
+ *   1250ms  exit   whole overlay fades out (260ms), then unmounts
+ *
+ * Total runtime ~1.5s.
  */
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+
 export function AnimatedSplash({ onDone }: { onDone: () => void }) {
   const overlay = useSharedValue(1);
-  const markScale = useSharedValue(0.6);
-  const markOpacity = useSharedValue(0);
-  const wordOpacity = useSharedValue(0);
-  const wordY = useSharedValue(12);
-  const sheenX = useSharedValue(-1.2);
+
+  const logoScale = useSharedValue(0.5);
+  const logoOpacity = useSharedValue(0);
+
+  const blobScale = useSharedValue(0.4);
+  const blobOpacity = useSharedValue(0);
+
+  const dot1 = useSharedValue(0);
+  const dot2 = useSharedValue(0);
+  const dot3 = useSharedValue(0);
 
   useEffect(() => {
-    // Mark — spring up + fade in
-    markOpacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
-    markScale.value = withSpring(1, { damping: 14, stiffness: 150, mass: 0.7 });
+    // Soft radial brand blob backdrop
+    blobOpacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
+    blobScale.value = withSpring(1, { damping: 18, stiffness: 90, mass: 1.2 });
 
-    // Sheen — runs once across the mark
-    sheenX.value = withDelay(
-      220,
-      withTiming(1.2, { duration: 520, easing: Easing.inOut(Easing.cubic) }),
+    // Logo — fade + spring in
+    logoOpacity.value = withDelay(
+      80,
+      withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) }),
+    );
+    logoScale.value = withDelay(
+      80,
+      withSpring(1, { damping: 13, stiffness: 160, mass: 0.7 }),
     );
 
-    // Wordmark — slides up + fades in slightly after the mark settles
-    wordOpacity.value = withDelay(
-      360,
-      withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }),
+    // Three brand-color dots — staggered ripple. Each goes 0 → 1 → 0 with
+    // a tiny lag so they feel like a heartbeat.
+    const rippleSpec = withSequence(
+      withTiming(1, { duration: 280, easing: Easing.out(Easing.cubic) }),
+      withTiming(0, { duration: 380, easing: Easing.in(Easing.cubic) }),
     );
-    wordY.value = withDelay(
-      360,
-      withTiming(0, { duration: 320, easing: Easing.out(Easing.cubic) }),
-    );
+    dot1.value = withDelay(400, rippleSpec);
+    dot2.value = withDelay(520, rippleSpec);
+    dot3.value = withDelay(640, rippleSpec);
 
-    // Exit — fade the entire overlay; report done so the parent unmounts us
+    // Exit — fade out the overlay, then unmount
     overlay.value = withDelay(
-      1100,
+      1250,
       withTiming(
         0,
         { duration: 260, easing: Easing.in(Easing.cubic) },
@@ -73,21 +85,28 @@ export function AnimatedSplash({ onDone }: { onDone: () => void }) {
         },
       ),
     );
-  }, [markOpacity, markScale, sheenX, wordOpacity, wordY, overlay, onDone]);
+  }, [blobOpacity, blobScale, logoOpacity, logoScale, dot1, dot2, dot3, overlay]);
 
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: overlay.value,
+  const overlayStyle = useAnimatedStyle(() => ({ opacity: overlay.value }));
+  const blobStyle = useAnimatedStyle(() => ({
+    opacity: blobOpacity.value,
+    transform: [{ scale: blobScale.value }],
   }));
-  const markStyle = useAnimatedStyle(() => ({
-    opacity: markOpacity.value,
-    transform: [{ scale: markScale.value }],
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+    transform: [{ scale: logoScale.value }],
   }));
-  const wordStyle = useAnimatedStyle(() => ({
-    opacity: wordOpacity.value,
-    transform: [{ translateY: wordY.value }],
+  const dot1Style = useAnimatedStyle(() => ({
+    opacity: dot1.value,
+    transform: [{ scale: 0.4 + dot1.value * 0.9 }],
   }));
-  const sheenStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: sheenX.value * 120 }, { rotate: "20deg" }],
+  const dot2Style = useAnimatedStyle(() => ({
+    opacity: dot2.value,
+    transform: [{ scale: 0.4 + dot2.value * 0.9 }],
+  }));
+  const dot3Style = useAnimatedStyle(() => ({
+    opacity: dot3.value,
+    transform: [{ scale: 0.4 + dot3.value * 0.9 }],
   }));
 
   return (
@@ -95,75 +114,34 @@ export function AnimatedSplash({ onDone }: { onDone: () => void }) {
       pointerEvents="none"
       style={[StyleSheet.absoluteFill, styles.root, overlayStyle]}
     >
-      <Animated.View style={[styles.markBox, markStyle]}>
-        <View style={styles.markClip}>
-          <Mark />
-          <Animated.View style={[styles.sheen, sheenStyle]} />
-        </View>
+      {/* Radial-style brand blob — a wide rose gradient that pulses behind
+          the logo. We approximate a radial with a tall LinearGradient inside
+          a scaled View; cheaper than rendering an actual radial. */}
+      <Animated.View style={[styles.blobWrap, blobStyle]}>
+        <LinearGradient
+          colors={["#fecdd3", "#ffffff"]}
+          start={{ x: 0.5, y: 0.5 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.blob}
+        />
       </Animated.View>
 
-      <Animated.View style={[styles.wordmark, wordStyle]}>
-        <Wordmark />
+      {/* Logo — the canonical AppLogo (mark + wordmark) springs in. */}
+      <Animated.View style={[styles.logoWrap, logoStyle]}>
+        <AppLogo size={56} hero />
       </Animated.View>
+
+      {/* Three pulsing brand-color dots beneath the logo */}
+      <View style={styles.dotRow}>
+        <Animated.View style={[styles.dot, styles.dotRose, dot1Style]} />
+        <Animated.View style={[styles.dot, styles.dotPink, dot2Style]} />
+        <Animated.View style={[styles.dot, styles.dotPeach, dot3Style]} />
+      </View>
     </Animated.View>
   );
 }
 
-function Mark() {
-  return (
-    <Svg width={108} height={108} viewBox="0 0 40 40">
-      <Defs>
-        <LinearGradient
-          id="sp-anim-grad"
-          x1="6"
-          y1="6"
-          x2="34"
-          y2="34"
-          gradientUnits="userSpaceOnUse"
-        >
-          <Stop offset="0%" stopColor="#fb7185" />
-          <Stop offset="55%" stopColor="#e11d48" />
-          <Stop offset="100%" stopColor="#9f1239" />
-        </LinearGradient>
-        <LinearGradient
-          id="sp-anim-fold"
-          x1="14"
-          y1="6"
-          x2="6"
-          y2="14"
-          gradientUnits="userSpaceOnUse"
-        >
-          <Stop offset="0%" stopColor="#ffe4e6" />
-          <Stop offset="100%" stopColor="#fda4af" />
-        </LinearGradient>
-      </Defs>
-      <Path
-        d="M14 6 L34 6 A2 2 0 0 1 36 8 L36 34 A2 2 0 0 1 34 36 L6 36 A2 2 0 0 1 4 34 L4 16 Z"
-        fill="url(#sp-anim-grad)"
-      />
-      <Path d="M14 6 L4 16 L14 16 Z" fill="url(#sp-anim-fold)" />
-      <Circle cx="10" cy="13" r="1.4" fill="#9f1239" opacity={0.85} />
-      <Path
-        d="M25 15.5 H19.5 C17.6 15.5 16 17.1 16 19 C16 20.9 17.6 22.5 19.5 22.5 H23.5 C25.4 22.5 27 24.1 27 26 C27 27.9 25.4 29.5 23.5 29.5 H17.5"
-        stroke="white"
-        strokeWidth={2.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <Circle cx={17.5} cy={29.5} r={1.6} fill="white" />
-    </Svg>
-  );
-}
-
-function Wordmark() {
-  return (
-    <Animated.Text style={styles.wordText}>
-      <Animated.Text style={styles.wordSale}>Sale</Animated.Text>
-      <Animated.Text style={styles.wordPage}>Page</Animated.Text>
-    </Animated.Text>
-  );
-}
+const BLOB_SIZE = Math.max(SCREEN_W, SCREEN_H) * 0.9;
 
 const styles = StyleSheet.create({
   root: {
@@ -171,41 +149,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  markBox: {
-    width: 108,
-    height: 108,
+  blobWrap: {
+    position: "absolute",
+    width: BLOB_SIZE,
+    height: BLOB_SIZE,
+    borderRadius: BLOB_SIZE / 2,
+    overflow: "hidden",
+  },
+  blob: {
+    flex: 1,
+  },
+  logoWrap: {
     alignItems: "center",
     justifyContent: "center",
   },
-  markClip: {
-    width: 108,
-    height: 108,
-    overflow: "hidden",
-    borderRadius: 24,
+  dotRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 28,
   },
-  // The diagonal sheen — a tall semi-transparent white stripe that translates
-  // across the mark, rotated 20° so it reads as a glass highlight.
-  sheen: {
-    position: "absolute",
-    top: -40,
-    bottom: -40,
-    left: 0,
-    width: 38,
-    backgroundColor: "rgba(255,255,255,0.55)",
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
-  wordmark: {
-    marginTop: 22,
-  },
-  wordText: {
-    fontSize: 30,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-    color: "#0a0a0a",
-  },
-  wordSale: {
-    color: "#0a0a0a",
-  },
-  wordPage: {
-    color: "#e11d48",
-  },
+  dotRose: { backgroundColor: "#e11d48" },
+  dotPink: { backgroundColor: "#fb7185" },
+  dotPeach: { backgroundColor: "#fda4af" },
 });
+
+// Suppress unused-imports warning — keeping `withRepeat` available for
+// follow-up tweaks if 911korn requests a continuous loop variant.
+void withRepeat;

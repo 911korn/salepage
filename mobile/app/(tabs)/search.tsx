@@ -19,7 +19,23 @@ import { VerifiedBadge, TrustMeter } from "@/components/trust-badge";
 import { ShopCover } from "@/components/shop-cover";
 import { DiscoveryRails } from "@/components/discovery-rails";
 import { AppLogo } from "@/components/brand/app-logo";
-import { Search, SlidersHorizontal, X } from "lucide-react-native";
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  Shirt,
+  UtensilsCrossed,
+  Smartphone,
+  Sparkles,
+  HeartPulse,
+  Sofa,
+  PawPrint,
+  Book,
+  Dumbbell,
+  Box,
+  Star,
+  type LucideIcon,
+} from "lucide-react-native";
 import {
   SearchFilterSheet,
   DEFAULT_FILTERS,
@@ -46,17 +62,17 @@ const CATEGORY_KEYS = [
   "sport",
   "other",
 ] as const;
-const CATEGORY_EMOJI: Record<(typeof CATEGORY_KEYS)[number], string> = {
-  fashion: "👗",
-  food: "🍜",
-  tech: "📱",
-  beauty: "💄",
-  health: "💊",
-  furniture: "🛋",
-  pets: "🐱",
-  books: "📚",
-  sport: "⚽",
-  other: "✨",
+const CATEGORY_ICONS: Record<(typeof CATEGORY_KEYS)[number], LucideIcon> = {
+  fashion: Shirt,
+  food: UtensilsCrossed,
+  tech: Smartphone,
+  beauty: Sparkles,
+  health: HeartPulse,
+  furniture: Sofa,
+  pets: PawPrint,
+  books: Book,
+  sport: Dumbbell,
+  other: Box,
 };
 
 type ShopsTab = "for-you" | "new" | "following";
@@ -382,7 +398,7 @@ function BrowseMode(props: BrowseProps) {
         contentContainerClassName="px-5 py-3 gap-2"
       >
         <CategoryChip
-          emoji="🌟"
+          Icon={Star}
           label={t("common:filters.all")}
           active={browseCategory === null}
           onPress={() => setBrowseCategory(null)}
@@ -390,7 +406,7 @@ function BrowseMode(props: BrowseProps) {
         {CATEGORY_KEYS.map((key) => (
           <CategoryChip
             key={key}
-            emoji={CATEGORY_EMOJI[key]}
+            Icon={CATEGORY_ICONS[key]}
             label={t(`common:categories.${key}`)}
             active={browseCategory === key}
             onPress={() => setBrowseCategory(key)}
@@ -637,12 +653,12 @@ function ShopCard({ shop }: { shop: ShopSummary }) {
 }
 
 function CategoryChip({
-  emoji,
+  Icon,
   label,
   active,
   onPress,
 }: {
-  emoji: string;
+  Icon: LucideIcon;
   label: string;
   active: boolean;
   onPress: () => void;
@@ -656,7 +672,11 @@ function CategoryChip({
           : "bg-white border border-border"
       }`}
     >
-      <Text className="text-[16px]">{emoji}</Text>
+      <Icon
+        size={18}
+        color={active ? "#e11d48" : "#0a0a0a"}
+        strokeWidth={active ? 2.2 : 1.8}
+      />
       <Text
         className={`mt-0.5 text-[10px] ${
           active ? "font-semibold text-brand-700" : "text-fg"
