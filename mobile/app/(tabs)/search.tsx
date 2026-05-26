@@ -586,8 +586,6 @@ function ShopCard({ shop }: { shop: ShopSummary }) {
       <ShopCover
         bannerUrl={shop.bannerUrls[0]}
         themeColor={shop.themeColor}
-        logoText={shop.logoText}
-        shopName={shop.name}
         height={96}
       />
       <View className="flex-row gap-3 p-4">

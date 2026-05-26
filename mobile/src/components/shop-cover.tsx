@@ -6,27 +6,26 @@ import { LinearGradient } from "expo-linear-gradient";
  * Default shop cover for shops that haven't uploaded a banner yet.
  *
  * The plain `themeColor` solid block we used before looked unprofessional
- * (911korn's feedback: "โล้นๆ แดงๆ ดูตลก"). This component renders a
- * branded fallback so empty banners still look intentional:
+ * (911korn 2026-05-26 first pass: "โล้นๆ แดงๆ ดูตลก"). This component
+ * renders a branded fallback so empty banners still look intentional:
  *
  *   - vertical gradient from shop.themeColor → lightened mix-with-white
  *   - 3 low-opacity white blobs as a soft pattern
- *   - shop initial / logoText centered in big white type. We deliberately
- *     do NOT render the uploaded profile photo (logoUrl) here — the
- *     avatar circle below the cover already shows it.
  *   - small "SalePage" wordmark in the top-right so buyers know it's
  *     a SalePage shop, not a third-party banner
+ *
+ * We deliberately do NOT render the shop initial (logoText) or the
+ * uploaded profile photo here (911korn 2026-05-26 second pass: "เอาที่
+ * วง ออกจากปกร้าน") — the avatar circle below the cover already shows
+ * the shop's identity, and an oversized letter on the cover read as
+ * cheap placeholder art rather than branded chrome.
  */
 export function ShopCoverFallback({
   themeColor,
-  logoText,
-  shopName,
   height = 96,
   showWordmark = true,
 }: {
   themeColor: string;
-  logoText: string | null;
-  shopName: string;
   /** Pixel height of the cover. Cards use 96; shop hero uses 144. */
   height?: number;
   /** Set false to hide the "SalePage" wordmark (e.g. when used in the
@@ -88,26 +87,6 @@ export function ShopCoverFallback({
           </Text>
         </View>
       ) : null}
-
-      {/* Center: shop initial in big white text. We deliberately don't
-          show the uploaded logoUrl here — the profile picture already
-          renders in the small avatar circle below the cover, so duplicating
-          it on the banner felt cluttered. */}
-      <View className="flex-1 items-center justify-center">
-        <Text
-          className="font-bold text-white"
-          style={{
-            fontSize: height * 0.4,
-            lineHeight: height * 0.42,
-            textShadowColor: "rgba(0,0,0,0.15)",
-            textShadowOffset: { width: 0, height: 1 },
-            textShadowRadius: 2,
-          }}
-          numberOfLines={1}
-        >
-          {logoText ?? shopName.slice(0, 1).toUpperCase()}
-        </Text>
-      </View>
     </View>
   );
 }
@@ -120,15 +99,11 @@ export function ShopCoverFallback({
 export function ShopCover({
   bannerUrl,
   themeColor,
-  logoText,
-  shopName,
   height = 96,
   showWordmark = true,
 }: {
   bannerUrl: string | null | undefined;
   themeColor: string;
-  logoText: string | null;
-  shopName: string;
   height?: number;
   showWordmark?: boolean;
 }) {
@@ -149,8 +124,6 @@ export function ShopCover({
   return (
     <ShopCoverFallback
       themeColor={themeColor}
-      logoText={logoText}
-      shopName={shopName}
       height={height}
       showWordmark={showWordmark}
     />

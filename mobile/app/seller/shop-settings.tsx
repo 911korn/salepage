@@ -270,15 +270,11 @@ export default function ShopSettingsScreen() {
             <ShopCover
               bannerUrl={banners[0].localUri ?? banners[0].url}
               themeColor={themeColor ?? shop.themeColor}
-              logoText={shop.logoText}
-              shopName={name?.trim() || shop.name}
               height={96}
             />
           ) : (
             <ShopCoverFallback
               themeColor={themeColor ?? shop.themeColor}
-              logoText={shop.logoText}
-              shopName={name?.trim() || shop.name}
               height={96}
             />
           )}

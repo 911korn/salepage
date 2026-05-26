@@ -55,12 +55,10 @@ export default function ShopScreen() {
   return (
     <Screen scroll>
       {/* Banner — buyer's first impression. Falls back to a branded
-          gradient + shop initial if the owner hasn't uploaded a cover. */}
+          gradient with soft blobs if the owner hasn't uploaded a cover. */}
       <ShopCover
         bannerUrl={shop.bannerUrls[0]}
         themeColor={shop.themeColor}
-        logoText={shop.logoText}
-        shopName={shop.name}
         height={176}
         showWordmark={false}
       />
