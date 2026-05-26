@@ -1,9 +1,11 @@
 import { useLocalSearchParams, router } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { View, Text, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
+import { ShopContactSheet } from "@/components/shop-contact-sheet";
 import { api, ApiClientError } from "@/lib/api";
 import { formatBaht, orderStatusLabel, formatRelativeTime } from "@/lib/format";
 import { detectCourier } from "@/lib/courier-detect";
@@ -15,6 +17,7 @@ export default function TrackingScreen() {
   const { t } = useTranslation(["order", "common"]);
   const { token } = useLocalSearchParams<{ token: string }>();
   const queryClient = useQueryClient();
+  const [contactOpen, setContactOpen] = useState(false);
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["order", token],
     queryFn: () => api.orders.get(token!),
@@ -209,6 +212,19 @@ export default function TrackingScreen() {
       </View>
 
       <View className="mx-5 mt-4">
+        {/* Contact-seller button — SalePage doesn't broker chat, so the
+            buyer needs a direct path to the shop's phone/LINE/Facebook
+            (911korn 2026-05-27 "หน้านี้ควรมีปุ่ม ติดต่อผู้ขาย ไว้ให้
+            ลูกค้าด้วย เพราะเราไม่ได้เป็นเหมือน Shopee"). Show whenever
+            the shop has at least one contact configured. */}
+        {hasAnyContact(data.shop.contact) ? (
+          <Button
+            className="mb-2"
+            onPress={() => setContactOpen(true)}
+          >
+            ติดต่อผู้ขาย
+          </Button>
+        ) : null}
         <Button
           variant="outline"
           loading={isRefetching}
@@ -259,7 +275,27 @@ export default function TrackingScreen() {
           </Button>
         ) : null}
       </View>
+
+      <ShopContactSheet
+        visible={contactOpen}
+        shopName={data.shop.name}
+        contact={data.shop.contact}
+        onDismiss={() => setContactOpen(false)}
+      />
     </Screen>
+  );
+}
+
+function hasAnyContact(contact: {
+  phone?: string | null;
+  line?: string | null;
+  facebook?: string | null;
+} | null | undefined): boolean {
+  if (!contact) return false;
+  return Boolean(
+    contact.phone?.trim() ||
+      contact.line?.trim() ||
+      contact.facebook?.trim(),
   );
 }
 
