@@ -46,14 +46,13 @@ const Body = z.object({
 export async function GET(request: Request, ctx: Ctx) {
   const session = await resolveSession(request);
   if (!session.ok) return session.response;
-  if (!(await hasProPlan(session.user.id))) {
-    return fail(
-      "plan_required",
-      "Auto Shipping ใช้ได้เฉพาะแพ็กเกจ Pro ขึ้นไป",
-      402,
-      { requiredPlan: "PRO" },
-    );
-  }
+  // GET is purely informational (returns the stored Shipment row + the
+  // list of supported couriers for the courier picker). 911korn 2026-05-27
+  // saw a Pro-plan wall here even though they were just trying to read
+  // existing shipment data — the gate was wrong. Real auto-shipping
+  // calls (EasyParcel rate quote / label gen / pickup booking) gate at
+  // their own call site when implemented.
+  void hasProPlan;
 
   const { token } = await ctx.params;
   const order = await db.order.findUnique({
@@ -77,14 +76,12 @@ export async function GET(request: Request, ctx: Ctx) {
 export async function POST(request: Request, ctx: Ctx) {
   const session = await resolveSession(request);
   if (!session.ok) return session.response;
-  if (!(await hasProPlan(session.user.id))) {
-    return fail(
-      "plan_required",
-      "Auto Shipping ใช้ได้เฉพาะแพ็กเกจ Pro ขึ้นไป",
-      402,
-      { requiredPlan: "PRO" },
-    );
-  }
+  // 911korn 2026-05-27: blanket hasProPlan gate was wrong — when a
+  // seller manually types in a tracking number and taps "Mark as
+  // shipped", we just store the tracking + flip status. That's a
+  // free-tier feature. The Pro gate belongs on EasyParcel rate quote /
+  // label generation / pickup booking, none of which are wired in this
+  // route yet. Gate at those call sites when they land instead.
 
   const { token } = await ctx.params;
   const order = await db.order.findUnique({
