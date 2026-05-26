@@ -1,13 +1,16 @@
 {
   "wallet": {
     "title": "Loyalty wallet",
-    "heroLabel": "Total loyalty points",
+    "heroLabel": "All your points in one place",
     "heroValue": "{{points}} pt",
     "byShop": "Points per shop",
     "empty": "No points yet",
-    "emptyHint": "Buy from SalePage shops to earn points automatically.",
-    "openShop": "Open shop",
-    "totalSpent": "Lifetime spend {{baht}}"
+    "emptyHint": "Buy from shops with loyalty enabled — points earn automatically.",
+    "openShop": "Browse shops",
+    "totalSpent": "Spent {{baht}}",
+    "shopsLabel": "Shops",
+    "totalSpentLabel": "Lifetime spend",
+    "autoApplyHint": "💡 Points apply automatically at checkout — use the same phone number you bought with before."
   },
   "earnings": {
     "title": "Affiliate earnings",

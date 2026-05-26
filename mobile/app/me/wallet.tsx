@@ -9,6 +9,7 @@ import {
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -23,6 +24,7 @@ import { formatBaht } from "@/lib/format";
  * per-shop wallet detail screen.
  */
 export default function WalletScreen() {
+  const { t } = useTranslation(["meSub", "common"]);
   const walletQuery = useQuery({
     queryKey: ["me", "wallet"],
     queryFn: () => api.me.wallet(),
@@ -42,10 +44,10 @@ export default function WalletScreen() {
       >
         <View className="px-5 pt-6">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-            กระเป๋าสะสมแต้ม
+            {t("wallet.title")}
           </Text>
           <Text className="mt-1 text-[20px] font-bold text-fg">
-            แต้มทุกร้านในที่เดียว
+            {t("wallet.heroLabel")}
           </Text>
         </View>
 
@@ -57,18 +59,17 @@ export default function WalletScreen() {
           <View className="mx-5 mt-8 items-center rounded-3xl border border-dashed border-border p-8">
             <Text className="text-[28px]">💎</Text>
             <Text className="mt-2 text-[14px] font-semibold text-fg">
-              ยังไม่มีแต้มสะสม
+              {t("wallet.empty")}
             </Text>
             <Text className="mt-1 text-center text-[11px] text-muted">
-              สั่งซื้อร้านที่มีระบบสะสมแต้ม{"\n"}
-              ระบบจะคำนวณให้อัตโนมัติ
+              {t("wallet.emptyHint")}
             </Text>
             <Button
               variant="outline"
               className="mt-4"
               onPress={() => router.replace("/")}
             >
-              เลือกร้าน
+              {t("wallet.openShop")}
             </Button>
           </View>
         ) : (
@@ -76,15 +77,17 @@ export default function WalletScreen() {
             {/* Totals header card */}
             <View className="mx-5 mt-4 rounded-3xl bg-brand-600 p-5">
               <Text className="text-[11px] font-semibold uppercase tracking-wider text-brand-100">
-                แต้มรวมทั้งหมด
+                {t("wallet.heroLabel")}
               </Text>
               <Text className="mt-1 text-[32px] font-bold text-white">
-                {walletQuery.data!.totals.totalPoints.toLocaleString()} pt
+                {t("wallet.heroValue", {
+                  points: walletQuery.data!.totals.totalPoints.toLocaleString(),
+                })}
               </Text>
               <View className="mt-3 flex-row gap-4">
                 <View className="flex-1">
                   <Text className="text-[10px] uppercase tracking-wider text-brand-100">
-                    ร้าน
+                    {t("wallet.shopsLabel")}
                   </Text>
                   <Text className="text-[15px] font-semibold text-white">
                     {walletQuery.data!.totals.shopCount}
@@ -92,7 +95,7 @@ export default function WalletScreen() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-[10px] uppercase tracking-wider text-brand-100">
-                    ยอดใช้สะสม
+                    {t("wallet.totalSpentLabel")}
                   </Text>
                   <Text className="text-[15px] font-semibold text-white">
                     {formatBaht(walletQuery.data!.totals.totalSpentSatang)}
@@ -133,7 +136,7 @@ export default function WalletScreen() {
                       {w.shop.name}
                     </Text>
                     <Text className="mt-0.5 text-[11px] text-muted">
-                      สั่งไปแล้ว {formatBaht(w.totalSpentSatang)}
+                      {t("wallet.totalSpent", { baht: formatBaht(w.totalSpentSatang) })}
                     </Text>
                   </View>
                   <View className="items-end">
@@ -150,8 +153,7 @@ export default function WalletScreen() {
 
             <View className="mx-5 mt-4 rounded-2xl border border-dashed border-border p-4">
               <Text className="text-[11px] leading-relaxed text-muted">
-                💡 แต้มจะถูกใช้อัตโนมัติเมื่อคุณเช็คเอาท์ที่ร้านนั้นๆ
-                — กรอกเบอร์โทรเดิมไว้ในตอนสั่งซื้อ
+                {t("wallet.autoApplyHint")}
               </Text>
             </View>
           </>
