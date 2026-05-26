@@ -39,46 +39,65 @@ export default function CartScreen() {
   // users with an extra 1.5% fee; they explicitly toggle it on when they want
   // escrow protection. Cleared when the shop is removed.
   const [shopProtect, setShopProtect] = useState<Record<string, boolean>>({});
+  // V1.1: per-shop coupon + loyalty. Each shop runs its own coupon catalog +
+  // loyalty wallet in our schema, so the cart tracks discounts shop-by-shop.
+  // The single-shop case is just `shopList.length === 1` over the same maps.
+  const [couponInputs, setCouponInputs] = useState<Record<string, string>>({});
+  const [appliedCoupons, setAppliedCoupons] = useState<
+    Record<string, { code: string; discountSatang: number } | null>
+  >({});
+  const [redeemPointsByShop, setRedeemPointsByShop] = useState<
+    Record<string, number>
+  >({});
 
   // Escrow fee preview for the summary section. Server is authoritative on
   // the actual charge — this is just display.
   const escrowFeeTotal = shopList.reduce((sum, shop) => {
     if (!shopProtect[shop.shopSlug]) return sum;
-    return sum + Math.ceil((shop.subtotalSatang * 150) / 10_000);
+    const couponDiscount =
+      appliedCoupons[shop.shopSlug]?.discountSatang ?? 0;
+    const pointsDiscount = (redeemPointsByShop[shop.shopSlug] ?? 0) * 100;
+    const postDiscount = Math.max(
+      0,
+      shop.subtotalSatang - couponDiscount - pointsDiscount,
+    );
+    return sum + Math.ceil((postDiscount * 150) / 10_000);
   }, 0);
-
-  // Coupon + loyalty are single-shop-only in V1.5 (multi-shop bag would need
-  // per-shop inputs — deferred to V1.6). We collect both bits of state at
-  // the cart level but only show the UI when shopCount === 1.
-  const isSingleShop = shopList.length === 1;
-  const singleShop = isSingleShop ? shopList[0]! : null;
-  const [couponCode, setCouponCode] = useState<string>("");
-  const [appliedCoupon, setAppliedCoupon] = useState<
-    { code: string; discountSatang: number } | null
-  >(null);
-  const [redeemPoints, setRedeemPoints] = useState(0);
 
   // After any subtotal/coupon change we recompute the final payable amount.
   // Server is authoritative on order create; this is just for display.
-  const couponDiscount = appliedCoupon?.discountSatang ?? 0;
-  const loyaltyDiscountSatang = redeemPoints * 100; // backend treats 1 pt = 1 baht; refined later via shop config
+  const couponDiscountTotal = shopList.reduce(
+    (sum, shop) =>
+      sum + (appliedCoupons[shop.shopSlug]?.discountSatang ?? 0),
+    0,
+  );
+  const loyaltyDiscountTotal = shopList.reduce(
+    (sum, shop) => sum + (redeemPointsByShop[shop.shopSlug] ?? 0) * 100,
+    0,
+  );
   const finalTotal = Math.max(
     0,
-    grandTotal - couponDiscount - loyaltyDiscountSatang,
+    grandTotal - couponDiscountTotal - loyaltyDiscountTotal,
   );
+
+  const isSingleShop = shopList.length === 1;
+  const singleShop = isSingleShop ? shopList[0]! : null;
 
   const createOrders = useMutation({
     mutationFn: () => {
       if (shopList.length === 0) throw new Error("ตะกร้าว่าง");
-      // Branch on cart shape: single-shop unlocks coupons + loyalty, multi-shop
-      // uses the atomic /orders/multi route which doesn't (V1.0 scope).
+      // Branch on cart shape: single-shop calls /orders (the historical entry
+      // point with side-effects like saved-address upsert + customer email
+      // notifications), multi-shop uses the atomic /orders/multi route.
       if (isSingleShop && singleShop) {
         return (async () => {
           // Pull the affiliate ref captured by the deep-link handler — null
           // if the user opened the app directly or the 30d window expired.
           const referrer = await getActiveReferrer();
+          const slug = singleShop.shopSlug;
+          const points = redeemPointsByShop[slug] ?? 0;
           return api.orders.create({
-            shopSlug: singleShop.shopSlug,
+            shopSlug: slug,
             items: singleShop.items.map((it) => ({
               productSlug: it.productSlug,
               qty: it.qty,
@@ -86,27 +105,26 @@ export default function CartScreen() {
             customerName: name.trim(),
             customerPhone: phone.trim() || undefined,
             customerAddress: address.trim() || undefined,
-            notes: shopNotes[singleShop.shopSlug]?.trim() || undefined,
-            couponCode: appliedCoupon?.code || undefined,
-            redeemPoints: redeemPoints > 0 ? redeemPoints : undefined,
+            notes: shopNotes[slug]?.trim() || undefined,
+            couponCode: appliedCoupons[slug]?.code || undefined,
+            redeemPoints: points > 0 ? points : undefined,
             referrerUserId: referrer?.userId,
             referrerCode: referrer?.code,
-            useEscrow: shopProtect[singleShop.shopSlug] || undefined,
+            useEscrow: shopProtect[slug] || undefined,
           });
-        })()
-          .then((res) => ({
-            orders: [
-              {
-                shopSlug: singleShop.shopSlug,
-                shopName: singleShop.shopName,
-                orderId: res.orderId,
-                token: res.token,
-                trackingUrl: res.trackingUrl,
-                totalSatang: 0,
-                qr: res.qr,
-              },
-            ],
-          }));
+        })().then((res) => ({
+          orders: [
+            {
+              shopSlug: singleShop.shopSlug,
+              shopName: singleShop.shopName,
+              orderId: res.orderId,
+              token: res.token,
+              trackingUrl: res.trackingUrl,
+              totalSatang: 0,
+              qr: res.qr,
+            },
+          ],
+        }));
       }
       return (async () => {
         const referrer = await getActiveReferrer();
@@ -114,15 +132,21 @@ export default function CartScreen() {
           customerName: name.trim(),
           customerPhone: phone.trim() || undefined,
           customerAddress: address.trim() || undefined,
-          shops: shopList.map((shop) => ({
-            shopSlug: shop.shopSlug,
-            items: shop.items.map((it) => ({
-              productSlug: it.productSlug,
-              qty: it.qty,
-            })),
-            notes: shopNotes[shop.shopSlug]?.trim() || undefined,
-            useEscrow: shopProtect[shop.shopSlug] || undefined,
-          })),
+          shops: shopList.map((shop) => {
+            const points = redeemPointsByShop[shop.shopSlug] ?? 0;
+            return {
+              shopSlug: shop.shopSlug,
+              items: shop.items.map((it) => ({
+                productSlug: it.productSlug,
+                qty: it.qty,
+              })),
+              notes: shopNotes[shop.shopSlug]?.trim() || undefined,
+              useEscrow: shopProtect[shop.shopSlug] || undefined,
+              couponCode:
+                appliedCoupons[shop.shopSlug]?.code || undefined,
+              redeemPoints: points > 0 ? points : undefined,
+            };
+          }),
           referrerUserId: referrer?.userId,
           referrerCode: referrer?.code,
         });
@@ -155,12 +179,15 @@ export default function CartScreen() {
   // shop, or removed one of the lines). Stale codes would error out on submit.
   // React 19: reset during render via a guard, not inside an effect, so we
   // don't trigger a second render pass.
-  const cartShapeKey = `${shopCount}|${grandTotal}`;
+  const cartShapeKey = shopList
+    .map((s) => `${s.shopSlug}:${s.subtotalSatang}`)
+    .join("|");
   const [lastShapeKey, setLastShapeKey] = useState(cartShapeKey);
   if (lastShapeKey !== cartShapeKey) {
     setLastShapeKey(cartShapeKey);
-    setAppliedCoupon(null);
-    setRedeemPoints(0);
+    setAppliedCoupons({});
+    setRedeemPointsByShop({});
+    setCouponInputs({});
   }
 
   if (shopList.length === 0) {
@@ -257,6 +284,39 @@ export default function CartScreen() {
                 }))
               }
             />
+            {/* V1.1 per-shop coupon + loyalty. Each shop runs its own catalog
+                + wallet so this panel is repeated for every shop in the bag. */}
+            <View className="border-t border-border">
+              <CouponLoyaltyPanel
+                shopSlug={shop.shopSlug}
+                phone={phone.trim()}
+                subtotalSatang={shop.subtotalSatang}
+                appliedCoupon={appliedCoupons[shop.shopSlug] ?? null}
+                couponInput={couponInputs[shop.shopSlug] ?? ""}
+                redeemPoints={redeemPointsByShop[shop.shopSlug] ?? 0}
+                onCouponInputChange={(v) =>
+                  setCouponInputs((prev) => ({ ...prev, [shop.shopSlug]: v }))
+                }
+                onApplyCoupon={(c) => {
+                  setAppliedCoupons((prev) => ({
+                    ...prev,
+                    [shop.shopSlug]: c,
+                  }));
+                  if (c) {
+                    setCouponInputs((prev) => ({
+                      ...prev,
+                      [shop.shopSlug]: c.code,
+                    }));
+                  }
+                }}
+                onRedeemPointsChange={(n) =>
+                  setRedeemPointsByShop((prev) => ({
+                    ...prev,
+                    [shop.shopSlug]: n,
+                  }))
+                }
+              />
+            </View>
             {/* Per-shop note. Optional. Maps to `Order.notes` server-side
                 so the shop sees it in the seller dashboard. */}
             <View className="border-t border-border px-4 py-3">
@@ -303,24 +363,6 @@ export default function CartScreen() {
           <AddressPicker value={address} onChange={setAddress} />
         </View>
 
-        {/* Coupon + Loyalty — only for single-shop carts (V1.5 limitation) */}
-        {isSingleShop && singleShop ? (
-          <CouponLoyaltyPanel
-            shopSlug={singleShop.shopSlug}
-            phone={phone.trim()}
-            subtotalSatang={singleShop.subtotalSatang}
-            appliedCoupon={appliedCoupon}
-            couponInput={couponCode}
-            redeemPoints={redeemPoints}
-            onCouponInputChange={setCouponCode}
-            onApplyCoupon={(c) => {
-              setAppliedCoupon(c);
-              if (c) setCouponCode(c.code);
-            }}
-            onRedeemPointsChange={setRedeemPoints}
-          />
-        ) : null}
-
         <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
           {shopList.map((shop) => (
             <Row
@@ -329,16 +371,16 @@ export default function CartScreen() {
               value={formatBaht(shop.subtotalSatang)}
             />
           ))}
-          {couponDiscount > 0 ? (
+          {couponDiscountTotal > 0 ? (
             <Row
-              label={`คูปอง ${appliedCoupon?.code ?? ""}`}
-              value={`-${formatBaht(couponDiscount)}`}
+              label="คูปองทั้งหมด"
+              value={`-${formatBaht(couponDiscountTotal)}`}
             />
           ) : null}
-          {loyaltyDiscountSatang > 0 ? (
+          {loyaltyDiscountTotal > 0 ? (
             <Row
-              label={`แต้มสะสม (${redeemPoints} pt)`}
-              value={`-${formatBaht(loyaltyDiscountSatang)}`}
+              label="แต้มสะสมทั้งหมด"
+              value={`-${formatBaht(loyaltyDiscountTotal)}`}
             />
           ) : null}
           {escrowFeeTotal > 0 ? (

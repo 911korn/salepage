@@ -43,6 +43,17 @@ const ShopOrderInput = z.object({
    * 422 if a shop with `acceptsEscrow=false` is asked to enable.
    */
   useEscrow: z.boolean().optional().default(false),
+  /**
+   * V1.1 per-shop coupon. Server re-validates against the shop's coupon
+   * catalog and silently ignores invalid codes (mirrors single-shop /orders
+   * behaviour so a typo on one shop doesn't fail the whole batch).
+   */
+  couponCode: z.string().min(1).max(40).optional().nullable(),
+  /**
+   * V1.1 per-shop loyalty redemption. 1 point = `shop.loyaltyBahtValuePerPoint` THB.
+   * Requires `customerPhone` at top level — wallet is keyed by phone.
+   */
+  redeemPoints: z.number().int().min(0).optional().default(0),
 });
 
 const Body = z.object({
@@ -120,6 +131,9 @@ export async function POST(request: Request) {
       promptpayId: true,
       contact: true,
       acceptsEscrow: true,
+      // V1.1 per-shop loyalty config — pulled so we can preview + apply
+      // redemption without a second round trip per shop.
+      loyaltyBahtValuePerPoint: true,
       owner: { select: { email: true } },
     },
   });
@@ -168,7 +182,15 @@ export async function POST(request: Request) {
     notes: string | undefined;
     useEscrow: boolean;
     escrowFeeSatang: number;
+    // V1.1 coupon + loyalty per shop (lazy-applied; nulls when not used).
+    couponId: string | null;
+    couponDiscountSatang: number;
+    pointsRedeemed: number;
+    pointsDiscountSatang: number;
   }
+  const cleanPhone = normalizedCustomerPhone
+    ? normalizedCustomerPhone.replace(/[^\d]/g, "")
+    : undefined;
   const prepared: PreparedOrder[] = [];
   for (const shopInput of input.shops) {
     const shop = shopBySlug.get(shopInput.shopSlug)!;
@@ -214,6 +236,72 @@ export async function POST(request: Request) {
         image: p.imageUrls[0],
       });
     }
+    // V1.1 per-shop coupon — same validation rules as the single-shop POST.
+    // We never trust client-side discount calculations.
+    let couponId: string | null = null;
+    let couponDiscountSatang = 0;
+    if (shopInput.couponCode) {
+      const coupon = await db.coupon.findUnique({
+        where: {
+          shopId_code: {
+            shopId: shop.id,
+            code: shopInput.couponCode.toLowerCase(),
+          },
+        },
+      });
+      if (
+        coupon &&
+        coupon.active &&
+        (!coupon.expiresAt || coupon.expiresAt.getTime() >= Date.now()) &&
+        (coupon.maxRedemptions === null ||
+          coupon.redeemedCount < coupon.maxRedemptions) &&
+        (coupon.minOrderSatang === null || subtotal >= coupon.minOrderSatang)
+      ) {
+        if (coupon.type === "PERCENT" && coupon.percent !== null) {
+          couponDiscountSatang = Math.floor((subtotal * coupon.percent) / 100);
+        } else if (coupon.type === "FIXED" && coupon.amountSatang !== null) {
+          couponDiscountSatang = Math.min(coupon.amountSatang, subtotal);
+        }
+        couponId = coupon.id;
+      }
+    }
+
+    // V1.1 per-shop loyalty redemption. Wallet is keyed by phone — without
+    // phone the buyer can't burn points (the single-shop route enforces the
+    // same rule).
+    let pointsRedeemed = 0;
+    let pointsDiscountSatang = 0;
+    if (
+      shopInput.redeemPoints &&
+      shopInput.redeemPoints > 0 &&
+      cleanPhone &&
+      cleanPhone.length >= 9 &&
+      shop.loyaltyBahtValuePerPoint > 0
+    ) {
+      const wallet = await db.customerLoyalty.findUnique({
+        where: {
+          shopId_customerPhone: {
+            shopId: shop.id,
+            customerPhone: cleanPhone,
+          },
+        },
+      });
+      const available = wallet?.points ?? 0;
+      const wanted = Math.min(shopInput.redeemPoints, available);
+      const maxPointsByOrder = Math.floor(
+        (subtotal - couponDiscountSatang) /
+          (shop.loyaltyBahtValuePerPoint * 100),
+      );
+      pointsRedeemed = Math.max(0, Math.min(wanted, maxPointsByOrder));
+      pointsDiscountSatang =
+        pointsRedeemed * shop.loyaltyBahtValuePerPoint * 100;
+    }
+
+    const totalBeforeEscrow = Math.max(
+      0,
+      subtotal - couponDiscountSatang - pointsDiscountSatang,
+    );
+
     // V1.5: per-shop Protected Pay. Reject early if the shop opted out so the
     // caller can re-render the cart without surprise charges at QR time.
     if (shopInput.useEscrow && !shop.acceptsEscrow) {
@@ -225,7 +313,7 @@ export async function POST(request: Request) {
       );
     }
     const escrowFeeSatang = shopInput.useEscrow
-      ? computeEscrowFeeSatang(subtotal)
+      ? computeEscrowFeeSatang(totalBeforeEscrow)
       : 0;
     prepared.push({
       shopId: shop.id,
@@ -235,12 +323,16 @@ export async function POST(request: Request) {
       shopOwnerEmail: shop.owner?.email ?? null,
       shopPromptpayId: shop.promptpayId,
       publicToken: generateOrderToken(),
-      totalSatang: subtotal + escrowFeeSatang, // shipping/coupon/points = 0 in V1.0 multi-checkout
+      totalSatang: totalBeforeEscrow + escrowFeeSatang,
       subtotalSatang: subtotal,
       items,
       notes: shopInput.notes,
       useEscrow: shopInput.useEscrow,
       escrowFeeSatang,
+      couponId,
+      couponDiscountSatang,
+      pointsRedeemed,
+      pointsDiscountSatang,
     });
   }
 
@@ -287,6 +379,13 @@ export async function POST(request: Request) {
           referrerCode: input.referrerCode?.trim() || null,
           useEscrow: p.useEscrow,
           escrowFeeSatang: p.escrowFeeSatang,
+          // V1.1 per-shop coupon + loyalty. We persist on the Order row so the
+          // shop owner's dashboard sees the same discount breakdown a single-
+          // shop order would show, and the post-create increment/decrement
+          // below stays idempotent on retries.
+          couponId: p.couponId,
+          couponDiscountSatang: p.couponDiscountSatang,
+          pointsRedeemed: p.pointsRedeemed,
           ...(lineProfile
             ? {
                 customerLineUserId: lineProfile.sub,
@@ -299,6 +398,42 @@ export async function POST(request: Request) {
       }),
     ),
   );
+
+  // V1.1 atomic side-effects per shop. Mirrors the single-shop post-create
+  // path so coupon redeemed counts + loyalty balances stay consistent.
+  for (const p of prepared) {
+    if (p.couponId) {
+      await db.coupon
+        .update({
+          where: { id: p.couponId },
+          data: { redeemedCount: { increment: 1 } },
+        })
+        .catch((err) =>
+          console.warn(
+            `[orders/multi] coupon increment failed for ${p.shopSlug}:`,
+            err,
+          ),
+        );
+    }
+    if (p.pointsRedeemed > 0 && cleanPhone) {
+      await db.customerLoyalty
+        .update({
+          where: {
+            shopId_customerPhone: {
+              shopId: p.shopId,
+              customerPhone: cleanPhone,
+            },
+          },
+          data: { points: { decrement: p.pointsRedeemed } },
+        })
+        .catch((err) =>
+          console.warn(
+            `[orders/multi] loyalty decrement failed for ${p.shopSlug}:`,
+            err,
+          ),
+        );
+    }
+  }
 
   // Fire confirmation emails (best-effort; non-blocking)
   if (input.customerEmail) {

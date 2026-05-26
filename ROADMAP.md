@@ -204,7 +204,7 @@
 - [x] Cart screen renders shop-by-shop with per-shop "remove shop" button
 - [x] `/checkout/multi?tokens=t1,t2,...` — overview screen with per-order status + tap-to-settle
 - [x] Slip ต่อร้าน (per-order, reuses existing `/checkout/[token]` flow)
-- [ ] Per-shop coupons + loyalty in multi-checkout (deferred — V1.1)
+- [x] Per-shop coupons + loyalty in multi-checkout — `POST /api/v1/orders/multi` accepts `couponCode` + `redeemPoints` per shop, server re-validates against each shop's own coupon catalog + loyalty wallet (silently ignores invalid codes so a typo on one shop doesn't fail the batch). Mobile cart renders `<CouponLoyaltyPanel />` inside every shop card.
 - [x] Per-shop notes input in cart UI — keyed by `shopSlug`, threaded into both single + multi-order POSTs
 
 #### User Account

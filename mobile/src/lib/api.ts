@@ -167,6 +167,10 @@ export const api = {
         notes?: string;
         /** V1.5 Protected Pay opt-in per-shop. */
         useEscrow?: boolean;
+        /** V1.1 per-shop coupon (silently ignored when invalid). */
+        couponCode?: string;
+        /** V1.1 per-shop loyalty points; requires top-level `customerPhone`. */
+        redeemPoints?: number;
       }>;
       lineIdToken?: string;
       /** V1.6 affiliate attribution — same as single-shop. */
