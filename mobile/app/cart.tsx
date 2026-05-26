@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
+import { useShallow } from "zustand/react/shallow";
 import {
   useCart,
   selectSubtotalSatang,
@@ -22,7 +23,12 @@ import { getActiveReferrer } from "@/lib/affiliate";
 
 export default function CartScreen() {
   const { t } = useTranslation(["cart", "common"]);
-  const shopList = useCart(selectShopList);
+  // useShallow runs selectShopList through a shallow-equality check so a
+  // re-render doesn't see a "new" array every tick. Without it, Zustand
+  // v5's default Object.is compare treated each freshly-built array as
+  // changed → useCart triggered another re-render → infinite loop →
+  // "Maximum update depth exceeded" (911korn 2026-05-27 IMG_5241).
+  const shopList = useCart(useShallow(selectShopList));
   const shopCount = useCart(selectShopCount);
   const grandTotal = useCart(selectSubtotalSatang);
   const setQty = useCart((s) => s.setQty);
