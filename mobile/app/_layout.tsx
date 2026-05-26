@@ -316,15 +316,14 @@ function RootLayout() {
             <Stack.Screen
               name="s/[slug]/[productSlug]"
               options={{
-                // Transparent header so the product gallery can bleed up,
-                // but ALWAYS show a visible back affordance. Without
-                // headerLeft the system chevron was invisible against
-                // saturated banner colors — 911korn 2026-05-27
-                // "ปุ่ม Back หลายเพจชอบกดไม่ได้".
-                headerTransparent: true,
-                headerTitle: "",
-                headerBackButtonDisplayMode: "minimal",
-                headerLeft: () => <BrandBackButton tone="light" />,
+                // Full-screen modal — 911korn 2026-05-27 IMG_5239:
+                // "ใช้เป็น Modal แทนเลย ... ไม่ต้องมีปุ่ม Back ให้รูป
+                // มันแสดงเต็มไปเลย มีแค่ X ซ้ายบน หรือ ปัดลง". Slides
+                // up, image bleeds all the way to the status bar, the
+                // screen itself renders its own X close button.
+                presentation: "fullScreenModal",
+                animation: "slide_from_bottom",
+                headerShown: false,
               }}
             />
             <Stack.Screen name="cart" options={{ headerTitle: brandHeader("cart") }} />

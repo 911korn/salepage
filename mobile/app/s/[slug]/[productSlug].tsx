@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from "react-native";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { X } from "lucide-react-native";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { ProductImageGallery } from "@/components/product-image-gallery";
@@ -10,6 +12,38 @@ import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 import { shareProduct } from "@/lib/share";
 import { useCart } from "@/store/cart";
+
+/**
+ * Floating close button — overlays the top-left of the product modal
+ * so the hero image bleeds all the way to the status bar (911korn
+ * 2026-05-27 IMG_5239 "ใช้เป็น Modal ... มีแค่ X ซ้ายบนให้กดปิด หรือ
+ * ปัดลง"). Translucent dark pill survives any product photo colour.
+ */
+function ProductCloseButton() {
+  const insets = useSafeAreaInsets();
+  return (
+    <Pressable
+      onPress={() => router.back()}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="Close"
+      style={{
+        position: "absolute",
+        top: insets.top + 8,
+        left: 16,
+        zIndex: 10,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(15,15,15,0.5)",
+      }}
+    >
+      <X size={20} color="#ffffff" strokeWidth={2.4} />
+    </Pressable>
+  );
+}
 
 export default function ProductScreen() {
   const { t } = useTranslation(["shop", "common"]);
@@ -32,6 +66,7 @@ export default function ProductScreen() {
   if (isLoading || !data) {
     return (
       <Screen>
+        <ProductCloseButton />
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#e11d48" />
         </View>
@@ -41,6 +76,7 @@ export default function ProductScreen() {
   if (!product) {
     return (
       <Screen>
+        <ProductCloseButton />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-fg">{t("productNotFound")}</Text>
           <Button className="mt-4" variant="outline" onPress={() => router.back()}>
@@ -53,8 +89,10 @@ export default function ProductScreen() {
 
   return (
     <Screen>
+      <ProductCloseButton />
       <ScrollView contentContainerClassName="pb-32">
-        {/* Hero gallery — swipe + tap-to-zoom */}
+        {/* Hero gallery — swipe + tap-to-zoom. Bleeds to the status bar
+            since this screen renders as a fullScreenModal with no header. */}
         <ProductImageGallery images={product.imageUrls} />
 
         <View className="px-5 pt-5">
