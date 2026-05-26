@@ -20,11 +20,35 @@ type OrderListItem = {
   createdAt: string;
 };
 
+type StatusTab = "ALL" | "PENDING" | "PAID" | "SHIPPING" | "DELIVERED" | "CANCELLED";
+
+const STATUS_TABS: StatusTab[] = [
+  "ALL",
+  "PENDING",
+  "PAID",
+  "SHIPPING",
+  "DELIVERED",
+  "CANCELLED",
+];
+
+const TAB_LABELS_TH: Record<StatusTab, string> = {
+  ALL: "ทั้งหมด",
+  PENDING: "รอชำระเงิน",
+  PAID: "ชำระแล้ว",
+  SHIPPING: "กำลังส่ง",
+  DELIVERED: "ได้รับแล้ว",
+  CANCELLED: "ยกเลิก",
+};
+
 export default function OrdersScreen() {
   const { t } = useTranslation(["order", "common"]);
   const [authed, setAuthed] = useState<boolean | null>(null);
-  // Re-read on focus, not just once on mount — so the modal-based signin
-  // flow refreshes the gate after dismissal.
+  // Default to "ALL" so the buyer sees everything; switching to PENDING
+  // gives them the same focused view the seller has. Persisted state isn't
+  // needed — each visit defaults to ALL.
+  const [tab, setTab] = useState<StatusTab>("ALL");
+
+  // Re-read auth on focus so the modal-based signin flow refreshes the gate.
   useFocusEffect(
     useCallback(() => {
       void getAuthToken().then((tok) => setAuthed(Boolean(tok)));
@@ -32,8 +56,9 @@ export default function OrdersScreen() {
   );
 
   const ordersQuery = useQuery({
-    queryKey: ["me", "orders"],
-    queryFn: () => api.me.orders(),
+    queryKey: ["me", "orders", tab],
+    queryFn: () =>
+      api.me.orders(tab === "ALL" ? undefined : { status: tab }),
     enabled: authed === true,
     // Refetch on focus so newly-confirmed checkouts appear without a manual
     // pull-to-refresh (911korn 2026-05-27).
@@ -41,20 +66,19 @@ export default function OrdersScreen() {
     refetchOnWindowFocus: true,
   });
 
-  // Pin pending payments to the top so the buyer can find the half-finished
-  // checkout immediately. Everything else stays in createdAt-desc order
-  // (911korn 2026-05-27 IMG_5250 "Order ที่ยังไม่ได้จ่าย หาไม่เจอ").
+  // Pin PENDING orders to the top of the "ALL" tab — the half-finished
+  // checkouts are what the buyer most often comes here looking for.
   const sortedOrders = useMemo(() => {
     const list = ordersQuery.data?.orders ?? [];
+    if (tab !== "ALL") return list;
     return [...list].sort((a, b) => {
       const aPending = a.status === "PENDING" ? 0 : 1;
       const bPending = b.status === "PENDING" ? 0 : 1;
       if (aPending !== bPending) return aPending - bPending;
       return b.createdAt.localeCompare(a.createdAt);
     });
-  }, [ordersQuery.data]);
+  }, [ordersQuery.data, tab]);
 
-  // Pull-to-refresh on focus (cheap; query is cached server-side).
   useFocusEffect(
     useCallback(() => {
       if (authed) void ordersQuery.refetch();
@@ -89,6 +113,8 @@ export default function OrdersScreen() {
     );
   }
 
+  const counts = ordersQuery.data?.counts ?? {};
+
   return (
     <Screen safeTop>
       <ScrollView contentContainerClassName="pb-32">
@@ -98,6 +124,44 @@ export default function OrdersScreen() {
           <Text className="mt-0.5 text-[13px] text-muted">{t("subtitle")}</Text>
         </View>
 
+        {/* Status tabs — horizontal scroller. Mirrors /seller/orders so the
+            buyer-side mental model lines up with what shop owners see.
+            `flexGrow: 0` is mandatory inside the parent column or the
+            rounded-full pills stretch vertically (911korn 2026-05-27). */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0 }}
+          contentContainerClassName="gap-2 px-5 pt-4 pb-1"
+        >
+          {STATUS_TABS.map((tabKey) => {
+            const count = tabKey === "ALL"
+              ? Object.values(counts).reduce((sum, c) => sum + c, 0)
+              : counts[tabKey] ?? 0;
+            const isActive = tab === tabKey;
+            return (
+              <Pressable
+                key={tabKey}
+                onPress={() => setTab(tabKey)}
+                className={`self-start rounded-full border px-3 py-1.5 ${
+                  isActive
+                    ? "border-brand-300 bg-brand-50"
+                    : "border-border bg-white"
+                }`}
+              >
+                <Text
+                  className={`text-[12px] font-medium ${
+                    isActive ? "text-brand-700" : "text-fg"
+                  }`}
+                >
+                  {TAB_LABELS_TH[tabKey]}
+                  {count > 0 ? ` (${count})` : ""}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
         {ordersQuery.isLoading ? (
           <View className="py-12">
             <ActivityIndicator color="#e11d48" />
@@ -105,7 +169,7 @@ export default function OrdersScreen() {
         ) : ordersQuery.error ? (
           <ErrorState error={ordersQuery.error} />
         ) : sortedOrders.length === 0 ? (
-          <EmptyState />
+          <EmptyState tab={tab} />
         ) : (
           <View className="mx-5 mt-4 overflow-hidden rounded-3xl border border-border bg-white">
             {sortedOrders.map((o, i) => (
@@ -174,12 +238,14 @@ function OrderRow({
   );
 }
 
-function EmptyState() {
+function EmptyState({ tab }: { tab: StatusTab }) {
   const { t } = useTranslation("order");
   return (
     <View className="mx-5 mt-6 rounded-3xl border border-dashed border-border bg-white p-8">
       <Text className="text-center text-[15px] font-semibold text-fg">
-        {t("list.empty")}
+        {tab === "ALL"
+          ? t("list.empty")
+          : `ไม่มีออเดอร์ในหมวด ${TAB_LABELS_TH[tab]}`}
       </Text>
       <Text className="mt-1 text-center text-[12px] text-muted">
         {t("list.emptyHint")}

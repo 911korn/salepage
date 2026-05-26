@@ -1,15 +1,26 @@
-import { ok } from "@/lib/api";
-import { db } from "@/lib/db";
+import { ok, fail } from "@/lib/api";
+import { db, OrderStatus, type Prisma } from "@/lib/db";
 import { resolveSession } from "@/lib/api-auth";
 
 /**
- * GET /api/v1/me/orders?cursor=<orderId> — cross-shop order history.
+ * GET /api/v1/me/orders?status=<STATUS>&cursor=<orderId>
  *
- * For V0.5 we match by `customerEmail` (= the LIFF/Login-derived email).
- * V1.0 will add Order.userId FK after a migration so anonymous-vs-logged-in
- * checkouts can be linked retroactively.
+ * Cross-shop order history. Two matchers OR'd together so signed-in buyers
+ * see their orders even when the buyer flow forgot to attach
+ * `customerEmail` at create-time:
+ *   1. `customerEmail = user.email`
+ *   2. `customerLineUserId = user.lineUserId` (if the user has linked LINE)
+ *
+ * Status filter is optional — omit for the "all" tab.
  */
 const PAGE_SIZE = 20;
+const VALID_STATUSES: OrderStatus[] = [
+  OrderStatus.PENDING,
+  OrderStatus.PAID,
+  OrderStatus.SHIPPING,
+  OrderStatus.DELIVERED,
+  OrderStatus.CANCELLED,
+];
 
 export async function GET(request: Request) {
   const session = await resolveSession(request);
@@ -18,9 +29,24 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const cursor = url.searchParams.get("cursor") ?? undefined;
+  const statusParam = url.searchParams.get("status") as OrderStatus | null;
+  if (statusParam && !VALID_STATUSES.includes(statusParam)) {
+    return fail("invalid_status", "Unknown order status", 400);
+  }
+
+  const orMatchers: Prisma.OrderWhereInput["OR"] = [
+    { customerEmail: user.email },
+  ];
+  if (user.lineUserId) {
+    orMatchers.push({ customerLineUserId: user.lineUserId });
+  }
+  const where: Prisma.OrderWhereInput = {
+    OR: orMatchers,
+    ...(statusParam ? { status: statusParam } : {}),
+  };
 
   const orders = await db.order.findMany({
-    where: { customerEmail: user.email },
+    where,
     orderBy: { createdAt: "desc" },
     take: PAGE_SIZE + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -34,6 +60,17 @@ export async function GET(request: Request) {
     },
   });
 
+  // Counts per status — drives the tab badges. Single grouped query, scoped
+  // to the same OR matchers as the list so the buyer can see "you have 3
+  // pending" without paginating.
+  const grouped = await db.order.groupBy({
+    by: ["status"],
+    where: { OR: orMatchers },
+    _count: { status: true },
+  });
+  const countByStatus: Record<string, number> = {};
+  for (const g of grouped) countByStatus[g.status] = g._count.status;
+
   const hasMore = orders.length > PAGE_SIZE;
   const slice = hasMore ? orders.slice(0, PAGE_SIZE) : orders;
   return ok({
@@ -45,6 +82,7 @@ export async function GET(request: Request) {
       totalSatang: o.totalSatang,
       createdAt: o.createdAt.toISOString(),
     })),
+    counts: countByStatus,
     nextCursor: hasMore ? slice[slice.length - 1]!.id : null,
   });
 }

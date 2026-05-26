@@ -408,7 +408,7 @@ export const api = {
         orderCount: number;
       }>("/api/v1/me"),
 
-    orders: (cursor?: string) =>
+    orders: (opts?: { status?: string; cursor?: string }) =>
       apiFetch<{
         orders: Array<{
           token: string;
@@ -418,8 +418,11 @@ export const api = {
           totalSatang: number;
           createdAt: string;
         }>;
+        counts: Record<string, number>;
         nextCursor: string | null;
-      }>("/api/v1/me/orders", { query: { cursor } }),
+      }>("/api/v1/me/orders", {
+        query: { status: opts?.status, cursor: opts?.cursor },
+      }),
 
     favorites: () =>
       apiFetch<{ shops: ShopSummary[] }>("/api/v1/me/favorites"),
