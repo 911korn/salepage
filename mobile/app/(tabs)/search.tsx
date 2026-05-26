@@ -13,6 +13,7 @@ import {
 import { router } from "expo-router";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { VerifiedBadge, TrustMeter } from "@/components/trust-badge";
 import { ShopCover } from "@/components/shop-cover";
@@ -31,18 +32,30 @@ import {
 } from "@/lib/recent-searches";
 import type { ShopSummary } from "@/types/api";
 
-const CATEGORIES: Array<{ key: string; label: string; emoji: string }> = [
-  { key: "fashion", label: "แฟชั่น", emoji: "👗" },
-  { key: "food", label: "อาหาร", emoji: "🍜" },
-  { key: "tech", label: "เทคโนโลยี", emoji: "📱" },
-  { key: "beauty", label: "ความงาม", emoji: "💄" },
-  { key: "health", label: "สุขภาพ", emoji: "💊" },
-  { key: "furniture", label: "เฟอร์นิเจอร์", emoji: "🛋" },
-  { key: "pets", label: "สัตว์เลี้ยง", emoji: "🐱" },
-  { key: "books", label: "หนังสือ", emoji: "📚" },
-  { key: "sport", label: "กีฬา", emoji: "⚽" },
-  { key: "other", label: "อื่นๆ", emoji: "✨" },
-];
+const CATEGORY_KEYS = [
+  "fashion",
+  "food",
+  "tech",
+  "beauty",
+  "health",
+  "furniture",
+  "pets",
+  "books",
+  "sport",
+  "other",
+] as const;
+const CATEGORY_EMOJI: Record<(typeof CATEGORY_KEYS)[number], string> = {
+  fashion: "👗",
+  food: "🍜",
+  tech: "📱",
+  beauty: "💄",
+  health: "💊",
+  furniture: "🛋",
+  pets: "🐱",
+  books: "📚",
+  sport: "⚽",
+  other: "✨",
+};
 
 type ShopsTab = "for-you" | "new" | "following";
 
@@ -58,6 +71,7 @@ type ShopsTab = "for-you" | "new" | "following";
  *      power users get continuity.
  */
 export default function ShopsScreen() {
+  const { t } = useTranslation(["shop", "common"]);
   const [q, setQ] = useState("");
   const debounced = useDeferredValue(q);
   const trimmed = debounced.trim();
@@ -146,7 +160,7 @@ export default function ShopsScreen() {
             <TextInput
               value={q}
               onChangeText={setQ}
-              placeholder="ค้นหาร้านหรือสินค้า"
+              placeholder={t("search.placeholder")}
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="search"
@@ -255,6 +269,7 @@ interface BrowseProps {
 }
 
 function BrowseMode(props: BrowseProps) {
+  const { t } = useTranslation(["shop", "common"]);
   const {
     recents,
     onPickRecent,
@@ -278,10 +293,10 @@ function BrowseMode(props: BrowseProps) {
         <View className="px-5 pb-3">
           <View className="flex-row items-center justify-between">
             <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-              ค้นหาล่าสุด
+              {t("search.recents")}
             </Text>
             <Pressable onPress={onClearRecents} hitSlop={8}>
-              <Text className="text-[11px] text-brand-700">ล้างทั้งหมด</Text>
+              <Text className="text-[11px] text-brand-700">{t("search.clearAll")}</Text>
             </Pressable>
           </View>
           <View className="mt-2 flex-row flex-wrap gap-2">
@@ -300,20 +315,26 @@ function BrowseMode(props: BrowseProps) {
 
       {/* Tab strip + Verified toggle */}
       <View className="mt-1 flex-row items-center gap-2 px-5">
-        {(["for-you", "new", "following"] as const).map((t) => (
+        {(
+          [
+            { key: "for-you", labelKey: "filters.recommended" },
+            { key: "new", labelKey: "filters.newest" },
+            { key: "following", labelKey: "filters.following" },
+          ] as const
+        ).map((tab) => (
           <Pressable
-            key={t}
-            onPress={() => setBrowseTab(t)}
+            key={tab.key}
+            onPress={() => setBrowseTab(tab.key as ShopsTab)}
             className={`rounded-full px-3.5 py-1.5 ${
-              browseTab === t ? "bg-brand-600" : "border border-border bg-white"
+              browseTab === tab.key ? "bg-brand-600" : "border border-border bg-white"
             }`}
           >
             <Text
               className={`text-[12px] font-semibold ${
-                browseTab === t ? "text-white" : "text-fg"
+                browseTab === tab.key ? "text-white" : "text-fg"
               }`}
             >
-              {t === "for-you" ? "แนะนำ" : t === "new" ? "ใหม่" : "ติดตาม"}
+              {t(`common:${tab.labelKey}`)}
             </Text>
           </Pressable>
         ))}
@@ -337,7 +358,7 @@ function BrowseMode(props: BrowseProps) {
               browseVerifiedOnly ? "text-emerald-700" : "text-muted"
             }`}
           >
-            ยืนยันแล้ว
+            {t("common:filters.verified")}
           </Text>
         </Pressable>
       </View>
@@ -353,17 +374,17 @@ function BrowseMode(props: BrowseProps) {
       >
         <CategoryChip
           emoji="🌟"
-          label="ทั้งหมด"
+          label={t("common:filters.all")}
           active={browseCategory === null}
           onPress={() => setBrowseCategory(null)}
         />
-        {CATEGORIES.map((c) => (
+        {CATEGORY_KEYS.map((key) => (
           <CategoryChip
-            key={c.key}
-            emoji={c.emoji}
-            label={c.label}
-            active={browseCategory === c.key}
-            onPress={() => setBrowseCategory(c.key)}
+            key={key}
+            emoji={CATEGORY_EMOJI[key]}
+            label={t(`common:categories.${key}`)}
+            active={browseCategory === key}
+            onPress={() => setBrowseCategory(key)}
           />
         ))}
       </ScrollView>
@@ -376,17 +397,17 @@ function BrowseMode(props: BrowseProps) {
       ) : error ? (
         <View className="mx-5 mt-6 rounded-3xl border border-rose-200 bg-rose-50 p-6">
           <Text className="text-center text-[14px] text-rose-700">
-            โหลดไม่สำเร็จ —{" "}
-            {error instanceof Error ? error.message : "ไม่ทราบสาเหตุ"}
+            {t("common:states.loadFailed")} —{" "}
+            {error instanceof Error ? error.message : t("common:states.error")}
           </Text>
         </View>
       ) : shops.length === 0 ? (
         <View className="mx-5 mt-6 rounded-3xl border border-dashed border-border bg-white p-8">
           <Text className="text-center text-[15px] font-semibold text-fg">
-            ยังไม่มีร้านในกลุ่มนี้
+            {t("search.emptyShops")}
           </Text>
           <Text className="mt-1 text-center text-[12px] text-muted">
-            ลองเลือกหมวดอื่น หรือสลับแท็บ
+            {t("search.emptyShopsHint")}
           </Text>
         </View>
       ) : (
@@ -400,7 +421,7 @@ function BrowseMode(props: BrowseProps) {
             </View>
           ) : !hasNextPage && shops.length > 6 ? (
             <Text className="py-4 text-center text-[11px] text-muted">
-              — ถึงท้ายรายการแล้ว —
+              {t("common:states.endOfList")}
             </Text>
           ) : null}
         </View>
@@ -424,6 +445,7 @@ function SearchResults({
   activeFilterCount: number;
   onResetFilters: () => void;
 }) {
+  const { t } = useTranslation(["shop"]);
   if (loading) {
     return (
       <View className="py-12">
@@ -435,7 +457,7 @@ function SearchResults({
     return (
       <View className="mx-5 mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-6">
         <Text className="text-center text-[14px] text-rose-700">
-          ค้นหาไม่สำเร็จ — ลองใหม่
+          {t("search.errorBody")}
         </Text>
       </View>
     );
@@ -446,7 +468,7 @@ function SearchResults({
       {data.shops.length ? (
         <View className="px-5">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-            ร้านที่เกี่ยวข้อง
+            {t("search.shopsRelated")}
           </Text>
           <ScrollView
             horizontal
@@ -526,8 +548,8 @@ function SearchResults({
         {data.products.length === 0 && data.shops.length === 0 ? (
           <View className="mt-8 px-5">
             <Text className="text-center text-[14px] text-muted">
-              ไม่พบผลการค้นหาสำหรับ &quot;{query}&quot;
-              {activeFilterCount > 0 ? "\nลองลดตัวกรองหรือรีเซ็ต" : ""}
+              {t("search.noResults", { query })}
+              {activeFilterCount > 0 ? `\n${t("search.noResultsHint")}` : ""}
             </Text>
             {activeFilterCount > 0 ? (
               <Pressable
@@ -535,7 +557,7 @@ function SearchResults({
                 className="mx-auto mt-3 rounded-full border border-border bg-white px-3 py-1.5"
               >
                 <Text className="text-[12px] font-medium text-brand-700">
-                  รีเซ็ตตัวกรอง
+                  {t("search.resetFilters")}
                 </Text>
               </Pressable>
             ) : null}
