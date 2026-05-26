@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { View, Text, Pressable, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -8,11 +9,10 @@ import { api } from "@/lib/api";
  * Live + upcoming carousel for the home feed. Self-hides when both lists
  * are empty so the rail doesn't take vertical space on quiet days.
  *
- * Live cards always come first (sorted by viewerCount on the server).
- * Upcoming cards render after, with a "🕒 schedule" pill instead of
- * the red "ON AIR" dot.
+ * Memoised so the feed screen's filter-state changes (sort, category,
+ * verifiedOnly) don't re-render the rail's polling subtree.
  */
-export function LiveRail() {
+export const LiveRail = memo(function LiveRail() {
   const liveQuery = useQuery({
     queryKey: ["live"],
     queryFn: () => api.live.list(),
@@ -128,4 +128,4 @@ export function LiveRail() {
       </ScrollView>
     </View>
   );
-}
+});

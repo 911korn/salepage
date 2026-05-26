@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -8,10 +9,9 @@ import { api } from "@/lib/api";
  * Stories rail — horizontal carousel of shop circles with unviewed-indicator
  * gradient borders. Tapping a circle opens `/stories/<slug>` viewer.
  *
- * Self-hides when there are no active stories so empty days don't take up
- * vertical real estate on the home feed.
+ * Memoised so the feed's filter-state changes don't re-render the rail.
  */
-export function StoriesRail() {
+export const StoriesRail = memo(function StoriesRail() {
   const storiesQuery = useQuery({
     queryKey: ["stories"],
     queryFn: () => api.stories.list(),
@@ -77,4 +77,4 @@ export function StoriesRail() {
       ))}
     </ScrollView>
   );
-}
+});

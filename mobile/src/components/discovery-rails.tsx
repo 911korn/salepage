@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -10,11 +10,9 @@ import { formatBaht } from "@/lib/format";
 /**
  * Combined home-feed rails: Featured shops carousel + Flash-sale coupons.
  *
- * Renders nothing if both lists are empty so we don't blow vertical space
- * on shops without admin-curated picks. Lazy: a single round-trip via
- * `api.discovery.rails()`, kept fresh by React Query's default staleTime.
+ * Memoised so the feed's filter-state changes don't re-render the rail.
  */
-export function DiscoveryRails() {
+export const DiscoveryRails = memo(function DiscoveryRails() {
   const railsQuery = useQuery({
     queryKey: ["discovery-rails"],
     queryFn: () => api.discovery.rails(),
@@ -31,7 +29,7 @@ export function DiscoveryRails() {
       {featured.length > 0 ? <FeaturedRail items={featured} /> : null}
     </View>
   );
-}
+});
 
 type Featured = NonNullable<
   Awaited<ReturnType<typeof api.discovery.rails>>
