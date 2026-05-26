@@ -271,11 +271,12 @@ function RootLayout() {
             <Stack.Screen
               name="signin"
               options={{
-                // Transparent header so the brand-tinted gradient on the
-                // signin screen bleeds up to the status bar, with a soft
-                // brand-styled back pill instead of the default chevron
-                // (911korn 2026-05-26: "ทำดีๆ บอกแล้วอย่าชุ่ย ปุ่ม back
-                // ทำให้สวยๆ").
+                // Modal presentation — 911korn 2026-05-26: "หน้านี้ใช้
+                // เป็น modal ไปเลยจะสวยกว่า". The signin sheet now slides
+                // up from the bottom on iOS, with the floating
+                // BrandBackButton (white pill + brand-rose accent) as
+                // the dismiss affordance instead of the default chevron.
+                presentation: "modal",
                 headerTransparent: true,
                 headerTitle: "",
                 headerBackButtonDisplayMode: "minimal",
@@ -285,6 +286,7 @@ function RootLayout() {
             <Stack.Screen
               name="signin/email"
               options={{
+                presentation: "modal",
                 headerTransparent: true,
                 headerTitle: "",
                 headerBackButtonDisplayMode: "minimal",
