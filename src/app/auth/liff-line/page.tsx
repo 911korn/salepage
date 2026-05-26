@@ -31,9 +31,30 @@ export const dynamic = "force-dynamic";
 export default async function LiffLinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ bridge?: string }>;
+  searchParams: Promise<{ bridge?: string; "liff.state"?: string }>;
 }) {
-  const { bridge } = await searchParams;
+  const sp = await searchParams;
+  // LIFF rewrites the user-facing URL `https://liff.line.me/<id>?bridge=X`
+  // into our endpoint URL with the original query encoded as `?liff.state=
+  // %3Fbridge%3DX`. We try the direct param first (handy for desktop
+  // testing) then fall back to parsing liff.state.
+  let bridge = sp.bridge ?? null;
+  if (!bridge && sp["liff.state"]) {
+    try {
+      // liff.state is URL-encoded "?bridge=...&..." OR
+      // "/path?bridge=..." — pull the bridge param from either shape
+      const decoded = decodeURIComponent(sp["liff.state"]);
+      // Build a base URL just so URLSearchParams parses cleanly
+      const q = decoded.includes("?")
+        ? decoded.slice(decoded.indexOf("?") + 1)
+        : decoded.replace(/^\?/, "");
+      const params = new URLSearchParams(q);
+      bridge = params.get("bridge");
+    } catch {
+      bridge = null;
+    }
+  }
+
   const liffId = getPlatformLineLiffId();
 
   if (!bridge) return <ErrorBlock message="Missing bridge id." />;
