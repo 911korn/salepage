@@ -68,6 +68,11 @@ type ApiResp<T> = ApiOk<T> | ApiErr;
 export async function loginWithLine(): Promise<LineBridgeResult> {
   const env = getEnv();
   const apiBase = env.apiBaseUrl.replace(/\/+$/, "");
+  if (!env.lineLiffId) {
+    throw new Error(
+      "EXPO_PUBLIC_LINE_LIFF_ID is not set — LIFF login cannot start",
+    );
+  }
 
   const startRes = await fetch(`${apiBase}/api/v1/auth/mobile-bridge/start`, {
     method: "POST",
@@ -87,10 +92,16 @@ export async function loginWithLine(): Promise<LineBridgeResult> {
   // Build a return URL that picks the right scheme at runtime:
   //   Expo Go: `exp://192.168.x.x:8081/--/auth/line?ok=1`
   //   EAS:     `salepage://auth/line?ok=1`
-  // The LIFF page deep-links here after auth so the user lands back
-  // in the SalePage app without manually app-switching.
   const returnUrl = Linking.createURL("/auth/line?ok=1");
-  const openUrl = `${apiBase}/api/v1/auth/mobile-bridge/line?bridge=${bridgeId}&return=${encodeURIComponent(returnUrl)}`;
+
+  // 911korn 2026-05-27: open liff.line.me DIRECTLY instead of going
+  // through our /api/v1/auth/mobile-bridge/line redirect. iOS only
+  // triggers Universal Link from user-initiated openURL, NOT from 302
+  // server redirects — so the server hop made iOS load liff.line.me as
+  // a regular web page first, briefly showing a 404 flash before the
+  // app handoff. Going direct means iOS sees the openURL is to
+  // liff.line.me from the start and switches to the LINE app cleanly.
+  const openUrl = `https://liff.line.me/${env.lineLiffId}?bridge=${encodeURIComponent(bridgeId)}&return=${encodeURIComponent(returnUrl)}`;
 
   let cancelled = false;
   let pollHandle: ReturnType<typeof setTimeout> | null = null;
