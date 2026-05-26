@@ -2,7 +2,7 @@ import { useLocalSearchParams, router, Link } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { Image } from "expo-image";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { VerifiedBadge, TrustMeter, RiskWarning } from "@/components/trust-badge";
@@ -205,7 +205,7 @@ function StatPill({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ProductCard({
+const ProductCard = memo(function ProductCard({
   shopSlug,
   product,
 }: {
@@ -238,6 +238,9 @@ function ProductCard({
               source={{ uri: product.imageUrls[0] }}
               style={{ width: "100%", height: "100%" }}
               contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
+              recyclingKey={`${shopSlug}-${product.slug}`}
             />
           ) : null}
           {discount ? (
@@ -274,7 +277,7 @@ function ProductCard({
       </Pressable>
     </Link>
   );
-}
+});
 
 // Silence unused-import lint for ScrollView (left here for future filters tab).
 void ScrollView;

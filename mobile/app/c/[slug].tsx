@@ -1,12 +1,12 @@
+import { memo, useCallback, useMemo } from "react";
 import {
   View,
   Text,
   Pressable,
-  ScrollView,
   ActivityIndicator,
   RefreshControl,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
+  FlatList,
+  type ListRenderItem,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -32,12 +32,9 @@ const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
 /**
  * /c/[slug] — full-screen category landing page.
  *
- * The home feed has the same data via its category chip, but a dedicated
- * route gives us a deep-linkable URL (e.g. salepage://c/fashion) and a
- * permanent destination for marketing content + push notifications.
- *
- * Reuses the same `api.feed.list({ category })` endpoint so server changes
- * apply uniformly.
+ * Virtualised: FlatList of ShopCards (no nested ScrollView). With 50+
+ * shops in a category the old ScrollView+.map() rendered the whole list
+ * synchronously and never recycled.
  */
 export default function CategoryScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -53,25 +50,60 @@ export default function CategoryScreen() {
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 
-  const allShops = feedQuery.data?.pages.flatMap((p) => p.shops) ?? [];
+  const allShops = useMemo(
+    () => feedQuery.data?.pages.flatMap((p) => p.shops) ?? [],
+    [feedQuery.data],
+  );
 
-  function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const distanceFromBottom =
-      contentSize.height - layoutMeasurement.height - contentOffset.y;
-    if (
-      distanceFromBottom < 600 &&
-      feedQuery.hasNextPage &&
-      !feedQuery.isFetchingNextPage
-    ) {
-      void feedQuery.fetchNextPage();
-    }
-  }
+  const renderItem: ListRenderItem<ShopSummary> = useCallback(
+    ({ item }) => <ShopCard shop={item} />,
+    [],
+  );
+
+  const ListHeader = (
+    <View className="px-5 pt-6 pb-3">
+      <Text className="text-[36px]">{meta?.emoji ?? "🛍"}</Text>
+      <Text className="mt-2 text-[24px] font-bold text-fg">{label}</Text>
+      <Text className="mt-1 text-[12px] text-muted">ร้านค้าในหมวดนี้</Text>
+    </View>
+  );
+
+  const ListFooter = feedQuery.isFetchingNextPage ? (
+    <View className="py-4">
+      <ActivityIndicator color="#e11d48" />
+    </View>
+  ) : !feedQuery.hasNextPage && allShops.length > 6 ? (
+    <Text className="py-4 text-center text-[11px] text-muted">
+      — ถึงท้ายรายการแล้ว —
+    </Text>
+  ) : null;
 
   return (
     <Screen>
-      <ScrollView
-        contentContainerClassName="pb-16"
+      <FlatList
+        data={allShops}
+        keyExtractor={(s) => s.id}
+        renderItem={renderItem}
+        ListHeaderComponent={ListHeader}
+        ListFooterComponent={ListFooter}
+        ListEmptyComponent={
+          feedQuery.isLoading ? (
+            <View className="py-16">
+              <ActivityIndicator color="#e11d48" />
+            </View>
+          ) : (
+            <View className="mx-5 mt-6 rounded-3xl border border-dashed border-border bg-white p-8">
+              <Text className="text-center text-[15px] font-semibold text-fg">
+                ยังไม่มีร้านในหมวดนี้
+              </Text>
+              <Text className="mt-1 text-center text-[12px] text-muted">
+                ลองหมวดอื่น หรือกลับไปดูทั้งหมด
+              </Text>
+            </View>
+          )
+        }
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 64 }}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         refreshControl={
           <RefreshControl
             refreshing={feedQuery.isRefetching && !feedQuery.isFetchingNextPage}
@@ -79,52 +111,23 @@ export default function CategoryScreen() {
             tintColor="#e11d48"
           />
         }
-        onScroll={handleScroll}
-        scrollEventThrottle={120}
-      >
-        <View className="px-5 pt-6">
-          <Text className="text-[36px]">{meta?.emoji ?? "🛍"}</Text>
-          <Text className="mt-2 text-[24px] font-bold text-fg">{label}</Text>
-          <Text className="mt-1 text-[12px] text-muted">
-            ร้านค้าในหมวดนี้
-          </Text>
-        </View>
-
-        {feedQuery.isLoading ? (
-          <View className="py-16">
-            <ActivityIndicator color="#e11d48" />
-          </View>
-        ) : allShops.length === 0 ? (
-          <View className="mx-5 mt-6 rounded-3xl border border-dashed border-border bg-white p-8">
-            <Text className="text-center text-[15px] font-semibold text-fg">
-              ยังไม่มีร้านในหมวดนี้
-            </Text>
-            <Text className="mt-1 text-center text-[12px] text-muted">
-              ลองหมวดอื่น หรือกลับไปดูทั้งหมด
-            </Text>
-          </View>
-        ) : (
-          <View className="mt-3 gap-3 px-5">
-            {allShops.map((shop) => (
-              <ShopCard key={shop.id} shop={shop} />
-            ))}
-            {feedQuery.isFetchingNextPage ? (
-              <View className="py-4">
-                <ActivityIndicator color="#e11d48" />
-              </View>
-            ) : !feedQuery.hasNextPage && allShops.length > 6 ? (
-              <Text className="py-4 text-center text-[11px] text-muted">
-                — ถึงท้ายรายการแล้ว —
-              </Text>
-            ) : null}
-          </View>
-        )}
-      </ScrollView>
+        onEndReached={() => {
+          if (feedQuery.hasNextPage && !feedQuery.isFetchingNextPage) {
+            void feedQuery.fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.6}
+        removeClippedSubviews
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={9}
+        showsVerticalScrollIndicator={false}
+      />
     </Screen>
   );
 }
 
-function ShopCard({ shop }: { shop: ShopSummary }) {
+const ShopCard = memo(function ShopCard({ shop }: { shop: ShopSummary }) {
   return (
     <Pressable
       onPress={() => router.push(`/s/${shop.slug}`)}
@@ -139,6 +142,9 @@ function ShopCard({ shop }: { shop: ShopSummary }) {
             source={{ uri: shop.bannerUrls[0] }}
             style={{ width: "100%", height: "100%" }}
             contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+            recyclingKey={`${shop.id}-banner`}
           />
         ) : null}
       </View>
@@ -152,6 +158,9 @@ function ShopCard({ shop }: { shop: ShopSummary }) {
               source={{ uri: shop.logoUrl }}
               style={{ width: "100%", height: "100%" }}
               contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
+              recyclingKey={`${shop.id}-logo`}
             />
           ) : (
             <Text className="text-xl font-bold text-white">
@@ -181,4 +190,4 @@ function ShopCard({ shop }: { shop: ShopSummary }) {
       </View>
     </Pressable>
   );
-}
+});

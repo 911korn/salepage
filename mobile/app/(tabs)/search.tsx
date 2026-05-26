@@ -1,4 +1,4 @@
-import { useState, useDeferredValue, useEffect } from "react";
+import { memo, useState, useDeferredValue, useEffect } from "react";
 import {
   View,
   Text,
@@ -541,6 +541,9 @@ function SearchResults({
                     source={{ uri: p.imageUrl }}
                     style={{ width: "100%", height: "100%" }}
                     contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={150}
+                    recyclingKey={`${p.shopSlug}-${p.slug}`}
                   />
                 ) : null}
               </View>
@@ -593,7 +596,7 @@ function SearchResults({
   );
 }
 
-function ShopCard({ shop }: { shop: ShopSummary }) {
+const ShopCard = memo(function ShopCard({ shop }: { shop: ShopSummary }) {
   return (
     <Pressable
       onPress={() => router.push(`/s/${shop.slug}`)}
@@ -614,6 +617,9 @@ function ShopCard({ shop }: { shop: ShopSummary }) {
               source={{ uri: shop.logoUrl }}
               style={{ width: "100%", height: "100%" }}
               contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
+              recyclingKey={shop.id}
             />
           ) : (
             <Text className="text-xl font-bold text-white">
@@ -650,9 +656,9 @@ function ShopCard({ shop }: { shop: ShopSummary }) {
       </View>
     </Pressable>
   );
-}
+});
 
-function CategoryChip({
+const CategoryChip = memo(function CategoryChip({
   Icon,
   label,
   active,
@@ -686,7 +692,7 @@ function CategoryChip({
       </Text>
     </Pressable>
   );
-}
+});
 
 function countActiveFilters(f: SearchFilters): number {
   let n = 0;

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -17,7 +18,7 @@ interface Props {
   limit?: number;
 }
 
-export function ReviewsList({ slug, limit = 6 }: Props) {
+export const ReviewsList = memo(function ReviewsList({ slug, limit = 6 }: Props) {
   const reviewsQuery = useQuery({
     queryKey: ["shop", slug, "reviews"],
     queryFn: () => api.shops.reviews(slug),
@@ -98,4 +99,4 @@ export function ReviewsList({ slug, limit = 6 }: Props) {
       </View>
     </View>
   );
-}
+});

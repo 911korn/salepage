@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { View, Text, Pressable, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -13,7 +14,7 @@ import { formatBaht } from "@/lib/format";
  * the current tier price. Tapping opens the dedicated join screen at
  * `/group-buy/[id]`.
  */
-export function GroupBuyRail({ shopSlug }: { shopSlug: string }) {
+export const GroupBuyRail = memo(function GroupBuyRail({ shopSlug }: { shopSlug: string }) {
   const query = useQuery({
     queryKey: ["groupBuy", "forShop", shopSlug],
     queryFn: () => api.groupBuy.forShop(shopSlug),
@@ -103,7 +104,7 @@ export function GroupBuyRail({ shopSlug }: { shopSlug: string }) {
       </ScrollView>
     </View>
   );
-}
+});
 
 /** Compact countdown like "เหลือ 2 ชม." / "เหลือ 3 ว." */
 function countdown(iso: string): string {
