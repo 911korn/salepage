@@ -62,7 +62,12 @@
     "markDelivered": "✓ ส่งถึงปลายทางแล้ว",
     "viewDetail": "ดูรายละเอียด →",
     "errorTitle": "เกิดข้อผิดพลาด",
-    "errorBody": "อัปเดตล้มเหลว"
+    "errorBody": "อัปเดตล้มเหลว",
+    "shippingAddress": "ที่อยู่จัดส่ง",
+    "slipFromBuyer": "สลิปจากลูกค้า",
+    "rejectTitle": "ปฏิเสธคำสั่งซื้อ?",
+    "rejectBody": "ลูกค้าจะถูกแจ้งว่ายกเลิก",
+    "rejectKeep": "ไม่ยก"
   },
   "products": {
     "title": "สินค้า",

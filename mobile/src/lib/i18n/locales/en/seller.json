@@ -62,7 +62,12 @@
     "markDelivered": "✓ Mark as delivered",
     "viewDetail": "View detail →",
     "errorTitle": "Something went wrong",
-    "errorBody": "Update failed"
+    "errorBody": "Update failed",
+    "shippingAddress": "Shipping address",
+    "slipFromBuyer": "Buyer's slip",
+    "rejectTitle": "Reject this order?",
+    "rejectBody": "The buyer will be notified of the cancellation.",
+    "rejectKeep": "Keep"
   },
   "products": {
     "title": "Products",

@@ -14,18 +14,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import { api, ApiClientError } from "@/lib/api";
-import { formatBaht } from "@/lib/format";
+import { formatBaht, orderStatusLabel } from "@/lib/format";
 import { useSellerMode } from "@/store/seller-mode";
 
 type Status = "PENDING" | "PAID" | "SHIPPING" | "DELIVERED" | "CANCELLED";
 
-const STATUS_TABS: Array<{ key: Status; label: string }> = [
-  { key: "PENDING", label: "รอตรวจสลิป" },
-  { key: "PAID", label: "พร้อมส่ง" },
-  { key: "SHIPPING", label: "กำลังส่ง" },
-  { key: "DELIVERED", label: "ส่งแล้ว" },
-  { key: "CANCELLED", label: "ยกเลิก" },
+const STATUS_TAB_KEYS: Status[] = [
+  "PENDING",
+  "PAID",
+  "SHIPPING",
+  "DELIVERED",
+  "CANCELLED",
 ];
 
 /**
@@ -43,6 +44,7 @@ const STATUS_TABS: Array<{ key: Status; label: string }> = [
  * row moves to the right tab automatically without manual refetch.
  */
 export default function SellerOrdersScreen() {
+  const { t } = useTranslation(["seller", "common"]);
   const slug = useSellerMode((s) => s.activeShopSlug);
   const params = useLocalSearchParams<{ status?: string }>();
   const [status, setStatus] = useState<Status>(
@@ -61,13 +63,13 @@ export default function SellerOrdersScreen() {
     return (
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-fg">เลือกร้านที่ /seller ก่อน</Text>
+          <Text className="text-center text-fg">{t("home.pickShopHint")}</Text>
           <Button
             variant="outline"
             className="mt-4"
             onPress={() => router.replace("/seller")}
           >
-            กลับ
+            {t("home.back")}
           </Button>
         </View>
       </Screen>
@@ -82,22 +84,22 @@ export default function SellerOrdersScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerClassName="gap-2 px-5 py-3"
       >
-        {STATUS_TABS.map((t) => (
+        {STATUS_TAB_KEYS.map((tabKey) => (
           <Pressable
-            key={t.key}
-            onPress={() => setStatus(t.key)}
+            key={tabKey}
+            onPress={() => setStatus(tabKey)}
             className={`rounded-full border px-3 py-1.5 ${
-              status === t.key
+              status === tabKey
                 ? "border-brand-300 bg-brand-50"
                 : "border-border bg-white"
             }`}
           >
             <Text
               className={`text-[12px] font-medium ${
-                status === t.key ? "text-brand-700" : "text-fg"
+                status === tabKey ? "text-brand-700" : "text-fg"
               }`}
             >
-              {t.label}
+              {t(`orders.tabs.${tabKey}`)}
             </Text>
           </Pressable>
         ))}
@@ -121,9 +123,7 @@ export default function SellerOrdersScreen() {
           <View className="mx-5 mt-8 items-center rounded-2xl border border-dashed border-border p-10">
             <Text className="text-[28px]">📭</Text>
             <Text className="mt-2 text-[13px] text-muted">
-              ไม่มีคำสั่งซื้อในหมวด &quot;{
-                STATUS_TABS.find((t) => t.key === status)?.label
-              }&quot;
+              {t("orders.empty", { label: t(`orders.tabs.${status}`) })}
             </Text>
           </View>
         ) : (
@@ -166,6 +166,7 @@ function OrderCard({
   shopSlug: string;
   onMutated: () => void;
 }) {
+  const { t } = useTranslation("seller");
   const [trackingInput, setTrackingInput] = useState(
     order.trackingNumber ?? "",
   );
@@ -178,8 +179,8 @@ function OrderCard({
       api.orders.setStatus(order.publicToken, next),
     onSuccess: onMutated,
     onError: (e) => {
-      const msg = e instanceof ApiClientError ? e.message : "อัปเดตล้มเหลว";
-      Alert.alert("เกิดข้อผิดพลาด", msg);
+      const msg = e instanceof ApiClientError ? e.message : t("orders.errorBody");
+      Alert.alert(t("orders.errorTitle"), msg);
     },
   });
 
@@ -190,8 +191,8 @@ function OrderCard({
       }),
     onSuccess: onMutated,
     onError: (e) => {
-      const msg = e instanceof ApiClientError ? e.message : "อัปเดตล้มเหลว";
-      Alert.alert("เกิดข้อผิดพลาด", msg);
+      const msg = e instanceof ApiClientError ? e.message : t("orders.errorBody");
+      Alert.alert(t("orders.errorTitle"), msg);
     },
   });
 
@@ -248,7 +249,7 @@ function OrderCard({
         ))}
         {order.items.length > 3 ? (
           <Text className="text-[11px] text-muted">
-            + อีก {order.items.length - 3} รายการ
+            + {order.items.length - 3}
           </Text>
         ) : null}
       </View>
@@ -257,7 +258,7 @@ function OrderCard({
       {order.customerAddress && order.status !== "PENDING" ? (
         <View className="border-t border-border px-4 py-3">
           <Text className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-            ที่อยู่จัดส่ง
+            {t("orders.shippingAddress")}
           </Text>
           <Text className="mt-1 text-[12px] leading-relaxed text-fg">
             {order.customerAddress}
@@ -272,7 +273,7 @@ function OrderCard({
           className="border-t border-border px-4 py-3"
         >
           <Text className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-            สลิปจากลูกค้า
+            {t("orders.slipFromBuyer")}
           </Text>
           <Image
             source={{ uri: order.slipImageUrl }}
@@ -295,10 +296,10 @@ function OrderCard({
               variant="outline"
               className="flex-1"
               onPress={() => {
-                Alert.alert("ปฏิเสธคำสั่งซื้อ?", "ลูกค้าจะถูกแจ้งว่ายกเลิก", [
-                  { text: "ไม่ยก", style: "cancel" },
+                Alert.alert(t("orders.rejectTitle"), t("orders.rejectBody"), [
+                  { text: t("orders.rejectKeep"), style: "cancel" },
                   {
-                    text: "ปฏิเสธ",
+                    text: t("orders.reject"),
                     style: "destructive",
                     onPress: () => setStatusMutation.mutate("CANCELLED"),
                   },
@@ -306,27 +307,24 @@ function OrderCard({
               }}
               disabled={setStatusMutation.isPending}
             >
-              ปฏิเสธ
+              {t("orders.reject")}
             </Button>
             <Button
               className="flex-1"
               onPress={() => setStatusMutation.mutate("PAID")}
               disabled={setStatusMutation.isPending}
             >
-              ✓ อนุมัติ
+              {t("orders.approve")}
             </Button>
           </View>
         ) : order.status === "PAID" ? (
           <View className="gap-2">
-            {/* Inline tracking number input — typed value gets passed to the
-                ship mutation as `trackingNumber`. Previously this was a
-                non-interactive <Text> which silently dropped seller input. */}
             <View className="flex-row items-center gap-2 rounded-xl border border-border bg-white px-3 py-2">
-              <Text className="text-[11px] text-muted">เลขพัสดุ</Text>
+              <Text className="text-[11px] text-muted">{t("orders.trackingLabel")}</Text>
               <TextInput
                 value={trackingInput}
                 onChangeText={setTrackingInput}
-                placeholder="เช่น TH001234567"
+                placeholder={t("orders.trackingPlaceholder")}
                 autoCapitalize="characters"
                 autoCorrect={false}
                 className="flex-1 text-[13px] text-fg"
@@ -336,7 +334,7 @@ function OrderCard({
               onPress={() => shipMutation.mutate()}
               disabled={shipMutation.isPending}
             >
-              📦 ทำเครื่องหมายว่าจัดส่ง
+              {t("orders.markShipped")}
             </Button>
           </View>
         ) : order.status === "SHIPPING" ? (
@@ -344,7 +342,7 @@ function OrderCard({
             onPress={() => setStatusMutation.mutate("DELIVERED")}
             disabled={setStatusMutation.isPending}
           >
-            ✓ ส่งถึงปลายทางแล้ว
+            {t("orders.markDelivered")}
           </Button>
         ) : (
           <Pressable
@@ -352,7 +350,7 @@ function OrderCard({
             className="self-end"
           >
             <Text className="text-[11px] font-semibold text-brand-700">
-              ดูรายละเอียด →
+              {t("orders.viewDetail")}
             </Text>
           </Pressable>
         )}

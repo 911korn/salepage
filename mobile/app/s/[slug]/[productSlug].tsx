@@ -2,6 +2,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from "react-native";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { ProductImageGallery } from "@/components/product-image-gallery";
@@ -11,6 +12,7 @@ import { shareProduct } from "@/lib/share";
 import { useCart } from "@/store/cart";
 
 export default function ProductScreen() {
+  const { t } = useTranslation(["shop", "common"]);
   const { slug, productSlug } = useLocalSearchParams<{
     slug: string;
     productSlug: string;
@@ -40,9 +42,9 @@ export default function ProductScreen() {
     return (
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-fg">ไม่พบสินค้านี้</Text>
+          <Text className="text-fg">{t("productNotFound")}</Text>
           <Button className="mt-4" variant="outline" onPress={() => router.back()}>
-            ย้อนกลับ
+            {t("common:actions.back")}
           </Button>
         </View>
       </Screen>
@@ -70,7 +72,7 @@ export default function ProductScreen() {
                 })
               }
               className="size-9 items-center justify-center rounded-full border border-border bg-white"
-              accessibilityLabel="แชร์สินค้า"
+              accessibilityLabel={t("share")}
             >
               <Text className="text-[16px]">↑</Text>
             </Pressable>
@@ -91,18 +93,18 @@ export default function ProductScreen() {
           <View className="mt-3 flex-row items-center gap-2">
             <View className="rounded-full border border-border bg-white px-2.5 py-0.5">
               <Text className="text-[11px] text-fg">
-                {product.type === "DIGITAL" ? "ดิจิทัล" : "มีจัดส่ง"}
+                {product.type === "DIGITAL" ? t("digital") : t("physical")}
               </Text>
             </View>
             <Text className="text-[12px] text-muted">
-              ขายแล้ว {product.sold.toLocaleString()} ชิ้น
+              {t("soldCount", { count: product.sold.toLocaleString() })}
             </Text>
           </View>
 
           {product.description ? (
             <View className="mt-5 rounded-2xl border border-border bg-white p-4">
               <Text className="text-[13px] font-semibold uppercase tracking-wider text-muted">
-                รายละเอียดสินค้า
+                {t("description")}
               </Text>
               <Text className="mt-2 text-[14px] leading-relaxed text-fg">
                 {product.description}
@@ -127,7 +129,7 @@ export default function ProductScreen() {
             });
           }}
         >
-          ใส่ตะกร้า
+          {t("addToCart")}
         </Button>
         <Button
           className="flex-1"
@@ -142,7 +144,7 @@ export default function ProductScreen() {
             router.push("/cart");
           }}
         >
-          ซื้อเลย
+          {t("buyNow")}
         </Button>
       </View>
     </Screen>
