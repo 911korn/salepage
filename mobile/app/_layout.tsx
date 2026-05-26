@@ -345,6 +345,10 @@ function RootLayout() {
               options={{ headerTitle: brandHeader("meEarnings") }}
             />
             <Stack.Screen
+              name="o/[token]/track"
+              options={{ headerTitle: brandHeader("orderTracking") }}
+            />
+            <Stack.Screen
               name="o/[token]/dispute"
               options={{ headerTitle: brandHeader("dispute") }}
             />

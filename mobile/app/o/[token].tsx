@@ -1,18 +1,12 @@
 import { useLocalSearchParams, router } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  View,
-  Text,
-  ScrollView,
-  Linking,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { View, Text, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
 import { formatBaht, orderStatusLabel, formatRelativeTime } from "@/lib/format";
+import { detectCourier } from "@/lib/courier-detect";
 import type { OrderStatus } from "@/types/api";
 
 const STATUS_FLOW: OrderStatus[] = ["PENDING", "PAID", "SHIPPING", "DELIVERED"];
@@ -101,15 +95,16 @@ export default function TrackingScreen() {
           <Text className="mt-1 font-mono text-[15px] text-fg">
             {data.trackingNumber}
           </Text>
+          <Text className="mt-1 text-[12px] text-muted">
+            {detectCourier(data.trackingNumber).name}
+          </Text>
           <Button
             className="mt-3"
             variant="outline"
             size="sm"
             onPress={() =>
-              Linking.openURL(
-                `https://track.thailandpost.co.th/?trackNumber=${encodeURIComponent(
-                  data.trackingNumber!,
-                )}`,
+              router.push(
+                `/o/${token}/track?n=${encodeURIComponent(data.trackingNumber!)}` as never,
               )
             }
           >
