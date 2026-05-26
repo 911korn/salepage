@@ -1,7 +1,24 @@
 import Script from "next/script";
 import { getPlatformLineLiffId } from "@/lib/line";
+import {
+  LIFF_RETURN_PARAM,
+  resolveLiffStateTarget,
+} from "@/lib/liff-url";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Pick a safe base origin for resolveLiffStateTarget. We can't import
+ * `webBaseUrl` env here (it's not always set in preview deployments) so
+ * we read the inbound Host header.
+ */
+async function getBaseOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "salepage.in.th";
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return `${proto}://${host}`;
+}
 
 /**
  * /auth/liff-line?bridge=<id>
@@ -59,41 +76,93 @@ export default async function LiffLinePage({
   }
 
   const liffId = getPlatformLineLiffId();
-
-  if (!bridge) return <ErrorBlock message="Missing bridge id." />;
   if (!liffId)
     return <ErrorBlock message="LIFF not configured on this deployment." />;
 
-  return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>SalePage — Sign in with LINE</title>
-        <style>{baseCss}</style>
-      </head>
-      <body>
-        <div className="card">
-          <div className="logo">LINE</div>
-          <p className="msg" id="msg">
-            Connecting your LINE account…
-          </p>
-          <div className="spinner" aria-hidden />
-        </div>
-        <Script
-          src="https://static.line-scdn.net/liff/edge/2/sdk.js"
-          strategy="beforeInteractive"
-        />
-        <Script
-          id="liff-bootstrap"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: bootstrapJs(liffId, bridge, returnUrl),
-          }}
-        />
-      </body>
-    </html>
-  );
+  // Bridge mode — used by the mobile app's "Login with LINE" flow.
+  // Unchanged; absolutely do not break this path (911korn 2026-05-27
+  // "ดูดีๆอย่าให้ กระทบ LINE Login นะ").
+  if (bridge) {
+    return (
+      <html lang="en">
+        <head>
+          <meta charSet="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>SalePage — Sign in with LINE</title>
+          <style>{baseCss}</style>
+        </head>
+        <body>
+          <div className="card">
+            <div className="logo">LINE</div>
+            <p className="msg" id="msg">
+              Connecting your LINE account…
+            </p>
+            <div className="spinner" aria-hidden />
+          </div>
+          <Script
+            src="https://static.line-scdn.net/liff/edge/2/sdk.js"
+            strategy="beforeInteractive"
+          />
+          <Script
+            id="liff-bootstrap"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: bootstrapJs(liffId, bridge, returnUrl),
+            }}
+          />
+        </body>
+      </html>
+    );
+  }
+
+  // Deep-link mode — the page was reached via a LIFF redirect from a LINE
+  // chat link (e.g. an order-status notification from the bot). No bridge
+  // present, but `liff.state` carries the original target path. Init LIFF
+  // so the user gets the auto-login through LINE's existing session, then
+  // bounce them to the real destination (911korn 2026-05-27 screenshot
+  // 04:24 "Missing bridge id. · ปกติมันต้อง Auto Login พร้อมซื้อ").
+  const origin = await getBaseOrigin();
+  const target = resolveLiffStateTarget(sp["liff.state"], `${origin}/auth/liff-line`);
+  if (target && target.pathname !== "/auth/liff-line") {
+    // Tag the redirect URL with `sp_liff=1` so `LineLiffBootstrap` on the
+    // destination page skips its own LIFF redirect — otherwise we'd ping-
+    // pong back here forever.
+    target.searchParams.set(LIFF_RETURN_PARAM, "1");
+    const targetHref = target.toString();
+    return (
+      <html lang="en">
+        <head>
+          <meta charSet="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>SalePage</title>
+          <style>{baseCss}</style>
+        </head>
+        <body>
+          <div className="card">
+            <div className="logo">LINE</div>
+            <p className="msg" id="msg">
+              กำลังพาคุณกลับเข้าหน้า SalePage…
+            </p>
+            <div className="spinner" aria-hidden />
+          </div>
+          <Script
+            src="https://static.line-scdn.net/liff/edge/2/sdk.js"
+            strategy="beforeInteractive"
+          />
+          <Script
+            id="liff-redirect"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: redirectJs(liffId, targetHref),
+            }}
+          />
+        </body>
+      </html>
+    );
+  }
+
+  // No bridge AND no resolvable target — explicit error so we don't loop.
+  return <ErrorBlock message="Missing bridge id." />;
 }
 
 function ErrorBlock({ message }: { message: string }) {
@@ -170,6 +239,41 @@ function bootstrapJs(
     }, 300);
   } catch (err) {
     setMsg('LINE sign-in error: ' + (err && err.message ? err.message : String(err)));
+  }
+})();
+`;
+}
+
+/**
+ * Deep-link bootstrap — initialises LIFF so the user's existing LINE app
+ * session establishes a profile + access token (gives us the "Auto Login
+ * พร้อมซื้อ" behaviour 911korn asked for), then redirects to the target
+ * URL with the `sp_liff=1` marker.
+ *
+ * If the user somehow isn't logged into LINE on this device, we still
+ * call liff.login() with the same target as the redirectUri so they come
+ * back here after auth and complete the bounce.
+ */
+function redirectJs(liffId: string, targetHref: string): string {
+  return `
+(async () => {
+  const setMsg = (t) => { const el = document.getElementById('msg'); if (el) el.textContent = t; };
+  const go = () => { try { window.location.replace(${JSON.stringify(targetHref)}); } catch (e) { /* ignore */ } };
+  try {
+    if (!window.liff) { go(); return; }
+    await window.liff.init({ liffId: ${JSON.stringify(liffId)}, withLoginOnExternalBrowser: true });
+    if (!window.liff.isLoggedIn()) {
+      // LINE app session not active in this LIFF window; bounce through
+      // liff.login() and we'll re-enter this script after auth.
+      window.liff.login({ redirectUri: window.location.href });
+      return;
+    }
+    setMsg('พร้อมแล้ว — กำลังพาไปหน้าสินค้า…');
+    go();
+  } catch (e) {
+    // Whatever broke, the buyer should still get to the target page —
+    // the page's own LineLiffBootstrap will retry the LIFF handshake.
+    go();
   }
 })();
 `;
