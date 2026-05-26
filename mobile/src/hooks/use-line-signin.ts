@@ -2,19 +2,20 @@ import { useState } from "react";
 import { router } from "expo-router";
 import { Alert } from "react-native";
 import { loginWithLine, LineLoginCancelledError } from "@/lib/line-login";
-import { api, ApiClientError } from "@/lib/api";
 import { setAuthToken } from "@/lib/auth";
 import { registerPushToken } from "@/lib/push";
 
 /**
- * Hook that orchestrates the full LINE → SalePage JWT flow:
- *   1. PKCE auth with LINE
- *   2. Exchange id_token at /api/v1/auth/line-mobile
- *   3. Persist JWT in SecureStore
- *   4. Register push token
- *   5. Navigate home
+ * Hook that orchestrates the LINE → SalePage JWT flow via the
+ * server-side bridge.
  *
- * Returns { signIn, loading, error } so the UI can render a loading button.
+ *   1. POST /api/v1/auth/mobile-bridge/start { provider: "line" }
+ *   2. Open browser to /mobile-bridge/line, poll until JWT
+ *   3. Persist JWT in SecureStore + register push token
+ *   4. Navigate home (or `redirectAfter`)
+ *
+ * Works in both Expo Go and EAS builds — same User row as the email-OTP
+ * + Google bridges + web Auth.js providers.
  */
 export function useLineSignIn() {
   const [loading, setLoading] = useState(false);
@@ -24,20 +25,13 @@ export function useLineSignIn() {
     setError(null);
     setLoading(true);
     try {
-      const { idToken } = await loginWithLine();
-      const session = await api.auth.lineMobile(idToken);
-      await setAuthToken(session.token);
-      // Best-effort push registration — not critical to login flow.
+      const result = await loginWithLine();
+      await setAuthToken(result.token);
       void registerPushToken().catch(() => undefined);
       router.replace((opts.redirectAfter ?? "/") as never);
     } catch (err) {
       if (err instanceof LineLoginCancelledError) return;
-      const msg =
-        err instanceof ApiClientError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : "เข้าสู่ระบบไม่สำเร็จ";
+      const msg = err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ";
       setError(msg);
       Alert.alert("เข้าสู่ระบบไม่สำเร็จ", msg);
     } finally {

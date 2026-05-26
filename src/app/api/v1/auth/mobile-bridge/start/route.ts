@@ -17,7 +17,7 @@ import { db } from "@/lib/db";
  *     stable handle without depending on the OAuth callback URL.
  */
 const Body = z.object({
-  provider: z.enum(["google"]),
+  provider: z.enum(["google", "line"]),
 });
 
 const EXPIRY_MS = 5 * 60 * 1000; // 5 min — covers OAuth login + 2FA + slow networks
