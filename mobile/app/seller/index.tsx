@@ -296,6 +296,12 @@ export default function SellerHomeScreen() {
               onPress={() => router.push("/seller/live")}
             />
             <ActionRow
+              icon="🧧"
+              title="Group Buy"
+              subtitle="เปิดให้ลูกค้ารวมซื้อราคาถูกลง"
+              onPress={() => router.push("/seller/group-buys")}
+            />
+            <ActionRow
               icon="💬"
               title="แชท"
               subtitle={
