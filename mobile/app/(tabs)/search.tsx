@@ -556,7 +556,6 @@ function ShopCard({ shop }: { shop: ShopSummary }) {
         bannerUrl={shop.bannerUrls[0]}
         themeColor={shop.themeColor}
         logoText={shop.logoText}
-        logoUrl={shop.logoUrl}
         shopName={shop.name}
         height={96}
       />

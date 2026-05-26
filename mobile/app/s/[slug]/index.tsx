@@ -57,7 +57,6 @@ export default function ShopScreen() {
         bannerUrl={shop.bannerUrls[0]}
         themeColor={shop.themeColor}
         logoText={shop.logoText}
-        logoUrl={shop.logoUrl}
         shopName={shop.name}
         height={176}
         showWordmark={false}

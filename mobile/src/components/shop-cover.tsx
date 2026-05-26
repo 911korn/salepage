@@ -11,25 +11,21 @@ import { LinearGradient } from "expo-linear-gradient";
  *
  *   - vertical gradient from shop.themeColor → lightened mix-with-white
  *   - 3 low-opacity white blobs as a soft pattern
- *   - large shop initial / logo centered (logoUrl wins if provided)
+ *   - shop initial / logoText centered in big white type. We deliberately
+ *     do NOT render the uploaded profile photo (logoUrl) here — the
+ *     avatar circle below the cover already shows it.
  *   - small "SalePage" wordmark in the top-right so buyers know it's
  *     a SalePage shop, not a third-party banner
- *
- * Drop it in wherever we used to render `<View style={{backgroundColor:
- * shop.themeColor}} />` — same prop API (themeColor, logoText, logoUrl,
- * shop name).
  */
 export function ShopCoverFallback({
   themeColor,
   logoText,
-  logoUrl,
   shopName,
   height = 96,
   showWordmark = true,
 }: {
   themeColor: string;
   logoText: string | null;
-  logoUrl: string | null;
   shopName: string;
   /** Pixel height of the cover. Cards use 96; shop hero uses 144. */
   height?: number;
@@ -93,34 +89,24 @@ export function ShopCoverFallback({
         </View>
       ) : null}
 
-      {/* Center: shop logo image OR shop initial in big white text. */}
+      {/* Center: shop initial in big white text. We deliberately don't
+          show the uploaded logoUrl here — the profile picture already
+          renders in the small avatar circle below the cover, so duplicating
+          it on the banner felt cluttered. */}
       <View className="flex-1 items-center justify-center">
-        {logoUrl ? (
-          <View
-            className="overflow-hidden rounded-2xl border-2 border-white/40 bg-white/10"
-            style={{ width: height * 0.55, height: height * 0.55 }}
-          >
-            <Image
-              source={{ uri: logoUrl }}
-              style={{ width: "100%", height: "100%" }}
-              contentFit="cover"
-            />
-          </View>
-        ) : (
-          <Text
-            className="font-bold text-white"
-            style={{
-              fontSize: height * 0.4,
-              lineHeight: height * 0.42,
-              textShadowColor: "rgba(0,0,0,0.15)",
-              textShadowOffset: { width: 0, height: 1 },
-              textShadowRadius: 2,
-            }}
-            numberOfLines={1}
-          >
-            {logoText ?? shopName.slice(0, 1).toUpperCase()}
-          </Text>
-        )}
+        <Text
+          className="font-bold text-white"
+          style={{
+            fontSize: height * 0.4,
+            lineHeight: height * 0.42,
+            textShadowColor: "rgba(0,0,0,0.15)",
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 2,
+          }}
+          numberOfLines={1}
+        >
+          {logoText ?? shopName.slice(0, 1).toUpperCase()}
+        </Text>
       </View>
     </View>
   );
@@ -135,7 +121,6 @@ export function ShopCover({
   bannerUrl,
   themeColor,
   logoText,
-  logoUrl,
   shopName,
   height = 96,
   showWordmark = true,
@@ -143,7 +128,6 @@ export function ShopCover({
   bannerUrl: string | null | undefined;
   themeColor: string;
   logoText: string | null;
-  logoUrl: string | null;
   shopName: string;
   height?: number;
   showWordmark?: boolean;
@@ -166,7 +150,6 @@ export function ShopCover({
     <ShopCoverFallback
       themeColor={themeColor}
       logoText={logoText}
-      logoUrl={logoUrl}
       shopName={shopName}
       height={height}
       showWordmark={showWordmark}

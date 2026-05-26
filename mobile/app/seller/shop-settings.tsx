@@ -271,11 +271,6 @@ export default function ShopSettingsScreen() {
               bannerUrl={banners[0].localUri ?? banners[0].url}
               themeColor={themeColor ?? shop.themeColor}
               logoText={shop.logoText}
-              logoUrl={
-                logo && logo !== "cleared"
-                  ? logo.localUri ?? logo.url
-                  : shop.logoUrl
-              }
               shopName={name?.trim() || shop.name}
               height={96}
             />
@@ -283,11 +278,6 @@ export default function ShopSettingsScreen() {
             <ShopCoverFallback
               themeColor={themeColor ?? shop.themeColor}
               logoText={shop.logoText}
-              logoUrl={
-                logo && logo !== "cleared"
-                  ? logo.localUri ?? logo.url
-                  : shop.logoUrl
-              }
               shopName={name?.trim() || shop.name}
               height={96}
             />
