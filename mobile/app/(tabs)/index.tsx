@@ -216,7 +216,7 @@ export default function HomeScreen() {
   ) : null;
 
   return (
-    <Screen>
+    <Screen safeTop>
       <FlatList
         // Two-column product grid. numColumns is fixed (changing it
         // requires re-mounting which is fine since we re-key the

@@ -20,7 +20,10 @@ interface Ctx {
 }
 
 const Body = z.object({
-  courierCode: z.string().min(1).max(40),
+  // Optional so the mobile "type tracking + mark shipped" quick flow
+  // doesn't need to pick a courier — server defaults to "other" (manual
+  // courier) when not provided.
+  courierCode: z.string().min(1).max(40).optional(),
   courierName: z.string().min(1).max(80).optional(),
   serviceName: z.string().max(80).optional().nullable(),
   handoff: z.enum(SHIPMENT_HANDOFFS).default("DROPOFF"),
@@ -111,7 +114,11 @@ export async function POST(request: Request, ctx: Ctx) {
     return fail("tracking_required", "กรุณาใส่เลขพัสดุก่อนเริ่มจัดส่ง", 422);
   }
 
-  const courier = getCourierOption(input.courierCode);
+  // Resolve courier — fall back to "other" (manual) when the caller
+  // didn't pick one. getCourierOption returns COURIER_OPTIONS[0] for
+  // unknowns, so we explicitly route absent codes to "other".
+  const resolvedCourierCode = input.courierCode ?? "other";
+  const courier = getCourierOption(resolvedCourierCode);
   const now = new Date();
   const shouldMarkShipping = input.markShipping && order.status !== OrderStatus.SHIPPING;
   const shipmentStatus = trackingNumber ? "IN_TRANSIT" : "READY_TO_SHIP";
@@ -119,7 +126,7 @@ export async function POST(request: Request, ctx: Ctx) {
   const parcelWeightGram = normalizeParcelWeightGram(input.parcelWeightGram);
   const shippingFeeSatang =
     input.shippingFeeSatang ??
-    estimateShippingFeeSatang(input.courierCode, parcelWeightGram);
+    estimateShippingFeeSatang(resolvedCourierCode, parcelWeightGram);
 
   const result = await db.$transaction(async (tx) => {
     const shipment = await tx.shipment.upsert({
@@ -128,7 +135,7 @@ export async function POST(request: Request, ctx: Ctx) {
         orderId: order.id,
         shopId: order.shop.id,
         provider: "manual",
-        courierCode: input.courierCode,
+        courierCode: resolvedCourierCode,
         courierName: input.courierName?.trim() || courier.name,
         serviceName: input.serviceName?.trim() || courier.serviceName,
         handoff: input.handoff,
@@ -154,7 +161,7 @@ export async function POST(request: Request, ctx: Ctx) {
         shippedAt: input.markShipping ? now : null,
       },
       update: {
-        courierCode: input.courierCode,
+        courierCode: resolvedCourierCode,
         courierName: input.courierName?.trim() || courier.name,
         serviceName: input.serviceName?.trim() || courier.serviceName,
         handoff: input.handoff,

@@ -72,7 +72,7 @@ export default function MeScreen() {
 
   if (authed === null) {
     return (
-      <Screen>
+      <Screen safeTop>
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#e11d48" />
         </View>
@@ -83,7 +83,7 @@ export default function MeScreen() {
   const currentLang = (i18n.language as AppLang) || "th";
 
   return (
-    <Screen>
+    <Screen safeTop>
       <ScrollView contentContainerClassName="pb-32">
         {/* Brand only — the tab bar already names this tab, so showing
             "Me / ฉัน" here as a heading was redundant (911korn 2026-05-26

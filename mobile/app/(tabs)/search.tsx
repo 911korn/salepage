@@ -169,7 +169,7 @@ export default function ShopsScreen() {
   const activeFilterCount = countActiveFilters(filters);
 
   return (
-    <Screen>
+    <Screen safeTop>
       {/* Header — logo + search bar + filter button */}
       <View className="px-5 pt-10 pb-3">
         <View className="mb-3">

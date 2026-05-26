@@ -29,7 +29,7 @@ export default function OrdersScreen() {
 
   if (authed === null) {
     return (
-      <Screen>
+      <Screen safeTop>
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#e11d48" />
         </View>
@@ -39,7 +39,7 @@ export default function OrdersScreen() {
 
   if (!authed) {
     return (
-      <Screen>
+      <Screen safeTop>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-[18px] font-semibold text-fg">
             {t("list.guestHeadline")}
@@ -56,7 +56,7 @@ export default function OrdersScreen() {
   }
 
   return (
-    <Screen>
+    <Screen safeTop>
       <ScrollView contentContainerClassName="pb-32">
         <View className="px-5 pt-10">
           <AppLogo size={22} />
