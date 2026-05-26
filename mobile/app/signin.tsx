@@ -1,7 +1,7 @@
 import { View, Text, Linking, ScrollView, Pressable } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Button } from "@/components/ui/button";
 import { AppLogo } from "@/components/brand/app-logo";
@@ -11,37 +11,58 @@ import { useLineSignIn } from "@/hooks/use-line-signin";
 import { useGoogleSignIn } from "@/hooks/use-google-signin";
 
 /**
- * Sign-in screen — global-app aesthetic.
+ * Sign-in screen.
  *
- * Layout:
- *   - Top: SalePage horizontal lockup + a Thai/English hero tagline.
- *   - Middle: card with two OAuth buttons (LINE green + Google white) using
- *     the real vendor SVG marks (per CET law: never emoji placeholders).
- *   - "or" divider → email magic-link fallback (opens web).
- *   - Bottom: terms / privacy footer + a tiny "trusted by N shops" prompt.
+ * Layout intent (911korn 2026-05-26: "ทำดีๆ บอกแล้วอย่าชุ่ย"):
+ *   - Brand-tinted gradient bleeds under the status bar so the back pill +
+ *     status text float on a warm pink, not on a flat white strip with a
+ *     hard edge into the pink below.
+ *   - Content is pushed below the floating back button by exactly enough
+ *     to clear it (status bar inset + ~64px), so the AppLogo never
+ *     overlaps the chrome.
+ *   - Hero section sits inside the gradient region; OAuth card lifts above
+ *     it on a white tile with soft shadow.
  *
  * Both OAuth providers converge on the same SalePage User row keyed by
- * lower-cased email — buyers who signed in on web via Google land here on
- * the SAME account.
+ * lower-cased email — buyers who signed in on web via Google land here
+ * on the SAME account.
  */
 export default function SignIn() {
   const { t } = useTranslation("nav");
   const { redirect } = useLocalSearchParams<{ redirect?: string }>();
+  const insets = useSafeAreaInsets();
   const lineSignIn = useLineSignIn();
   const googleSignIn = useGoogleSignIn();
   const anyLoading = lineSignIn.loading || googleSignIn.loading;
 
+  // Header chrome = status bar + 40px back button + 12px breathing
+  const topGap = insets.top + 52;
+  const gradientHeight = insets.top + 360;
+
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      {/* Subtle gradient header — soft brand-tinted wash so the screen
-          doesn't feel like a flat white form. */}
+    <View className="flex-1 bg-white">
+      {/* Full-bleed gradient — extends under the status bar so the back
+          button (and the iOS time) sit on warm pink, not on white. */}
       <LinearGradient
-        colors={["#fff1f2", "#ffffff"]}
-        style={{ position: "absolute", left: 0, right: 0, top: 0, height: 280 }}
+        colors={["#ffe4e6", "#fff1f2", "#ffffff"]}
+        locations={[0, 0.55, 1]}
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: 0,
+          height: gradientHeight,
+        }}
       />
+
       <ScrollView
         className="flex-1"
-        contentContainerClassName="px-6 pt-10 pb-10 min-h-full"
+        contentContainerStyle={{
+          paddingTop: topGap,
+          paddingHorizontal: 24,
+          paddingBottom: 40,
+          minHeight: "100%",
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* Hero */}
@@ -135,7 +156,7 @@ export default function SignIn() {
           </Text>
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
