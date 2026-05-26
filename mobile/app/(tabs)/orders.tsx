@@ -2,7 +2,6 @@ import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-nati
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Screen } from "@/components/ui/screen";
-import { TabBar } from "@/components/ui/tab-bar";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth";
@@ -27,7 +26,6 @@ export default function OrdersScreen() {
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#e11d48" />
         </View>
-        <TabBar active="orders" />
       </Screen>
     );
   }
@@ -46,7 +44,6 @@ export default function OrdersScreen() {
             เข้าสู่ระบบ
           </Button>
         </View>
-        <TabBar active="orders" />
       </Screen>
     );
   }
@@ -98,7 +95,6 @@ export default function OrdersScreen() {
           </View>
         )}
       </ScrollView>
-      <TabBar active="orders" />
     </Screen>
   );
 }

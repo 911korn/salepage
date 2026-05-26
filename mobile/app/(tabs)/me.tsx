@@ -13,7 +13,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
-import { TabBar } from "@/components/ui/tab-bar";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { getAuthToken, clearAuthToken } from "@/lib/auth";
@@ -69,7 +68,6 @@ export default function MeScreen() {
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#e11d48" />
         </View>
-        <TabBar active="me" />
       </Screen>
     );
   }
@@ -264,8 +262,6 @@ export default function MeScreen() {
           </View>
         ) : null}
       </ScrollView>
-
-      <TabBar active="me" />
     </Screen>
   );
 }

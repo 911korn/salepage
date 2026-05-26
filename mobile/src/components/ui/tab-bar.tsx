@@ -1,58 +1,75 @@
 import { View, Text, Pressable } from "react-native";
-import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 /**
- * Bottom tab bar — present on the 4 V1 main screens (home, shops,
- * orders, me). Other routes are stack-pushed and don't render the bar.
+ * Bottom tab bar — rendered by the `<Tabs>` layout in `app/(tabs)/_layout.tsx`
+ * via its `tabBar` prop. Receives React Navigation state directly so taps are
+ * instant (no Stack slide animation) and per-tab navigation state is kept
+ * alive in memory (Shopee-style).
  *
  * Labels resolve through the `common.tabs.*` i18n namespace so the bar
- * re-renders instantly when the user changes language in /me.
+ * re-renders when the user changes language in /me.
  */
 
-type TabKey = "home" | "shops" | "orders" | "me";
+type TabKey = "index" | "search" | "orders" | "me";
 
-interface Props {
-  active: TabKey;
-}
+const TABS: Record<
+  TabKey,
+  { i18nKey: string; iconActive: string; iconInactive: string }
+> = {
+  index: { i18nKey: "tabs.home", iconActive: "🏠", iconInactive: "🏡" },
+  search: { i18nKey: "tabs.shops", iconActive: "🛍", iconInactive: "🛒" },
+  orders: { i18nKey: "tabs.orders", iconActive: "📦", iconInactive: "📋" },
+  me: { i18nKey: "tabs.me", iconActive: "👤", iconInactive: "👥" },
+};
 
-const TABS: Array<{
-  key: TabKey;
-  href: string;
-  iconActive: string;
-  iconInactive: string;
-}> = [
-  // V1.1: home = product feed (Shopee-style), shops = old discovery + search.
-  { key: "home", href: "/", iconActive: "🏠", iconInactive: "🏡" },
-  { key: "shops", href: "/search", iconActive: "🛍", iconInactive: "🛒" },
-  { key: "orders", href: "/orders", iconActive: "📦", iconInactive: "📋" },
-  { key: "me", href: "/me", iconActive: "👤", iconInactive: "👥" },
-];
+const ROUTE_ORDER: TabKey[] = ["index", "search", "orders", "me"];
 
-export function TabBar({ active }: Props) {
+export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { t } = useTranslation("common");
+
+  // Filter + order routes from React Navigation state to our 4 known tabs.
+  // Anything else in the (tabs) group gets ignored — keeps the bar stable
+  // if we ever add hidden tab routes (e.g. modal scratch screens).
+  const visibleRoutes = ROUTE_ORDER.filter((key) =>
+    state.routes.some((r) => r.name === key),
+  );
+
   return (
-    <View className="absolute bottom-0 left-0 right-0 flex-row border-t border-border bg-white pb-6 pt-2">
-      {TABS.map((tab) => {
-        const isActive = tab.key === active;
+    <View className="flex-row border-t border-border bg-white pb-6 pt-2">
+      {visibleRoutes.map((key) => {
+        const route = state.routes.find((r) => r.name === key)!;
+        const focused =
+          state.routes[state.index]?.name === key;
+        const meta = TABS[key];
+
         return (
           <Pressable
-            key={tab.key}
+            key={key}
+            accessibilityRole="button"
+            accessibilityState={focused ? { selected: true } : {}}
             onPress={() => {
-              if (isActive) return;
-              router.replace(tab.href as never);
+              const event = navigation.emit({
+                type: "tabPress",
+                target: route.key,
+                canPreventDefault: true,
+              });
+              if (!focused && !event.defaultPrevented) {
+                navigation.navigate(route.name, route.params);
+              }
             }}
             className="flex-1 items-center justify-center py-1.5"
           >
             <Text className="text-[20px]">
-              {isActive ? tab.iconActive : tab.iconInactive}
+              {focused ? meta.iconActive : meta.iconInactive}
             </Text>
             <Text
               className={`mt-0.5 text-[11px] ${
-                isActive ? "font-semibold text-brand-700" : "text-muted"
+                focused ? "font-semibold text-brand-700" : "text-muted"
               }`}
             >
-              {t(`tabs.${tab.key}`)}
+              {t(meta.i18nKey)}
             </Text>
           </Pressable>
         );

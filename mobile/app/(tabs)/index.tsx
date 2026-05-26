@@ -14,7 +14,6 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
-import { TabBar } from "@/components/ui/tab-bar";
 import { VerifiedBadge } from "@/components/trust-badge";
 import { StoriesRail } from "@/components/stories-rail";
 import { DiscoveryRails } from "@/components/discovery-rails";
@@ -228,7 +227,6 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
-      <TabBar active="home" />
     </Screen>
   );
 }

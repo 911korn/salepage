@@ -14,7 +14,6 @@ import { router } from "expo-router";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Screen } from "@/components/ui/screen";
-import { TabBar } from "@/components/ui/tab-bar";
 import { VerifiedBadge, TrustMeter } from "@/components/trust-badge";
 import { DiscoveryRails } from "@/components/discovery-rails";
 import {
@@ -233,8 +232,6 @@ export default function ShopsScreen() {
           />
         )}
       </ScrollView>
-
-      <TabBar active="shops" />
     </Screen>
   );
 }
