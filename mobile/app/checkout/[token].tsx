@@ -12,6 +12,7 @@ import { Image } from "expo-image";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
+import { SuggestedSlip } from "@/components/suggested-slip";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
@@ -156,6 +157,15 @@ export default function CheckoutPayScreen() {
             {t("afterTransfer")}
           </Text>
         </View>
+
+        {/* Auto-suggest the latest photo if the buyer just snapped /
+            received a slip via their bank app in the last 5 minutes —
+            one-tap upload bypasses the gallery picker entirely. */}
+        <SuggestedSlip
+          onUse={(asset) =>
+            verifyMutation.mutate({ kind: "image", ...asset })
+          }
+        />
 
         <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
           <Text className="text-[13px] font-semibold uppercase tracking-wider text-muted">

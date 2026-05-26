@@ -121,6 +121,19 @@ const config: ExpoConfig = {
         photosPermission: "เลือกรูปสลิปจากคลังภาพเพื่อยืนยันการชำระเงิน",
       },
     ],
+    // expo-media-library powers the "use latest photo as slip" auto-
+    // suggestion on the checkout screen — limited Photos access is
+    // enough; we only read the single newest asset.
+    [
+      "expo-media-library",
+      {
+        photosPermission:
+          "ดูรูปล่าสุดในคลังเพื่อแนะนำสลิปอัตโนมัติหลังโอนเงิน",
+        savePhotosPermission:
+          "บันทึก QR ลงในคลังภาพเพื่อใช้ในแอปธนาคาร",
+        isAccessMediaLocationEnabled: false,
+      },
+    ],
     "expo-secure-store",
     "expo-notifications",
     "@sentry/react-native",
