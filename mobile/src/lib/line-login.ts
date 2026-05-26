@@ -82,7 +82,15 @@ export async function loginWithLine(): Promise<LineBridgeResult> {
   if (!startJson.ok) {
     throw new Error(startJson.error.message);
   }
-  const { bridgeId, openUrl } = startJson.data;
+  const { bridgeId } = startJson.data;
+
+  // Build a return URL that picks the right scheme at runtime:
+  //   Expo Go: `exp://192.168.x.x:8081/--/auth/line?ok=1`
+  //   EAS:     `salepage://auth/line?ok=1`
+  // The LIFF page deep-links here after auth so the user lands back
+  // in the SalePage app without manually app-switching.
+  const returnUrl = Linking.createURL("/auth/line?ok=1");
+  const openUrl = `${apiBase}/api/v1/auth/mobile-bridge/line?bridge=${bridgeId}&return=${encodeURIComponent(returnUrl)}`;
 
   let cancelled = false;
   let pollHandle: ReturnType<typeof setTimeout> | null = null;

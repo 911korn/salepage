@@ -31,27 +31,30 @@ export const dynamic = "force-dynamic";
 export default async function LiffLinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ bridge?: string; "liff.state"?: string }>;
+  searchParams: Promise<{
+    bridge?: string;
+    return?: string;
+    "liff.state"?: string;
+  }>;
 }) {
   const sp = await searchParams;
-  // LIFF rewrites the user-facing URL `https://liff.line.me/<id>?bridge=X`
-  // into our endpoint URL with the original query encoded as `?liff.state=
-  // %3Fbridge%3DX`. We try the direct param first (handy for desktop
-  // testing) then fall back to parsing liff.state.
+  // LIFF rewrites the user-facing URL `https://liff.line.me/<id>?bridge=X
+  // &return=Y` into our endpoint URL with the original query encoded as
+  // `?liff.state=%3Fbridge%3DX%26return%3DY`. We try direct params first
+  // (handy for desktop testing) then fall back to parsing liff.state.
   let bridge = sp.bridge ?? null;
-  if (!bridge && sp["liff.state"]) {
+  let returnUrl = sp.return ?? null;
+  if ((!bridge || !returnUrl) && sp["liff.state"]) {
     try {
-      // liff.state is URL-encoded "?bridge=...&..." OR
-      // "/path?bridge=..." — pull the bridge param from either shape
       const decoded = decodeURIComponent(sp["liff.state"]);
-      // Build a base URL just so URLSearchParams parses cleanly
       const q = decoded.includes("?")
         ? decoded.slice(decoded.indexOf("?") + 1)
         : decoded.replace(/^\?/, "");
       const params = new URLSearchParams(q);
-      bridge = params.get("bridge");
+      bridge ??= params.get("bridge");
+      returnUrl ??= params.get("return");
     } catch {
-      bridge = null;
+      /* fall through with whatever we got */
     }
   }
 
@@ -85,7 +88,7 @@ export default async function LiffLinePage({
           id="liff-bootstrap"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
-            __html: bootstrapJs(liffId, bridge),
+            __html: bootstrapJs(liffId, bridge, returnUrl),
           }}
         />
       </body>
@@ -112,7 +115,14 @@ function ErrorBlock({ message }: { message: string }) {
   );
 }
 
-function bootstrapJs(liffId: string, bridge: string): string {
+function bootstrapJs(
+  liffId: string,
+  bridge: string,
+  returnUrl: string | null,
+): string {
+  // Default to the salepage:// scheme so EAS prod builds still get the
+  // auto-return even when the mobile app forgot to pass `return`.
+  const finalReturnUrl = returnUrl ?? "salepage://auth/line?ok=1";
   return `
 (async () => {
   const setMsg = (t) => { const el = document.getElementById('msg'); if (el) el.textContent = t; };
@@ -152,7 +162,7 @@ function bootstrapJs(liffId: string, bridge: string): string {
     // list and they swipe back manually (acceptable for dev).
     setTimeout(() => {
       try {
-        window.location.href = 'salepage://auth/line?ok=1';
+        window.location.href = ${JSON.stringify(finalReturnUrl)};
       } catch (e) { /* ignore */ }
       setTimeout(() => {
         try { window.liff.closeWindow(); } catch (e) { /* ignore */ }

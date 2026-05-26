@@ -43,10 +43,17 @@ export async function GET(request: Request) {
     return errorPage("LIFF not configured on this server.");
   }
 
-  // Forward the bridge id via the LIFF URL's `?bridge=...` query — LIFF
-  // SDK preserves the URL on liff.login() roundtrip via redirectUri.
+  // Forward the bridge id + optional return URL via the LIFF URL query.
+  // The LIFF SDK preserves these on the liff.login() roundtrip via
+  // redirectUri, and our /auth/liff-line page parses them out of
+  // `liff.state` to (a) verify the bridge and (b) deep-link the user
+  // back to the SalePage native app after auth.
   const liffUrl = new URL(`https://liff.line.me/${liffId}`);
   liffUrl.searchParams.set("bridge", row.id);
+  const returnUrl = url.searchParams.get("return");
+  if (returnUrl) {
+    liffUrl.searchParams.set("return", returnUrl);
+  }
 
   return NextResponse.redirect(liffUrl);
 }
