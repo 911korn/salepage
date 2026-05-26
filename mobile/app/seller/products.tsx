@@ -10,6 +10,7 @@ import {
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -26,6 +27,7 @@ import { useSellerMode } from "@/store/seller-mode";
  * the first iteration. We surface a deep link to it from this screen.
  */
 export default function SellerProductsScreen() {
+  const { t } = useTranslation(["seller", "shop"]);
   const slug = useSellerMode((s) => s.activeShopSlug);
 
   const shopQuery = useQuery({
@@ -38,13 +40,13 @@ export default function SellerProductsScreen() {
     return (
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-fg">เลือกร้านที่ /seller ก่อน</Text>
+          <Text className="text-center text-fg">{t("home.pickShopHint")}</Text>
           <Button
             variant="outline"
             className="mt-4"
             onPress={() => router.replace("/seller")}
           >
-            กลับ
+            {t("home.back")}
           </Button>
         </View>
       </Screen>
@@ -68,10 +70,10 @@ export default function SellerProductsScreen() {
         {/* Header + create button */}
         <View className="px-5 pt-6">
           <Text className="text-[20px] font-bold text-fg">
-            สินค้าในร้าน {shopQuery.data?.shop.name ?? ""}
+            {t("products.header", { name: shopQuery.data?.shop.name ?? "" })}
           </Text>
           <Text className="mt-1 text-[12px] text-muted">
-            {products.length} รายการ · ดูเฉพาะที่เปิดขายอยู่
+            {t("products.subtitle", { count: products.length })}
           </Text>
           <View className="mt-3 flex-row gap-2">
             <Pressable
@@ -79,7 +81,7 @@ export default function SellerProductsScreen() {
               className="flex-row items-center gap-2 rounded-full bg-brand-600 px-4 py-2"
             >
               <Text className="text-[12px] font-semibold text-white">
-                + เพิ่มสินค้าในแอป
+                {t("products.addInApp")}
               </Text>
             </Pressable>
             <Pressable
@@ -91,7 +93,7 @@ export default function SellerProductsScreen() {
               className="flex-row items-center gap-2 rounded-full border border-border bg-white px-4 py-2"
             >
               <Text className="text-[12px] font-semibold text-fg">
-                แก้ไขที่เว็บ
+                {t("products.editOnWeb")}
               </Text>
               <Text className="text-[10px] text-muted">↗</Text>
             </Pressable>
@@ -105,9 +107,9 @@ export default function SellerProductsScreen() {
         ) : products.length === 0 ? (
           <View className="mx-5 mt-8 items-center rounded-2xl border border-dashed border-border p-10">
             <Text className="text-[28px]">📦</Text>
-            <Text className="mt-2 text-[13px] text-fg">ยังไม่มีสินค้า</Text>
+            <Text className="mt-2 text-[13px] text-fg">{t("products.empty")}</Text>
             <Text className="mt-1 text-center text-[11px] text-muted">
-              เพิ่มสินค้าที่ Dashboard เว็บ พร้อมอัปโหลดรูป + AI เขียนคำบรรยายอัตโนมัติ
+              {t("products.emptyHint")}
             </Text>
           </View>
         ) : (
@@ -153,8 +155,8 @@ export default function SellerProductsScreen() {
                         }`}
                       >
                         {p.stock === 0
-                          ? "หมด"
-                          : `สต็อก ${p.stock}`}
+                          ? t("shop:outOfStock")
+                          : t("shop:lowStock", { count: p.stock })}
                       </Text>
                     ) : null}
                   </View>
