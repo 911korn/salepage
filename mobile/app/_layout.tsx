@@ -41,6 +41,7 @@ import { saveReferrer } from "@/lib/affiliate";
 import { AppLogo } from "@/components/brand/app-logo";
 import { AnimatedSplash } from "@/components/animated-splash";
 import { BrandBackButton } from "@/components/ui/back-button";
+import { GlobalCartButton } from "@/components/global-cart-button";
 import { View, Text } from "react-native";
 
 /**
@@ -444,9 +445,16 @@ function RootLayout() {
               options={{ headerTitle: brandHeader("groupBuy") }}
             />
           </Stack>
-          {/* Animated brand splash. Rendered AFTER <Stack> so it sits on top
-              via React Native's render-order z-stacking. Unmounts as soon as
-              its fade-out finishes (~1.4s after cold start). */}
+          {/* App-wide floating cart shortcut — sits over every screen at
+              the top-right (911korn 2026-05-27 "ทำให้ตระกร้าสามารถกดดูได้
+              ทุกหน้า · ให้มันอยู่ที่เดิมตรงนั้นไปเลย"). The component
+              hides itself on routes where it would be redundant (cart,
+              checkout, signin, product modal, stories). Mounted AFTER
+              <Stack> so it z-stacks on top. */}
+          <GlobalCartButton />
+          {/* Animated brand splash. Rendered AFTER <GlobalCartButton> so
+              it covers the cart pill during the intro beat. Unmounts as
+              soon as its fade-out finishes (~1.4s after cold start). */}
           {splashAnimating ? (
             <AnimatedSplash onDone={() => setSplashAnimating(false)} />
           ) : null}

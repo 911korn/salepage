@@ -15,6 +15,10 @@ import * as ImagePicker from "expo-image-picker";
 import { SuggestedSlip } from "@/components/suggested-slip";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
+import {
+  CancelConfirmSheet,
+  type CancelReason,
+} from "@/components/cancel-confirm-sheet";
 import { useTranslation } from "react-i18next";
 import { i18n } from "@/lib/i18n";
 import { api, ApiClientError } from "@/lib/api";
@@ -40,6 +44,26 @@ export default function CheckoutPayScreen() {
   const { t } = useTranslation(["checkout", "common"]);
   const { token } = useLocalSearchParams<{ token: string }>();
   const [mode, setMode] = useState<Mode>("qr-display");
+  const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
+
+  const cancelMutation = useMutation({
+    mutationFn: (reason: CancelReason) =>
+      api.orders.cancel(token!, { reason }),
+    onSuccess: () => {
+      setCancelSheetOpen(false);
+      Alert.alert(t("cancelled"), t("cancelledBody"), [
+        {
+          text: t("common:actions.confirm"),
+          onPress: () => router.replace("/"),
+        },
+      ]);
+    },
+    onError: (e) => {
+      const msg =
+        e instanceof ApiClientError ? e.message : t("cancelError");
+      Alert.alert(t("verifyErrorTitle"), msg);
+    },
+  });
 
   const orderQuery = useQuery({
     queryKey: ["order", token],
@@ -204,7 +228,7 @@ export default function CheckoutPayScreen() {
 
         {/* Cancel order — only available while PENDING (no slip submitted yet) */}
         <Pressable
-          onPress={() => confirmCancelOrder(token!, t)}
+          onPress={() => setCancelSheetOpen(true)}
           className="mx-5 mt-6 items-center py-2"
           hitSlop={8}
         >
@@ -213,29 +237,15 @@ export default function CheckoutPayScreen() {
           </Text>
         </Pressable>
       </ScrollView>
+
+      <CancelConfirmSheet
+        visible={cancelSheetOpen}
+        pending={cancelMutation.isPending}
+        onConfirm={(reason) => cancelMutation.mutate(reason)}
+        onDismiss={() => setCancelSheetOpen(false)}
+      />
     </Screen>
   );
-}
-
-function confirmCancelOrder(token: string, t: (key: string) => string) {
-  Alert.alert(t("cancelTitle"), t("cancelBody"), [
-    { text: t("cancelKeep"), style: "cancel" },
-    {
-      text: t("cancelDo"),
-      style: "destructive",
-      onPress: async () => {
-        try {
-          await api.orders.cancel(token);
-          Alert.alert(t("cancelled"), t("cancelledBody"), [
-            { text: t("common:actions.confirm"), onPress: () => router.replace("/") },
-          ]);
-        } catch (e) {
-          const msg = e instanceof ApiClientError ? e.message : t("cancelError");
-          Alert.alert(t("verifyErrorTitle"), msg);
-        }
-      },
-    },
-  ]);
 }
 
 async function pickFromGallery(

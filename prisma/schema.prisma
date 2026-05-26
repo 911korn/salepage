@@ -386,6 +386,19 @@ model Order {
   disputes        Dispute[]
   groupBuyMember  GroupBuyMember?
 
+  // Cancel metadata (V1.6). Stamped when status flips to CANCELLED:
+  //   - cancelledAt: when the cancel happened (drives the 24h restore
+  //     window for buyer-initiated cancels)
+  //   - cancelledBy: who pressed the cancel — buyer, seller, or system
+  //     (cron auto-expire, dispute auto-resolve, group-buy expiry). Only
+  //     BUYER cancels are eligible for restore.
+  //   - cancelReason: freeform/enum-like string captured from the buyer
+  //     in the confirm sheet (e.g. "wrong-address", "changed-mind").
+  //     Seller/system cancels leave this null.
+  cancelledAt   DateTime?
+  cancelledBy   OrderCancelledBy?
+  cancelReason  String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -393,6 +406,12 @@ model Order {
   @@index([shopId, customerLineUserId, createdAt])
   @@index([customerLineUserId, createdAt])
   @@index([createdAt])
+}
+
+enum OrderCancelledBy {
+  BUYER
+  SELLER
+  SYSTEM
 }
 
 enum OrderStatus {

@@ -38,12 +38,17 @@ export async function GET(request: Request) {
   // No push-notify on auto-expiry — at 7 days the buyer has long stopped
   // looking. The checkout screen just calls "ใช้สลิปได้ตามสะดวก" and the
   // order quietly drops out of /me/orders' PENDING tab when this runs.
+  const now = new Date();
   const result = await db.order.updateMany({
     where: {
       status: OrderStatus.PENDING,
       createdAt: { lt: cutoff },
     },
-    data: { status: OrderStatus.CANCELLED },
+    data: {
+      status: OrderStatus.CANCELLED,
+      cancelledAt: now,
+      cancelledBy: "SYSTEM",
+    },
   });
 
   return ok({

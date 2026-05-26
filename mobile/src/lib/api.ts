@@ -265,9 +265,10 @@ export const api = {
      * the wrong shop can drop the order immediately instead of waiting on
      * the 7-day auto-expiry cron.
      */
-    cancel: (token: string) =>
+    cancel: (token: string, opts?: { reason?: string }) =>
       apiFetch<{ status: string }>(`/api/v1/orders/${token}/cancel`, {
         method: "POST",
+        body: opts?.reason ? { reason: opts.reason } : undefined,
         anonymous: true,
       }),
 

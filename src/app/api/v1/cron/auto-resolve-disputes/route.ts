@@ -84,7 +84,12 @@ export async function GET(request: Request) {
         if (d.order.status !== OrderStatus.CANCELLED) {
           await tx.order.update({
             where: { id: d.order.id },
-            data: { status: OrderStatus.CANCELLED },
+            data: {
+              status: OrderStatus.CANCELLED,
+              cancelledAt: new Date(),
+              cancelledBy: "SYSTEM",
+              cancelReason: "dispute-auto-resolved",
+            },
           });
         }
       });

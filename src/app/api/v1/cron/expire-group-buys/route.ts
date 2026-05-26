@@ -100,7 +100,12 @@ export async function GET(request: Request) {
             id: m.orderId,
             status: { notIn: [OrderStatus.CANCELLED, OrderStatus.REFUNDED] },
           },
-          data: { status: OrderStatus.CANCELLED },
+          data: {
+            status: OrderStatus.CANCELLED,
+            cancelledAt: new Date(),
+            cancelledBy: "SYSTEM",
+            cancelReason: "group-buy-expired",
+          },
         });
         if (cancelRes.count === 0) continue;
 

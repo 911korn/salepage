@@ -8,9 +8,29 @@ interface Ctx {
 
 export const runtime = "nodejs";
 
-/** POST /api/v1/orders/:token/cancel — public, token-scoped pending cancel. */
-export async function POST(_request: Request, ctx: Ctx) {
+/**
+ * POST /api/v1/orders/:token/cancel — public, token-scoped pending cancel.
+ *
+ * Body (optional): `{ reason?: string }` — the tag picked by the buyer in
+ * the mobile confirm sheet (e.g. "wrong-address" / "changed-mind"). Stored
+ * for analytics + as context for the future 24h restore feature.
+ * Inlined the body read so empty-body POSTs (the old mobile + web caller
+ * shape) still go through without a 400.
+ */
+export async function POST(request: Request, ctx: Ctx) {
   const { token } = await ctx.params;
+  let reason: string | null = null;
+  try {
+    const raw = (await request.json().catch(() => null)) as
+      | { reason?: unknown }
+      | null;
+    if (raw && typeof raw.reason === "string") {
+      reason = raw.reason.trim().slice(0, 60) || null;
+    }
+  } catch {
+    reason = null;
+  }
+
   const order = await db.order.findUnique({
     where: { publicToken: token },
     include: { shop: { select: { name: true, slug: true } } },
@@ -27,7 +47,12 @@ export async function POST(_request: Request, ctx: Ctx) {
 
   const updated = await db.order.update({
     where: { id: order.id },
-    data: { status: OrderStatus.CANCELLED },
+    data: {
+      status: OrderStatus.CANCELLED,
+      cancelledAt: new Date(),
+      cancelledBy: "BUYER",
+      cancelReason: reason,
+    },
     include: { shop: { select: { name: true, slug: true } } },
   });
 

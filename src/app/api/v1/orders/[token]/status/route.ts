@@ -82,6 +82,13 @@ export async function PATCH(request: Request, ctx: Ctx) {
       );
     }
     data.status = status;
+    // Stamp cancel metadata when the seller transitions to CANCELLED so
+    // /me/orders' restore logic can tell BUYER-cancelled rows apart from
+    // SELLER-rejected rows (only the former are restoreable).
+    if (status === "CANCELLED") {
+      data.cancelledAt = new Date();
+      data.cancelledBy = "SELLER";
+    }
   }
   if (trackingNumber !== undefined) data.trackingNumber = trackingNumber;
   if (notes !== undefined) data.notes = notes;
