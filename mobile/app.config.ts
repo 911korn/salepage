@@ -45,9 +45,12 @@ const config: ExpoConfig = {
     enabled: true,
     checkAutomatically: "ON_LOAD",
     fallbackToCacheTimeout: 0,
-    ...(process.env.EXPO_PUBLIC_UPDATES_URL
-      ? { url: process.env.EXPO_PUBLIC_UPDATES_URL }
-      : {}),
+    // Hard-coded EAS Update URL for project 51fe1f0b-...-a38 (the
+    // salepage-mobile project on the 911korn EAS account). The env-var
+    // override stays for CI/preview channels that want a different URL.
+    url:
+      process.env.EXPO_PUBLIC_UPDATES_URL ??
+      "https://u.expo.dev/51fe1f0b-8b8b-4305-9e97-cd4565948a38",
   },
   ios: {
     supportsTablet: true,
@@ -158,9 +161,13 @@ const config: ExpoConfig = {
     ...(process.env.EXPO_PUBLIC_SENTRY_DSN
       ? { sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN }
       : {}),
-    ...(process.env.EAS_PROJECT_ID
-      ? { eas: { projectId: process.env.EAS_PROJECT_ID } }
-      : {}),
+    // EAS project — created via `eas init` 2026-05-26 on the 911korn
+    // account. Env var override kept for CI flexibility, but the static
+    // default keeps `eas update` working out of the box.
+    eas: {
+      projectId:
+        process.env.EAS_PROJECT_ID ?? "51fe1f0b-8b8b-4305-9e97-cd4565948a38",
+    },
   },
 };
 
