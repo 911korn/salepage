@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft, Bell, MessageCircle, Phone, ShieldCheck, Star } from "lucide-react";
+import { ArrowLeft, Bell, MessageCircle, Phone, ShieldCheck, Star, Store } from "lucide-react";
+import { CartIconLink } from "@/components/buyer/cart-icon-link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -217,6 +218,17 @@ export default async function StorefrontPage({ params }: PageProps) {
           <p className="min-w-0 flex-1 truncate text-center font-mono text-xs text-zinc-500">
             {storefrontLabel(shop.slug)}
           </p>
+          {/* Buyer-flow continuity: cart icon + "all shops" link in the
+              header so a shopper who arrived via a shared link can hop
+              to other shops or check their bag without backing out
+              entirely (911korn 2026-05-27 e2e gap). */}
+          <Link
+            href="/shops"
+            className="hidden shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs text-zinc-600 hover:bg-[color:var(--color-soft)] hover:text-[color:var(--color-fg)] sm:inline-flex"
+          >
+            <Store className="size-3.5" /> ร้านอื่น
+          </Link>
+          <CartIconLink className="shrink-0" />
           <Link
             href={ownerDashboardHref ?? "/signup"}
             className={cn(buttonStyles({

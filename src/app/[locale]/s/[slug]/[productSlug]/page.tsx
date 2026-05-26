@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { CartIconLink } from "@/components/buyer/cart-icon-link";
 import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -117,6 +118,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <p className="min-w-0 flex-1 truncate text-right font-mono text-xs text-zinc-500">
             {storefrontLabel(shopView.slug, product.slug)}
           </p>
+          <CartIconLink className="shrink-0" />
         </div>
       </header>
 
