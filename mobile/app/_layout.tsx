@@ -39,6 +39,7 @@ import { setAuthToken } from "@/lib/auth";
 import { saveReferrer } from "@/lib/affiliate";
 import { AppLogo } from "@/components/brand/app-logo";
 import { AnimatedSplash } from "@/components/animated-splash";
+import { BrandBackButton } from "@/components/ui/back-button";
 import { View, Text } from "react-native";
 
 /**
@@ -219,26 +220,27 @@ function RootLayout() {
               name="signin"
               options={{
                 // Transparent header so the brand-tinted gradient on the
-                // signin screen still bleeds up to the status bar, but
-                // 911korn 2026-05-26 ("เพิ่ม ปุ่ม back ให้หน้านี้ด้วย")
-                // needs a back chevron — empty title, dark tint, no label.
+                // signin screen bleeds up to the status bar, with a soft
+                // brand-styled back pill instead of the default chevron
+                // (911korn 2026-05-26: "ทำดีๆ บอกแล้วอย่าชุ่ย ปุ่ม back
+                // ทำให้สวยๆ").
                 headerTransparent: true,
                 headerTitle: "",
-                headerTintColor: "#0a0a0a",
                 headerBackButtonDisplayMode: "minimal",
+                headerLeft: () => <BrandBackButton tone="dark" />,
               }}
             />
             <Stack.Screen
               name="s/[slug]/index"
               options={{
-                // Brand header with back chevron — 911korn 2026-05-26
-                // "เพิ่มปุ่ม Back หน้านี้ด้วย". The banner sits flush below;
-                // an empty headerTitle keeps the bar minimal so the cover
-                // photo carries the page identity.
+                // Transparent header so the colored cover banner reaches
+                // the status bar. Light-tone BrandBackButton (white
+                // chevron on translucent dark pill) survives any banner
+                // color without looking misplaced.
                 headerTransparent: true,
                 headerTitle: "",
-                headerTintColor: "#ffffff",
                 headerBackButtonDisplayMode: "minimal",
+                headerLeft: () => <BrandBackButton tone="light" />,
               }}
             />
             <Stack.Screen
