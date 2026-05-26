@@ -1,4 +1,3 @@
-import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { getEnv } from "@/lib/env";
 
@@ -137,40 +136,33 @@ export async function loginWithLine(): Promise<LineBridgeResult> {
     void tick();
   });
 
-  // openBrowserAsync (SFSafariViewController on iOS, Chrome Custom Tabs on
-  // Android) ALLOWS deep links to other apps — so when LINE's web page
-  // hits its `line://` Universal Link, iOS hands off to the native LINE
-  // app. openAuthSessionAsync (SFAuthSession) sandboxes the session and
-  // blocks those redirects, which is why the user saw access.line.me's
-  // email/password form instead of LINE app auto-open.
-  const browserPromise = WebBrowser.openBrowserAsync(openUrl, {
-    presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-    dismissButtonStyle: "close",
-  });
+  // 911korn 2026-05-26: SFSafariViewController (WebBrowser.openBrowserAsync)
+  // does NOT auto-trigger Universal Links without an explicit user
+  // gesture — so the liff.line.me redirect just opened access.line.me
+  // inside the sheet and showed the email/password form instead of
+  // launching the LINE app.
+  //
+  // Linking.openURL routes through the system Safari, which DOES respect
+  // Universal Links automatically. iOS sees `https://liff.line.me/<id>`
+  // and hands off to the LINE app immediately.
+  //
+  // Trade-off: the user is now in Safari (or LINE), not inside our
+  // SafariViewController. They have to manually swipe back to SalePage
+  // after LINE finishes. The poll keeps running in the background — by
+  // the time the user returns, the JWT is already persisted.
+  void Linking.openURL(openUrl);
 
-  await Promise.race([pollPromise, browserPromise]);
+  await pollPromise;
 
   if (finalResult) {
     cancelled = true;
     if (pollHandle) clearTimeout(pollHandle);
-    try {
-      WebBrowser.dismissBrowser();
-    } catch {
-      // ignore — no browser open
-    }
     return finalResult;
   }
 
-  // Browser closed — give the poll a couple seconds to catch up
-  await Promise.race([
-    pollPromise,
-    new Promise((r) => setTimeout(r, 2000)),
-  ]);
-
+  // Poll resolved without a token — timeout or hard error
   cancelled = true;
   if (pollHandle) clearTimeout(pollHandle);
-
-  if (finalResult) return finalResult;
   if (finalError) throw finalError;
   throw new LineLoginCancelledError();
 }
