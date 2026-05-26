@@ -260,10 +260,17 @@ export async function POST(request: Request) {
       referrerCode: input.referrerCode?.trim() || null,
       useEscrow: input.useEscrow,
       escrowFeeSatang,
-      customerLineUserId: lineProfile?.sub,
+      // Prefer the lineIdToken claim (real LIFF profile from the buyer's
+      // current LINE session) over the cached session.lineUserId — but fall
+      // back to the latter so signed-in mobile buyers still get tagged even
+      // when the cart doesn't forward a fresh idToken. This dual-source
+      // attribution is what makes /me/orders recover orphaned rows whose
+      // customerEmail somehow ended up null (911korn 2026-05-27 03:00).
+      customerLineUserId: lineProfile?.sub ?? sessionUser?.lineUserId ?? undefined,
       customerLineDisplayName: lineProfile?.name,
       customerLinePictureUrl: lineProfile?.picture,
-      lineLinkedAt: lineProfile ? new Date() : undefined,
+      lineLinkedAt:
+        lineProfile || sessionUser?.lineUserId ? new Date() : undefined,
     },
   });
 

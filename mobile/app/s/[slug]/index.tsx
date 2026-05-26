@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { Image } from "expo-image";
 import { memo, useMemo } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
+import { BrandBackButton } from "@/components/ui/back-button";
 import { VerifiedBadge, TrustMeter, RiskWarning } from "@/components/trust-badge";
 import { ReviewsList } from "@/components/reviews-list";
 import { GroupBuyRail } from "@/components/group-buy-rail";
@@ -18,6 +20,29 @@ import { formatBaht } from "@/lib/format";
 import { shareShop } from "@/lib/share";
 import type { ShopSummary } from "@/types/api";
 
+/**
+ * Floating back button — overlays the top-left of the shop cover so the
+ * banner can bleed all the way to the status bar. Mirrors the product
+ * detail screen's pattern (911korn 2026-05-27 02:58 screenshot flagged
+ * the residual white band from the old `headerTransparent: true` setup).
+ */
+function ShopBackFloatingButton() {
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      pointerEvents="box-none"
+      style={{
+        position: "absolute",
+        top: insets.top + 8,
+        left: 16,
+        zIndex: 10,
+      }}
+    >
+      <BrandBackButton tone="light" />
+    </View>
+  );
+}
+
 export default function ShopScreen() {
   const { t } = useTranslation(["shop", "common"]);
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -30,6 +55,7 @@ export default function ShopScreen() {
   if (isLoading) {
     return (
       <Screen>
+        <ShopBackFloatingButton />
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#e11d48" />
         </View>
@@ -39,6 +65,7 @@ export default function ShopScreen() {
   if (error || !data) {
     return (
       <Screen>
+        <ShopBackFloatingButton />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-fg">
             {t("shopNotFound")} <Text className="font-semibold">{slug}</Text>
@@ -55,6 +82,7 @@ export default function ShopScreen() {
 
   return (
     <Screen scroll>
+      <ShopBackFloatingButton />
       {/* Banner — buyer's first impression. Falls back to a branded
           gradient with soft blobs if the owner hasn't uploaded a cover. */}
       <ShopCover

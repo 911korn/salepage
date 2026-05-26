@@ -393,6 +393,9 @@ export async function POST(request: Request) {
           couponId: p.couponId,
           couponDiscountSatang: p.couponDiscountSatang,
           pointsRedeemed: p.pointsRedeemed,
+          // Stamp LINE userId from either the freshly-verified idToken or
+          // the cached session, so /me/orders' OR-match recovers the row
+          // even if customerEmail attachment fails downstream.
           ...(lineProfile
             ? {
                 customerLineUserId: lineProfile.sub,
@@ -400,7 +403,12 @@ export async function POST(request: Request) {
                 customerLinePictureUrl: lineProfile.picture ?? null,
                 lineLinkedAt: new Date(),
               }
-            : {}),
+            : sessionUser?.lineUserId
+              ? {
+                  customerLineUserId: sessionUser.lineUserId,
+                  lineLinkedAt: new Date(),
+                }
+              : {}),
         },
       }),
     ),

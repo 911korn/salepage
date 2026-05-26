@@ -303,14 +303,15 @@ function RootLayout() {
             <Stack.Screen
               name="s/[slug]/index"
               options={{
-                // Transparent header so the colored cover banner reaches
-                // the status bar. Light-tone BrandBackButton (white
-                // chevron on translucent dark pill) survives any banner
-                // color without looking misplaced.
-                headerTransparent: true,
-                headerTitle: "",
-                headerBackButtonDisplayMode: "minimal",
-                headerLeft: () => <BrandBackButton tone="light" />,
+                // No Stack header — the screen renders its own floating
+                // BrandBackButton over the cover banner via safe-area
+                // insets. `headerTransparent: true` was leaving a header-
+                // sized strip of background above the banner on iOS even
+                // with contentInsetAdjustmentBehavior="never" set on the
+                // ScrollView (911korn 2026-05-27 02:58 screenshot). The
+                // product detail screen uses the same headerShown:false +
+                // floating-button pattern and renders cleanly.
+                headerShown: false,
               }}
             />
             <Stack.Screen
