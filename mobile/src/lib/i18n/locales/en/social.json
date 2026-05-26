@@ -1,0 +1,59 @@
+{
+  "groupBuy": {
+    "tagline": "🧧 GROUP BUY",
+    "joinHeader": "Join the group buy",
+    "qty": "Qty",
+    "nameLabel": "Full name *",
+    "namePlaceholder": "e.g. John Doe",
+    "phoneLabel": "Phone",
+    "phonePlaceholder": "08x-xxx-xxxx",
+    "addressLabel": "Shipping address",
+    "addressPlaceholder": "House no., road, district, province, zip",
+    "tierTable": "Tier pricing",
+    "tierUnit": "≥ {{qty}} units",
+    "progress": "{{current}} / {{target}} units",
+    "maxCap": "Cap {{max}}",
+    "readyToShip": "Ready to ship 🎉",
+    "expired": "Time's up",
+    "filled": "Filled — buy normally from the product page",
+    "closed": "Closed",
+    "nextTierHint": "⬇ Drops to {{price}} once {{qty}} units pool in",
+    "joinBtn": "Join + pay {{amount}}",
+    "viewProduct": "View product",
+    "shareBtn": "📣 Invite friends to help fill",
+    "shareMessage": "🧧 {{title}}\nPooling {{current}}/{{target}} units — {{price}} each",
+    "joinErrTitle": "Something went wrong",
+    "joinErrBody": "Could not join the group buy",
+    "loadErr": "Group Buy not found",
+    "countdownDays": "{{days}}d {{hours}}h left",
+    "countdownHMS": "{{h}}:{{m}}:{{s}} left",
+    "countdownExpired": "Expired"
+  },
+  "stories": {
+    "justNow": "Just now",
+    "minutesShort": "{{count}}m",
+    "hoursShort": "{{count}}h",
+    "error": "Something went wrong",
+    "empty": "No stories right now",
+    "viewProduct": "View product →",
+    "openLink": "Open link ↗",
+    "close": "Close"
+  },
+  "live": {
+    "viewers": "{{count}} watching",
+    "live": "🔴 LIVE",
+    "ended": "Live ended",
+    "scheduled": "Not started",
+    "commentPlaceholder": "Type a comment...",
+    "send": "Send",
+    "pinnedProduct": "Pinned",
+    "buyNow": "Buy now",
+    "comments": "Comments",
+    "noComments": "No comments yet — be the first!"
+  },
+  "category": {
+    "title": "{{name}}",
+    "empty": "No shops in this category yet",
+    "shops": "{{count}} shops"
+  }
+}

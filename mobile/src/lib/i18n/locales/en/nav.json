@@ -1,0 +1,41 @@
+{
+  "stack": {
+    "signin": "Sign in",
+    "cart": "Cart",
+    "checkout": "Checkout",
+    "checkoutMulti": "Checkout",
+    "orderTracking": "Order status",
+    "meNotifications": "Notifications",
+    "meKyc": "Identity (KYC)",
+    "meAddresses": "Address book",
+    "meWallet": "Loyalty wallet",
+    "meEarnings": "Affiliate earnings",
+    "dispute": "Open dispute",
+    "review": "Write a review",
+    "category": "Category",
+    "sellerHome": "Seller mode",
+    "sellerOrders": "Orders",
+    "sellerProducts": "Products",
+    "sellerProductsNew": "Add product",
+    "sellerStories": "Stories",
+    "sellerStoriesNew": "Post story",
+    "sellerLive": "Shop live",
+    "sellerLiveNew": "New live",
+    "sellerChat": "Chat",
+    "sellerGroupBuys": "Group Buy",
+    "sellerGroupBuysNew": "New campaign",
+    "groupBuy": "Group Buy",
+    "shopSettings": "Shop page + cover"
+  },
+  "signin": {
+    "title": "Sign in",
+    "subtitle": "Sign in with LINE to save addresses + see all your orders.",
+    "lineBtn": "Continue with LINE",
+    "emailBtn": "Email (magic link)",
+    "termsAccept": "By signing in you accept the",
+    "terms": "Terms",
+    "and": "and",
+    "privacy": "Privacy Policy",
+    "errorTitle": "Sign in failed"
+  }
+}

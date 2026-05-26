@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, ScrollView, Alert } from "react-nativ
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import { CouponLoyaltyPanel } from "@/components/coupon-loyalty-panel";
 import { getActiveReferrer } from "@/lib/affiliate";
 
 export default function CartScreen() {
+  const { t } = useTranslation(["cart", "common"]);
   const shopList = useCart(selectShopList);
   const shopCount = useCart(selectShopCount);
   const grandTotal = useCart(selectSubtotalSatang);
@@ -170,8 +172,8 @@ export default function CartScreen() {
       const msg =
         err instanceof ApiClientError
           ? err.message
-          : "ไม่สามารถสร้างคำสั่งซื้อ กรุณาลองอีกครั้ง";
-      Alert.alert("เกิดข้อผิดพลาด", msg);
+          : t("createOrderError");
+      Alert.alert(t("errorAlertTitle"), msg);
     },
   });
 
@@ -194,9 +196,9 @@ export default function CartScreen() {
     return (
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-fg">ตะกร้าว่าง</Text>
+          <Text className="text-fg">{t("empty")}</Text>
           <Button className="mt-4" variant="outline" onPress={() => router.back()}>
-            เลือกซื้อสินค้าต่อ
+            {t("continueShopping")}
           </Button>
         </View>
       </Screen>
@@ -210,12 +212,12 @@ export default function CartScreen() {
       <ScrollView contentContainerClassName="pb-32">
         <View className="px-5 pt-4">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-            ตะกร้า
+            {t("title")}
           </Text>
           <Text className="text-[15px] font-semibold text-fg">
             {shopCount === 1
-              ? `ร้าน ${shopList[0]!.shopName}`
-              : `${shopCount} ร้าน · จ่ายแยกตามร้าน`}
+              ? t("shopOnly", { name: shopList[0]!.shopName })
+              : t("shopCount", { count: shopCount })}
           </Text>
         </View>
 
@@ -234,18 +236,18 @@ export default function CartScreen() {
                   {shop.shopName}
                 </Text>
                 <Text className="text-[11px] text-muted">
-                  {shop.items.length} รายการ · {formatBaht(shop.subtotalSatang)}
+                  {t("shop:productCount", { count: shop.items.length })} · {formatBaht(shop.subtotalSatang)}
                 </Text>
               </View>
               <Pressable
                 onPress={() =>
                   Alert.alert(
-                    "ลบร้านนี้ออกจากตะกร้า?",
-                    `สินค้า ${shop.items.length} รายการจะถูกลบ`,
+                    t("removeShopTitle"),
+                    t("removeShopBody", { count: shop.items.length }),
                     [
-                      { text: "ยกเลิก", style: "cancel" },
+                      { text: t("common:actions.cancel"), style: "cancel" },
                       {
-                        text: "ลบร้าน",
+                        text: t("removeShopAction"),
                         style: "destructive",
                         onPress: () => removeShop(shop.shopSlug),
                       },
@@ -254,7 +256,7 @@ export default function CartScreen() {
                 }
                 hitSlop={8}
               >
-                <Text className="text-[12px] text-rose-600">ลบร้าน</Text>
+                <Text className="text-[12px] text-rose-600">{t("removeShop")}</Text>
               </Pressable>
             </View>
             {shop.items.map((it, idx) => (
@@ -321,7 +323,7 @@ export default function CartScreen() {
                 so the shop sees it in the seller dashboard. */}
             <View className="border-t border-border px-4 py-3">
               <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-                หมายเหตุถึงร้าน
+                {t("noteToShop")}
               </Text>
               <TextInput
                 value={shopNotes[shop.shopSlug] ?? ""}
@@ -331,7 +333,7 @@ export default function CartScreen() {
                     [shop.shopSlug]: text,
                   }))
                 }
-                placeholder="เช่น ฝากหน้าร้าน, ไม่บีบขนาด ฯลฯ"
+                placeholder={t("notePlaceholder")}
                 multiline
                 maxLength={500}
                 className="mt-1 rounded-xl border border-border bg-white px-3 py-2 text-[13px] text-fg"
@@ -343,19 +345,19 @@ export default function CartScreen() {
 
         <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
           <Text className="text-[13px] font-semibold uppercase tracking-wider text-muted">
-            ข้อมูลผู้รับ
+            {t("recipient")}
           </Text>
           <FieldInput
-            label="ชื่อ-นามสกุล *"
+            label={t("nameLabel")}
             value={name}
             onChangeText={setName}
-            placeholder="เช่น สมชาย ใจดี"
+            placeholder={t("namePlaceholder")}
           />
           <FieldInput
-            label="เบอร์โทร"
+            label={t("phoneLabel")}
             value={phone}
             onChangeText={setPhone}
-            placeholder="08x-xxx-xxxx"
+            placeholder={t("phonePlaceholder")}
             keyboardType="phone-pad"
           />
           {/* Postcode-driven autocomplete (V0.5 polish). Composes the final
@@ -373,33 +375,32 @@ export default function CartScreen() {
           ))}
           {couponDiscountTotal > 0 ? (
             <Row
-              label="คูปองทั้งหมด"
+              label={t("totalCoupon")}
               value={`-${formatBaht(couponDiscountTotal)}`}
             />
           ) : null}
           {loyaltyDiscountTotal > 0 ? (
             <Row
-              label="แต้มสะสมทั้งหมด"
+              label={t("totalLoyalty")}
               value={`-${formatBaht(loyaltyDiscountTotal)}`}
             />
           ) : null}
           {escrowFeeTotal > 0 ? (
             <Row
-              label="🛡️ Protected Pay fee (1.5%)"
+              label={t("protectedPayFee")}
               value={`+${formatBaht(escrowFeeTotal)}`}
             />
           ) : null}
           <View className="mt-3 border-t border-border pt-3">
             <Row
-              label="ยอดรวม"
+              label={t("totalLabel")}
               value={formatBaht(finalTotal + escrowFeeTotal)}
               bold
             />
           </View>
           {shopCount > 1 ? (
             <Text className="mt-3 text-[11px] leading-relaxed text-muted">
-              ร้านบน SalePage รับเงินตรง จึงต้องโอนแยกร้าน ({shopCount}{" "}
-              QR) — หลังยืนยัน ระบบจะสรุป QR ให้อัตโนมัติ
+              {t("multiShopHint", { count: shopCount })}
             </Text>
           ) : null}
         </View>
@@ -411,7 +412,7 @@ export default function CartScreen() {
           disabled={!canCheckout || createOrders.isPending}
           onPress={() => createOrders.mutate()}
         >
-          ยืนยันคำสั่งซื้อ {formatBaht(finalTotal + escrowFeeTotal)}
+          {t("confirmOrder", { amount: formatBaht(finalTotal + escrowFeeTotal) })}
         </Button>
       </View>
     </Screen>
@@ -431,6 +432,8 @@ function CartLineRow({
   onDecrement: () => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation("common");
+  const remove = t("actions.delete");
   return (
     <View
       className={`flex-row gap-3 p-3 ${showDivider ? "border-t border-border" : ""}`}
@@ -458,7 +461,7 @@ function CartLineRow({
           </Text>
           <QtyButton onPress={onIncrement} label="+" />
           <Pressable onPress={onRemove} className="ml-auto" hitSlop={6}>
-            <Text className="text-[12px] text-rose-600">ลบ</Text>
+            <Text className="text-[12px] text-rose-600">{remove}</Text>
           </Pressable>
         </View>
       </View>
@@ -480,6 +483,7 @@ function ProtectedPayToggle({
   shopSubtotal: number;
   onToggle: (next: boolean) => void;
 }) {
+  const { t } = useTranslation("cart");
   const feeSatang = Math.ceil((shopSubtotal * 150) / 10_000);
   return (
     <Pressable
@@ -499,11 +503,10 @@ function ProtectedPayToggle({
       </View>
       <View className="flex-1">
         <Text className="text-[13px] font-semibold text-fg">
-          🛡️ Protected Pay (+{formatBaht(feeSatang)})
+          {t("protectedPayLabel", { fee: formatBaht(feeSatang) })}
         </Text>
         <Text className="mt-0.5 text-[11px] leading-relaxed text-muted">
-          ระบบกักเงินไว้ — ปล่อยให้ร้านหลังกดยืนยันรับสินค้า หรือ 72 ชม.
-          หลังจัดส่งสำเร็จ
+          {t("protectedPayHint")}
         </Text>
       </View>
     </Pressable>

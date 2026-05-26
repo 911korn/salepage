@@ -62,5 +62,19 @@
     "label": "Language",
     "thai": "Thai",
     "english": "English"
+  },
+  "orderStatus": {
+    "PENDING": "Pending payment",
+    "PAID": "Paid",
+    "SHIPPING": "In transit",
+    "DELIVERED": "Delivered",
+    "CANCELLED": "Cancelled",
+    "REFUNDED": "Refunded"
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
   }
 }

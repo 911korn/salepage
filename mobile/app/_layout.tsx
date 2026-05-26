@@ -9,8 +9,16 @@ initSentry();
 // i18n hydrates the saved language from AsyncStorage on first render —
 // guard the splash hide until it resolves so the very first frame uses
 // the right locale (no TH→EN flash).
-import { initI18n } from "@/lib/i18n";
+import { initI18n, i18n } from "@/lib/i18n";
 const i18nReady = initI18n();
+
+// Tiny helper — Stack.Screen options serialize once on render, so we can't
+// use the `useTranslation` hook there. Read directly off the i18n instance.
+// `i18n.t("nav:stack.foo")` re-renders the navigator only on full screen
+// remount, which is fine — language changes are rare.
+function tnav(key: string): string {
+  return i18n.t(`nav:stack.${key}`) as string;
+}
 
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -151,41 +159,41 @@ function RootLayout() {
                 normally, but tapping between Home / Shops / Orders / Me
                 is instant (Shopee-style) because <Tabs> pre-mounts them. */}
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="signin" options={{ title: "เข้าสู่ระบบ" }} />
+            <Stack.Screen name="signin" options={{ title: tnav("signin") }} />
             <Stack.Screen name="s/[slug]/index" options={{ headerShown: false }} />
             <Stack.Screen
               name="s/[slug]/[productSlug]"
               options={{ headerTransparent: true, title: "" }}
             />
-            <Stack.Screen name="cart" options={{ title: "ตะกร้า" }} />
+            <Stack.Screen name="cart" options={{ title: tnav("cart") }} />
             <Stack.Screen
               name="checkout/[token]"
-              options={{ title: "ชำระเงิน", headerBackVisible: false }}
+              options={{ title: tnav("checkout"), headerBackVisible: false }}
             />
             <Stack.Screen
               name="checkout/multi"
-              options={{ title: "ชำระเงิน", headerBackVisible: false }}
+              options={{ title: tnav("checkoutMulti"), headerBackVisible: false }}
             />
-            <Stack.Screen name="o/[token]" options={{ title: "สถานะคำสั่งซื้อ" }} />
+            <Stack.Screen name="o/[token]" options={{ title: tnav("orderTracking") }} />
             <Stack.Screen
               name="me/notifications"
-              options={{ title: "การแจ้งเตือน" }}
+              options={{ title: tnav("meNotifications") }}
             />
-            <Stack.Screen name="me/kyc" options={{ title: "ยืนยันตัวตน (KYC)" }} />
-            <Stack.Screen name="me/addresses" options={{ title: "สมุดที่อยู่" }} />
-            <Stack.Screen name="me/wallet" options={{ title: "กระเป๋าสะสมแต้ม" }} />
-            <Stack.Screen name="me/earnings" options={{ title: "รายได้แอฟฟิลิเอต" }} />
+            <Stack.Screen name="me/kyc" options={{ title: tnav("meKyc") }} />
+            <Stack.Screen name="me/addresses" options={{ title: tnav("meAddresses") }} />
+            <Stack.Screen name="me/wallet" options={{ title: tnav("meWallet") }} />
+            <Stack.Screen name="me/earnings" options={{ title: tnav("meEarnings") }} />
             <Stack.Screen
               name="o/[token]/dispute"
-              options={{ title: "เปิดข้อพิพาท" }}
+              options={{ title: tnav("dispute") }}
             />
             <Stack.Screen
               name="o/[token]/review"
-              options={{ title: "เขียนรีวิว" }}
+              options={{ title: tnav("review") }}
             />
             <Stack.Screen
               name="c/[slug]"
-              options={{ title: "หมวดหมู่" }}
+              options={{ title: tnav("category") }}
             />
             <Stack.Screen
               name="stories/[slug]"
@@ -195,26 +203,26 @@ function RootLayout() {
                 animation: "fade",
               }}
             />
-            <Stack.Screen name="seller/index" options={{ title: "โหมดผู้ขาย" }} />
-            <Stack.Screen name="seller/orders" options={{ title: "คำสั่งซื้อ" }} />
-            <Stack.Screen name="seller/products" options={{ title: "สินค้า" }} />
+            <Stack.Screen name="seller/index" options={{ title: tnav("sellerHome") }} />
+            <Stack.Screen name="seller/orders" options={{ title: tnav("sellerOrders") }} />
+            <Stack.Screen name="seller/products" options={{ title: tnav("sellerProducts") }} />
             <Stack.Screen
               name="seller/products/new"
-              options={{ title: "เพิ่มสินค้า" }}
+              options={{ title: tnav("sellerProductsNew") }}
             />
             <Stack.Screen
               name="seller/shop-settings"
-              options={{ title: "หน้าร้าน + ปก" }}
+              options={{ title: tnav("shopSettings") }}
             />
-            <Stack.Screen name="seller/stories" options={{ title: "สตอรี่ร้าน" }} />
+            <Stack.Screen name="seller/stories" options={{ title: tnav("sellerStories") }} />
             <Stack.Screen
               name="seller/stories/new"
-              options={{ title: "โพสต์สตอรี่" }}
+              options={{ title: tnav("sellerStoriesNew") }}
             />
-            <Stack.Screen name="seller/live" options={{ title: "ไลฟ์ของร้าน" }} />
+            <Stack.Screen name="seller/live" options={{ title: tnav("sellerLive") }} />
             <Stack.Screen
               name="seller/live/new"
-              options={{ title: "สร้างไลฟ์" }}
+              options={{ title: tnav("sellerLiveNew") }}
             />
             <Stack.Screen
               name="live/[id]"
@@ -224,22 +232,22 @@ function RootLayout() {
                 animation: "fade",
               }}
             />
-            <Stack.Screen name="seller/chat" options={{ title: "แชท" }} />
+            <Stack.Screen name="seller/chat" options={{ title: tnav("sellerChat") }} />
             <Stack.Screen
               name="seller/chat/[id]"
               options={{ title: "" }}
             />
             <Stack.Screen
               name="seller/group-buys"
-              options={{ title: "Group Buy" }}
+              options={{ title: tnav("sellerGroupBuys") }}
             />
             <Stack.Screen
               name="seller/group-buys/new"
-              options={{ title: "สร้างแคมเปญ" }}
+              options={{ title: tnav("sellerGroupBuysNew") }}
             />
             <Stack.Screen
               name="group-buy/[id]"
-              options={{ title: "Group Buy" }}
+              options={{ title: tnav("groupBuy") }}
             />
           </Stack>
         </QueryClientProvider>

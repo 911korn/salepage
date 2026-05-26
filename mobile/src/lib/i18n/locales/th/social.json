@@ -1,0 +1,59 @@
+{
+  "groupBuy": {
+    "tagline": "🧧 GROUP BUY",
+    "joinHeader": "เข้าร่วม Group Buy",
+    "qty": "จำนวน",
+    "nameLabel": "ชื่อ-นามสกุล *",
+    "namePlaceholder": "เช่น สมชาย ใจดี",
+    "phoneLabel": "เบอร์โทร",
+    "phonePlaceholder": "08x-xxx-xxxx",
+    "addressLabel": "ที่อยู่จัดส่ง",
+    "addressPlaceholder": "บ้านเลขที่ ถนน เขต/อำเภอ จังหวัด รหัสไปรษณีย์",
+    "tierTable": "ตารางส่วนลดตามจำนวน",
+    "tierUnit": "≥ {{qty}} ชิ้น",
+    "progress": "{{current}} / {{target}} ชิ้น",
+    "maxCap": "เพดาน {{max}}",
+    "readyToShip": "พร้อมจัดส่ง 🎉",
+    "expired": "หมดเวลาแล้ว",
+    "filled": "เต็มแล้ว — สั่งซื้อปกติได้จากหน้าสินค้า",
+    "closed": "ปิดแล้ว",
+    "nextTierHint": "⬇ ลดเหลือ {{price}} เมื่อรวม {{qty}} ชิ้น",
+    "joinBtn": "เข้าร่วม + จ่ายเงิน {{amount}}",
+    "viewProduct": "ดูสินค้า",
+    "shareBtn": "📣 แชร์ชวนเพื่อนช่วยฟิล",
+    "shareMessage": "🧧 {{title}}\nรวมซื้อ {{current}}/{{target}} ชิ้น — {{price}} เท่านั้น",
+    "joinErrTitle": "เกิดข้อผิดพลาด",
+    "joinErrBody": "เข้าร่วม Group Buy ไม่สำเร็จ",
+    "loadErr": "ไม่พบ Group Buy นี้",
+    "countdownDays": "เหลือ {{days}} วัน {{hours}} ชม.",
+    "countdownHMS": "เหลือ {{h}}:{{m}}:{{s}}",
+    "countdownExpired": "หมดเวลา"
+  },
+  "stories": {
+    "justNow": "เพิ่งโพสต์",
+    "minutesShort": "{{count}} นาที",
+    "hoursShort": "{{count}} ชั่วโมง",
+    "error": "เกิดข้อผิดพลาด",
+    "empty": "ไม่มีสตอรี่ในเวลานี้",
+    "viewProduct": "ดูสินค้า →",
+    "openLink": "เปิดลิงก์ ↗",
+    "close": "ปิด"
+  },
+  "live": {
+    "viewers": "{{count}} คนกำลังดู",
+    "live": "🔴 LIVE",
+    "ended": "ไลฟ์จบแล้ว",
+    "scheduled": "ยังไม่เริ่ม",
+    "commentPlaceholder": "พิมพ์ comment...",
+    "send": "ส่ง",
+    "pinnedProduct": "ปักหมุดอยู่",
+    "buyNow": "ซื้อทันที",
+    "comments": "ความคิดเห็น",
+    "noComments": "ยังไม่มี comment — เริ่มก่อนใคร!"
+  },
+  "category": {
+    "title": "หมวด {{name}}",
+    "empty": "ยังไม่มีร้านในหมวดนี้",
+    "shops": "{{count}} ร้าน"
+  }
+}

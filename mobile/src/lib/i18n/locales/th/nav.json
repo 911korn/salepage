@@ -1,0 +1,41 @@
+{
+  "stack": {
+    "signin": "เข้าสู่ระบบ",
+    "cart": "ตะกร้า",
+    "checkout": "ชำระเงิน",
+    "checkoutMulti": "ชำระเงิน",
+    "orderTracking": "สถานะคำสั่งซื้อ",
+    "meNotifications": "การแจ้งเตือน",
+    "meKyc": "ยืนยันตัวตน (KYC)",
+    "meAddresses": "สมุดที่อยู่",
+    "meWallet": "กระเป๋าสะสมแต้ม",
+    "meEarnings": "รายได้แอฟฟิลิเอต",
+    "dispute": "เปิดข้อพิพาท",
+    "review": "เขียนรีวิว",
+    "category": "หมวดหมู่",
+    "sellerHome": "โหมดผู้ขาย",
+    "sellerOrders": "คำสั่งซื้อ",
+    "sellerProducts": "สินค้า",
+    "sellerProductsNew": "เพิ่มสินค้า",
+    "sellerStories": "สตอรี่ร้าน",
+    "sellerStoriesNew": "โพสต์สตอรี่",
+    "sellerLive": "ไลฟ์ของร้าน",
+    "sellerLiveNew": "สร้างไลฟ์",
+    "sellerChat": "แชท",
+    "sellerGroupBuys": "Group Buy",
+    "sellerGroupBuysNew": "สร้างแคมเปญ",
+    "groupBuy": "Group Buy",
+    "shopSettings": "หน้าร้าน + ปก"
+  },
+  "signin": {
+    "title": "เข้าสู่ระบบ",
+    "subtitle": "เข้าสู่ระบบด้วย LINE เพื่อบันทึกที่อยู่ + ดู order ทุกร้าน",
+    "lineBtn": "ดำเนินการต่อด้วย LINE",
+    "emailBtn": "ใช้อีเมล (magic link)",
+    "termsAccept": "เข้าสู่ระบบแล้วถือว่ายอมรับ",
+    "terms": "เงื่อนไขการใช้งาน",
+    "and": "และ",
+    "privacy": "นโยบายความเป็นส่วนตัว",
+    "errorTitle": "เข้าสู่ระบบไม่สำเร็จ"
+  }
+}

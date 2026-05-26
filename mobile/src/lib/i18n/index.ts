@@ -6,9 +6,25 @@ import * as Localization from "expo-localization";
 import thCommon from "./locales/th/common.json";
 import thHome from "./locales/th/home.json";
 import thMe from "./locales/th/me.json";
+import thCart from "./locales/th/cart.json";
+import thCheckout from "./locales/th/checkout.json";
+import thOrder from "./locales/th/order.json";
+import thShop from "./locales/th/shop.json";
+import thSeller from "./locales/th/seller.json";
+import thSocial from "./locales/th/social.json";
+import thMeSub from "./locales/th/meSub.json";
+import thNav from "./locales/th/nav.json";
 import enCommon from "./locales/en/common.json";
 import enHome from "./locales/en/home.json";
 import enMe from "./locales/en/me.json";
+import enCart from "./locales/en/cart.json";
+import enCheckout from "./locales/en/checkout.json";
+import enOrder from "./locales/en/order.json";
+import enShop from "./locales/en/shop.json";
+import enSeller from "./locales/en/seller.json";
+import enSocial from "./locales/en/social.json";
+import enMeSub from "./locales/en/meSub.json";
+import enNav from "./locales/en/nav.json";
 
 /**
  * i18n foundation for the SalePage mobile app.
@@ -48,7 +64,19 @@ export type AppLang = "th" | "en";
 export const SUPPORTED_LANGS = ["th", "en"] as const;
 export const FALLBACK_LANG: AppLang = "th";
 
-export const NAMESPACES = ["common", "home", "me"] as const;
+export const NAMESPACES = [
+  "common",
+  "home",
+  "me",
+  "cart",
+  "checkout",
+  "order",
+  "shop",
+  "seller",
+  "social",
+  "meSub",
+  "nav",
+] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 
 const STORAGE_KEY = "salepage.lang.v1";
@@ -58,11 +86,27 @@ const resources = {
     common: thCommon,
     home: thHome,
     me: thMe,
+    cart: thCart,
+    checkout: thCheckout,
+    order: thOrder,
+    shop: thShop,
+    seller: thSeller,
+    social: thSocial,
+    meSub: thMeSub,
+    nav: thNav,
   },
   en: {
     common: enCommon,
     home: enHome,
     me: enMe,
+    cart: enCart,
+    checkout: enCheckout,
+    order: enOrder,
+    shop: enShop,
+    seller: enSeller,
+    social: enSocial,
+    meSub: enMeSub,
+    nav: enNav,
   },
 } as const;
 

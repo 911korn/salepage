@@ -14,6 +14,8 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "ex
 import * as ImagePicker from "expo-image-picker";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
+import { i18n } from "@/lib/i18n";
 import { api, ApiClientError } from "@/lib/api";
 import { formatBaht, orderStatusLabel } from "@/lib/format";
 import { compressForSlipUpload } from "@/lib/image-compress";
@@ -34,6 +36,7 @@ type Mode = "qr-display" | "scan-slip" | "shoot-slip";
  *  5. On success → push to /o/[token] for tracking.
  */
 export default function CheckoutPayScreen() {
+  const { t } = useTranslation(["checkout", "common"]);
   const { token } = useLocalSearchParams<{ token: string }>();
   const [mode, setMode] = useState<Mode>("qr-display");
 
@@ -64,20 +67,20 @@ export default function CheckoutPayScreen() {
     },
     onSuccess: (res) => {
       if (res.verified) {
-        Alert.alert("ยืนยันสลิปสำเร็จ", "ระบบได้รับการชำระเงินแล้ว", [
-          { text: "ดูสถานะ", onPress: () => router.replace(`/o/${token}`) },
+        Alert.alert(t("verifySuccessTitle"), t("verifySuccessBody"), [
+          { text: t("verifyShowStatus"), onPress: () => router.replace(`/o/${token}`) },
         ]);
       } else {
         Alert.alert(
-          "ไม่ผ่านการตรวจสอบ",
-          res.errorMessage ?? "กรุณาลองใหม่อีกครั้ง — ตรวจสอบจำนวนเงิน + ผู้รับ",
+          t("verifyFailTitle"),
+          res.errorMessage ?? t("verifyFailBody"),
         );
       }
     },
     onError: (err) => {
       const msg =
-        err instanceof ApiClientError ? err.message : "ตรวจสลิปล้มเหลว";
-      Alert.alert("เกิดข้อผิดพลาด", msg);
+        err instanceof ApiClientError ? err.message : t("verifyErrorBody");
+      Alert.alert(t("verifyErrorTitle"), msg);
     },
   });
 
@@ -99,7 +102,7 @@ export default function CheckoutPayScreen() {
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-fg">{orderStatusLabel(order.status)}</Text>
           <Button className="mt-4" onPress={() => router.replace(`/o/${token}`)}>
-            ดูสถานะ
+            {t("verifyShowStatus")}
           </Button>
         </View>
       </Screen>
@@ -121,20 +124,20 @@ export default function CheckoutPayScreen() {
       <ScrollView contentContainerClassName="pb-24">
         <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-            ยอดที่ต้องชำระ
+            {t("amountDue")}
           </Text>
           <Text className="mt-1 text-[32px] font-bold text-brand-700">
             {formatBaht(order.totalSatang)}
           </Text>
           <Text className="mt-1 text-[12px] text-muted">
-            ร้าน {order.shop.name}
+            {t("shopRef", { name: order.shop.name })}
           </Text>
           <CountdownTimer createdAt={order.createdAt} />
         </View>
 
         <View className="mx-5 mt-4 items-center rounded-3xl border border-border bg-white p-5">
           <Text className="text-[14px] font-semibold text-fg">
-            สแกน QR PromptPay เพื่อชำระ
+            {t("scanPromptPay")}
           </Text>
           <View className="mt-3 size-72 items-center justify-center overflow-hidden rounded-2xl bg-soft">
             {order.qr?.dataUrl ? (
@@ -145,53 +148,52 @@ export default function CheckoutPayScreen() {
               />
             ) : (
               <Text className="px-4 text-center text-[12px] text-muted">
-                ร้านนี้ยังไม่ได้ตั้ง PromptPay {"\n"}ติดต่อร้านโดยตรงเพื่อชำระ
+                {t("noPromptPay")}
               </Text>
             )}
           </View>
           <Text className="mt-3 text-center text-[12px] text-muted">
-            หลังโอนแล้ว ส่งสลิปด้านล่างเพื่อยืนยันอัตโนมัติ
+            {t("afterTransfer")}
           </Text>
         </View>
 
         <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
           <Text className="text-[13px] font-semibold uppercase tracking-wider text-muted">
-            ส่งสลิปยืนยัน
+            {t("uploadSlip")}
           </Text>
           <View className="mt-3 gap-2">
             <Button onPress={() => setMode("scan-slip")}>
-              สแกน QR ของสลิป (เร็วที่สุด)
+              {t("scanSlipQr")}
             </Button>
             <Button
               variant="outline"
               onPress={() => pickFromGallery(verifyMutation.mutate)}
             >
-              เลือกรูปสลิปจากแกลเลอรี
+              {t("pickFromGallery")}
             </Button>
           </View>
           {verifyMutation.isPending ? (
             <View className="mt-4 flex-row items-center gap-2">
               <ActivityIndicator color="#e11d48" />
-              <Text className="text-[13px] text-muted">กำลังตรวจสลิป...</Text>
+              <Text className="text-[13px] text-muted">{t("verifying")}</Text>
             </View>
           ) : null}
         </View>
 
         <View className="mx-5 mt-4 rounded-2xl border border-dashed border-border p-4">
           <Text className="text-[12px] text-muted">
-            ระบบจะตรวจสลิปอัตโนมัติด้วย AI ภายใน 3–5 วินาที
-            หากตรวจไม่ผ่าน ร้านจะรีวิวด้วยตัวเอง
+            {t("aiHint")}
           </Text>
         </View>
 
         {/* Cancel order — only available while PENDING (no slip submitted yet) */}
         <Pressable
-          onPress={() => confirmCancelOrder(token!)}
+          onPress={() => confirmCancelOrder(token!, t)}
           className="mx-5 mt-6 items-center py-2"
           hitSlop={8}
         >
           <Text className="text-[12px] text-rose-600 underline">
-            ยกเลิกคำสั่งซื้อ
+            {t("cancelOrder")}
           </Text>
         </Pressable>
       </ScrollView>
@@ -207,6 +209,7 @@ export default function CheckoutPayScreen() {
  * which materially lifts conversion vs. an open-ended QR.
  */
 function CountdownTimer({ createdAt }: { createdAt: string }) {
+  const { t } = useTranslation("checkout");
   const expiresAt = useMemo(
     () => new Date(createdAt).getTime() + 15 * 60 * 1000,
     [createdAt],
@@ -224,45 +227,39 @@ function CountdownTimer({ createdAt }: { createdAt: string }) {
 
   if (remaining <= 0) {
     return (
-      <Text className="mt-2 text-[12px] text-rose-600">
-        ⏱ หมดเวลาอย่างเป็นทางการ — สร้างคำสั่งไหม่หากยังต้องการจ่าย
-      </Text>
+      <Text className="mt-2 text-[12px] text-rose-600">{t("expired")}</Text>
     );
   }
   const mins = Math.floor(remaining / 60_000);
   const secs = Math.floor((remaining % 60_000) / 1000);
+  const formatted = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   const color = remaining < 60_000 ? "text-rose-600" : "text-amber-700";
   return (
     <Text className={`mt-2 text-[12px] font-semibold ${color}`}>
-      ⏱ จ่ายภายใน {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}{" "}
-      นาที
+      {t("timeLeft", { time: formatted })}
     </Text>
   );
 }
 
-function confirmCancelOrder(token: string) {
-  Alert.alert(
-    "ยกเลิกคำสั่งซื้อ?",
-    "หากยกเลิก คุณจะไม่สามารถส่งสลิปอีกได้",
-    [
-      { text: "ไม่ยก", style: "cancel" },
-      {
-        text: "ยกเลิก",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await api.orders.cancel(token);
-            Alert.alert("ยกเลิกแล้ว", "คำสั่งซื้อถูกยกเลิก", [
-              { text: "ตกลง", onPress: () => router.replace("/") },
-            ]);
-          } catch (e) {
-            const msg = e instanceof ApiClientError ? e.message : "ยกเลิกไม่สำเร็จ";
-            Alert.alert("เกิดข้อผิดพลาด", msg);
-          }
-        },
+function confirmCancelOrder(token: string, t: (key: string) => string) {
+  Alert.alert(t("cancelTitle"), t("cancelBody"), [
+    { text: t("cancelKeep"), style: "cancel" },
+    {
+      text: t("cancelDo"),
+      style: "destructive",
+      onPress: async () => {
+        try {
+          await api.orders.cancel(token);
+          Alert.alert(t("cancelled"), t("cancelledBody"), [
+            { text: t("common:actions.confirm"), onPress: () => router.replace("/") },
+          ]);
+        } catch (e) {
+          const msg = e instanceof ApiClientError ? e.message : t("cancelError");
+          Alert.alert(t("verifyErrorTitle"), msg);
+        }
       },
-    ],
-  );
+    },
+  ]);
 }
 
 async function pickFromGallery(
@@ -276,8 +273,8 @@ async function pickFromGallery(
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) {
     Alert.alert(
-      "ต้องการสิทธิ์เข้าถึงคลังภาพ",
-      "เปิดในการตั้งค่า > SalePage",
+      i18n.t("checkout:galleryPermNeededTitle"),
+      i18n.t("checkout:permSettingsHint"),
     );
     return;
   }
@@ -323,13 +320,15 @@ function SlipQrScanner({
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-[15px] text-fg">
-            ต้องการสิทธิ์ใช้กล้องเพื่อสแกน QR ของสลิป
+            {i18n.t("checkout:scannerCameraNeeded")}
           </Text>
           <Button className="mt-4" onPress={() => void requestPermission()}>
-            อนุญาต
+            {i18n.t("checkout:scannerAllow")}
           </Button>
           <Pressable className="mt-3" onPress={onCancel}>
-            <Text className="text-[13px] text-muted">ย้อนกลับ</Text>
+            <Text className="text-[13px] text-muted">
+              {i18n.t("checkout:scannerBack")}
+            </Text>
           </Pressable>
         </View>
       </Screen>
@@ -351,17 +350,19 @@ function SlipQrScanner({
       <View className="absolute inset-x-0 bottom-10 px-6">
         <View className="rounded-2xl bg-black/70 p-4">
           <Text className="text-center text-[14px] text-white">
-            จัดให้ QR บนสลิปอยู่กลางจอ
+            {i18n.t("checkout:scannerCenter")}
           </Text>
           <Pressable className="mt-3 self-center" onPress={onCancel}>
-            <Text className="text-[13px] text-white/80 underline">ยกเลิก</Text>
+            <Text className="text-[13px] text-white/80 underline">
+              {i18n.t("checkout:scannerCancel")}
+            </Text>
           </Pressable>
         </View>
       </View>
       {loading ? (
         <View className="absolute inset-0 items-center justify-center bg-black/60">
           <ActivityIndicator color="#fff" size="large" />
-          <Text className="mt-3 text-white">กำลังตรวจสลิป...</Text>
+          <Text className="mt-3 text-white">{i18n.t("checkout:verifying")}</Text>
         </View>
       ) : null}
     </View>

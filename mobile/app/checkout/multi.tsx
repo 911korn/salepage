@@ -10,10 +10,11 @@ import {
 import { useLocalSearchParams, router, Link } from "expo-router";
 import { useQueries } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-import { formatBaht } from "@/lib/format";
+import { formatBaht, orderStatusLabel } from "@/lib/format";
 
 /**
  * /checkout/multi?tokens=t1,t2,t3
@@ -27,6 +28,7 @@ import { formatBaht } from "@/lib/format";
  * tracks its own slip state independently.
  */
 export default function CheckoutMultiScreen() {
+  const { t } = useTranslation(["checkout", "common"]);
   const params = useLocalSearchParams<{ tokens?: string }>();
   const tokens = useMemo(() => {
     if (!params.tokens) return [];
@@ -51,9 +53,9 @@ export default function CheckoutMultiScreen() {
     return (
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-fg">ไม่พบรายการชำระเงิน</Text>
+          <Text className="text-fg">{t("multi.notFoundHeadline")}</Text>
           <Button className="mt-4" variant="outline" onPress={() => router.replace("/")}>
-            กลับหน้าแรก
+            {t("multi.goHome")}
           </Button>
         </View>
       </Screen>
@@ -74,13 +76,13 @@ export default function CheckoutMultiScreen() {
       <ScrollView contentContainerClassName="pb-32">
         <View className="px-5 pt-6">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-            จ่ายแยกตามร้าน
+            {t("multi.splitTitle")}
           </Text>
           <Text className="mt-1 text-[20px] font-bold text-fg">
-            {tokens.length} ร้าน · {formatBaht(totalSatang)}
+            {t("multi.splitHeader", { count: tokens.length, total: formatBaht(totalSatang) })}
           </Text>
           <Text className="mt-1 text-[12px] leading-relaxed text-muted">
-            แต่ละร้านจะมี QR PromptPay ของร้านเอง — ระบบส่งเงินตรงเข้าร้านโดยไม่หักค่าธรรมเนียม
+            {t("multi.splitHint")}
           </Text>
         </View>
 
@@ -99,10 +101,10 @@ export default function CheckoutMultiScreen() {
         {allLoaded && settledCount === tokens.length ? (
           <View className="mx-5 mt-4 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
             <Text className="text-[14px] font-semibold text-emerald-800">
-              จ่ายครบทุกร้านแล้ว 🎉
+              {t("multi.allSettledHeadline")}
             </Text>
             <Text className="mt-1 text-[12px] text-emerald-700">
-              ติดตามสถานะการจัดส่งได้ที่ &quot;คำสั่งซื้อของฉัน&quot;
+              {t("multi.allSettledHint")}
             </Text>
           </View>
         ) : null}
@@ -112,27 +114,23 @@ export default function CheckoutMultiScreen() {
       <View className="absolute bottom-0 left-0 right-0 border-t border-border bg-white px-4 py-3 pb-6">
         {allLoaded && settledCount === tokens.length ? (
           <Button onPress={() => router.replace("/orders")}>
-            ดูคำสั่งซื้อทั้งหมด ({tokens.length})
+            {t("multi.viewMyOrders", { count: tokens.length })}
           </Button>
         ) : (
           <Button
             variant="outline"
             onPress={() => {
-              Alert.alert(
-                "ออกจากหน้าชำระเงิน?",
-                "คำสั่งซื้อจะอยู่ในระบบ คุณสามารถกลับมาจ่ายภายหลังผ่าน 'คำสั่งซื้อของฉัน'",
-                [
-                  { text: "ยังไม่ออก", style: "cancel" },
-                  {
-                    text: "ออก",
-                    style: "destructive",
-                    onPress: () => router.replace("/"),
-                  },
-                ],
-              );
+              Alert.alert(t("multi.exitTitle"), t("multi.exitBody"), [
+                { text: t("multi.exitKeep"), style: "cancel" },
+                {
+                  text: t("multi.exitDo"),
+                  style: "destructive",
+                  onPress: () => router.replace("/"),
+                },
+              ]);
             }}
           >
-            จ่ายภายหลัง
+            {t("multi.payLater")}
           </Button>
         )}
       </View>
@@ -150,16 +148,17 @@ function OrderRow({
   query: { data?: Awaited<ReturnType<typeof api.orders.get>>; error?: unknown };
   index: number;
 }) {
+  const { t } = useTranslation(["checkout", "shop"]);
   const order = query.data;
   const error = query.error;
   if (error) {
     return (
       <View className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
         <Text className="text-[13px] font-semibold text-rose-800">
-          ร้านที่ {index + 1} โหลดไม่สำเร็จ
+          {t("multi.shopLoadFail", { index: index + 1 })}
         </Text>
         <Text className="mt-1 text-[12px] text-rose-700" numberOfLines={2}>
-          {error instanceof Error ? error.message : "ไม่ทราบสาเหตุ"}
+          {error instanceof Error ? error.message : t("multi.unknownReason")}
         </Text>
       </View>
     );
@@ -173,7 +172,7 @@ function OrderRow({
   }
 
   const isSettled = order.status !== "PENDING";
-  const statusLabel = STATUS_LABELS[order.status] ?? order.status;
+  const statusLabel = orderStatusLabel(order.status);
   const statusColor = STATUS_COLORS[order.status] ?? "text-muted";
 
   return (
@@ -192,7 +191,7 @@ function OrderRow({
             {order.shop.name}
           </Text>
           <Text className="mt-0.5 text-[12px] text-muted">
-            {order.items.length} รายการ · {formatBaht(order.totalSatang)}
+            {t("shop:productCount", { count: order.items.length })} · {formatBaht(order.totalSatang)}
           </Text>
         </View>
         <Text className={`text-[12px] font-semibold ${statusColor}`}>
@@ -206,17 +205,17 @@ function OrderRow({
             onPress={() => router.push(`/o/${order.publicToken}`)}
             className="flex-row items-center justify-between"
           >
-            <Text className="text-[12px] text-muted">ดูสถานะคำสั่งซื้อนี้</Text>
+            <Text className="text-[12px] text-muted">{t("multi.viewStatus")}</Text>
             <Text className="text-[12px] font-semibold text-brand-700">→</Text>
           </Pressable>
         ) : (
           <Link href={`/checkout/${token}`} asChild>
             <Pressable className="flex-row items-center justify-between">
               <Text className="text-[12px] font-semibold text-fg">
-                สแกน QR และอัปโหลดสลิป
+                {t("multi.scanAndUpload")}
               </Text>
               <Text className="text-[12px] font-semibold text-brand-700">
-                ชำระเงิน →
+                {t("multi.payNow")}
               </Text>
             </Pressable>
           </Link>
@@ -225,15 +224,6 @@ function OrderRow({
     </View>
   );
 }
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "รอชำระ",
-  PAID: "ชำระแล้ว",
-  SHIPPING: "กำลังจัดส่ง",
-  DELIVERED: "ส่งสำเร็จ",
-  CANCELLED: "ยกเลิก",
-  REFUNDED: "คืนเงิน",
-};
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "text-amber-600",
