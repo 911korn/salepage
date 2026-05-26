@@ -78,9 +78,11 @@ export default function MeScreen() {
   return (
     <Screen>
       <ScrollView contentContainerClassName="pb-32">
+        {/* Brand only — the tab bar already names this tab, so showing
+            "Me / ฉัน" here as a heading was redundant (911korn 2026-05-26
+            "เอาคำว่า me ซ้ายบนออก"). */}
         <View className="px-5 pt-10 pb-4">
           <AppLogo size={22} />
-          <Text className="mt-3 text-[24px] font-bold text-fg">{t("me:title")}</Text>
         </View>
 
         {!authed ? (

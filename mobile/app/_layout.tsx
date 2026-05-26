@@ -38,6 +38,7 @@ import { registerPushToken, deepLinkFromNotification } from "@/lib/push";
 import { setAuthToken } from "@/lib/auth";
 import { saveReferrer } from "@/lib/affiliate";
 import { AppLogo } from "@/components/brand/app-logo";
+import { AnimatedSplash } from "@/components/animated-splash";
 import { View, Text } from "react-native";
 
 /**
@@ -83,6 +84,11 @@ const queryClient = new QueryClient({
 
 function RootLayout() {
   const [i18nLoaded, setI18nLoaded] = useState(false);
+  // True until the AnimatedSplash overlay finishes its choreography. While
+  // it's true the overlay sits on top of the Stack; when false the overlay
+  // is unmounted and the user sees the real app. We default to true because
+  // we want the brand beat to run on cold start.
+  const [splashAnimating, setSplashAnimating] = useState(true);
   useEffect(() => {
     void i18nReady.then(() => setI18nLoaded(true));
   }, []);
@@ -95,6 +101,10 @@ function RootLayout() {
     "Kanit-Bold": Kanit_700Bold,
   });
 
+  // Hide the NATIVE splash as soon as fonts are ready — the AnimatedSplash
+  // overlay then takes over the brand beat with its choreography. Keeping
+  // the native splash up too long means iOS double-flashes the static art
+  // before the JS overlay can mount.
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync().catch(() => undefined);
@@ -188,7 +198,15 @@ function RootLayout() {
               // Screens that need a full-bleed UI (tabs, stories, live, the
               // product detail page) override this with `headerShown: false`.
               headerTitleAlign: "center",
-              headerBackTitle: " ",
+              // Hide the iOS back-button label entirely — only the chevron
+              // shows. Without this, pushing from the (tabs) group makes
+              // iOS print "tabs" / "me" / "Home" beside the arrow, which
+              // 911korn 2026-05-26 flagged as cluttered ("เอาคำว่า tab ออก
+              // จากปุ่ม back ทั้งหมด"). "minimal" is the React Navigation 7
+              // canonical way; the deprecated `headerBackTitleVisible: false`
+              // alias is kept for older iOS versions.
+              headerBackButtonDisplayMode: "minimal",
+              headerBackTitle: "",
             }}
           >
             {/* The 4 bottom-tab screens live in `app/(tabs)/` with their
@@ -312,6 +330,12 @@ function RootLayout() {
               options={{ headerTitle: brandHeader("groupBuy") }}
             />
           </Stack>
+          {/* Animated brand splash. Rendered AFTER <Stack> so it sits on top
+              via React Native's render-order z-stacking. Unmounts as soon as
+              its fade-out finishes (~1.4s after cold start). */}
+          {splashAnimating ? (
+            <AnimatedSplash onDone={() => setSplashAnimating(false)} />
+          ) : null}
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
