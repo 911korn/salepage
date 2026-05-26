@@ -3,15 +3,23 @@ import { ok, fail } from "@/lib/api";
 import { auth } from "@/lib/auth";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_TYPES = new Set([
+const MAX_BYTES_IMAGE = 5 * 1024 * 1024; // 5 MB — product / slip / story thumbnails
+const MAX_BYTES_VIDEO = 25 * 1024 * 1024; // 25 MB — ~15s 720p H.264 stories
+const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/jpg",
   "image/png",
   "image/webp",
   "image/avif",
 ]);
+const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/quicktime"]);
+const ALLOWED_TYPES = new Set([...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES]);
+
+function maxBytesFor(type: string): number {
+  return ALLOWED_VIDEO_TYPES.has(type) ? MAX_BYTES_VIDEO : MAX_BYTES_IMAGE;
+}
 
 /**
  * POST /api/v1/upload — auth-required image upload.
@@ -47,8 +55,9 @@ export async function POST(request: Request) {
     if (!ALLOWED_TYPES.has(f.type)) {
       return fail("bad_type", `Unsupported type ${f.type}`, 415);
     }
-    if (f.size > MAX_BYTES) {
-      return fail("too_large", `Max ${MAX_BYTES} bytes`, 413);
+    const cap = maxBytesFor(f.type);
+    if (f.size > cap) {
+      return fail("too_large", `Max ${cap} bytes`, 413);
     }
     file = {
       name: f.name,
@@ -72,8 +81,9 @@ export async function POST(request: Request) {
       return fail("bad_type", `Unsupported type ${json.contentType}`, 415);
     }
     const bytes = Uint8Array.from(Buffer.from(json.dataBase64, "base64"));
-    if (bytes.byteLength > MAX_BYTES) {
-      return fail("too_large", `Max ${MAX_BYTES} bytes`, 413);
+    const cap = maxBytesFor(json.contentType);
+    if (bytes.byteLength > cap) {
+      return fail("too_large", `Max ${cap} bytes`, 413);
     }
     file = { name: json.filename, type: json.contentType, bytes };
   } else {

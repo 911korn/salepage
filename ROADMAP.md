@@ -358,7 +358,7 @@
 - [x] Buyer-side: stories rail on feed top + full-screen viewer (`/stories/[slug]`) with auto-advance, tap-to-skip, progress bars, caption + CTA link
 - [x] Seller-side mobile uploader — `/seller/stories` list + `/seller/stories/new` (image picker, caption, product-link picker)
 - [x] Tap-to-buy linked product — viewer's CTA opens `/s/:slug/:productSlug`
-- [ ] Video story support (mediaKind=VIDEO; viewer currently shows placeholder)
+- [x] Video story support — `expo-video`-backed `<VideoSlide />` in `/stories/[slug]` (auto-plays muted + auto-advances on `playToEnd`), seller picker in `/seller/stories/new` toggles IMAGE/VIDEO (15s cap, MP4/MOV), `/api/v1/upload` accepts `video/mp4` + `video/quicktime` up to 25 MB
 
 #### Group Buy / Pre-order
 - [x] Schema: `GroupBuy` + `GroupBuyMember` + `GroupBuyStatus` enum (ACTIVE/FILLED/EXPIRED/CANCELLED) with tiered `pricePerTier` Json

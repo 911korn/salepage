@@ -1260,7 +1260,12 @@ export const api = {
   upload: {
     fromBase64: (input: {
       filename: string;
-      contentType: "image/jpeg" | "image/png" | "image/webp";
+      contentType:
+        | "image/jpeg"
+        | "image/png"
+        | "image/webp"
+        | "video/mp4"
+        | "video/quicktime";
       dataBase64: string;
     }) =>
       apiFetch<{ url: string; pathname: string; size: number }>(

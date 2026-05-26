@@ -10,6 +10,7 @@ import {
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { VideoView, useVideoPlayer } from "expo-video";
 import { api } from "@/lib/api";
 
 /**
@@ -48,25 +49,31 @@ export default function StoryViewerScreen() {
     setProgress(0);
   }
 
-  // Progress + auto-advance
+  // Shared "go to next slide" — used by the auto-advance timer (images),
+  // VideoSlide's onEnded callback (videos), and the right-tap handler.
+  function advance() {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (index < stories.length - 1) setIndex(index + 1);
+    else router.back();
+  }
+
+  // Image slides: simple wall-clock progress. Video slides skip this loop —
+  // VideoSlide drives its own progress + onEnded.
   useEffect(() => {
-    if (!current) return;
+    if (!current || current.mediaKind !== "IMAGE") return;
     if (intervalRef.current) clearInterval(intervalRef.current);
     const startedAt = Date.now();
     intervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startedAt;
       const pct = Math.min(1, elapsed / SLIDE_DURATION_MS);
       setProgress(pct);
-      if (pct >= 1) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        if (index < stories.length - 1) setIndex(index + 1);
-        else router.back();
-      }
+      if (pct >= 1) advance();
     }, 50);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [current?.id, index, stories.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id, current?.mediaKind, index, stories.length]);
 
   // View bump — fire-and-forget once per slide.
   useEffect(() => {
@@ -113,13 +120,7 @@ export default function StoryViewerScreen() {
           contentFit="contain"
         />
       ) : (
-        // Video support is V2.1 — we render a poster + tap-to-open external.
-        <Pressable
-          onPress={() => Linking.openURL(current.mediaUrl)}
-          className="flex-1 items-center justify-center"
-        >
-          <Text className="text-[14px] text-white">▶ แตะเพื่อดูวิดีโอ</Text>
-        </Pressable>
+        <VideoSlide uri={current.mediaUrl} onEnded={advance} />
       )}
 
       {/* Progress bars (one per slide) */}
@@ -217,4 +218,44 @@ function timeAgo(iso: string): string {
   if (mins < 60) return `${mins} นาที`;
   const hours = Math.floor(mins / 60);
   return `${hours} ชั่วโมง`;
+}
+
+/**
+ * Video story slide. Owns its own VideoPlayer, auto-plays + auto-loops false
+ * so we can fire onEnded once. Muted by default so the story rail doesn't
+ * blast audio in someone's commute; users can tap the player to unmute (a
+ * future polish). expo-video's `useVideoPlayer` cleans up the native player
+ * when this component unmounts.
+ */
+function VideoSlide({
+  uri,
+  onEnded,
+}: {
+  uri: string;
+  onEnded: () => void;
+}) {
+  const player = useVideoPlayer(uri, (p) => {
+    p.muted = true;
+    p.loop = false;
+    p.play();
+  });
+
+  useEffect(() => {
+    const sub = player.addListener("playToEnd", () => {
+      onEnded();
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player]);
+
+  return (
+    <VideoView
+      player={player}
+      style={{ width: "100%", height: "100%" }}
+      contentFit="contain"
+      nativeControls={false}
+      allowsFullscreen={false}
+      allowsPictureInPicture={false}
+    />
+  );
 }

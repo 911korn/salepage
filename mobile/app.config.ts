@@ -98,6 +98,7 @@ const config: ExpoConfig = {
     "expo-secure-store",
     "expo-notifications",
     "@sentry/react-native",
+    "expo-video",
   ],
   experiments: {
     typedRoutes: true,

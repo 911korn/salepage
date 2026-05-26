@@ -22,7 +22,7 @@ import { useSellerMode } from "@/store/seller-mode";
  * /seller/stories/new — owner posts a new 24h story.
  *
  * Flow:
- *   1. Pick image (we cap at IMAGE for V2.0; video lands in V2.1).
+ *   1. Pick image OR video (video capped ~15s, ≤25 MB on server).
  *   2. Optional caption (≤ 280 chars).
  *   3. Optional CTA — choose a product from the shop catalog OR an external URL.
  *   4. Submit → POST `/api/v1/shops/:slug/stories` → bounce back to the list.
@@ -36,6 +36,7 @@ export default function NewStoryScreen() {
 
   const [imageLocalUri, setImageLocalUri] = useState<string | null>(null);
   const [imageRemoteUrl, setImageRemoteUrl] = useState<string | null>(null);
+  const [mediaKind, setMediaKind] = useState<"IMAGE" | "VIDEO">("IMAGE");
   const [caption, setCaption] = useState("");
   const [linkProductSlug, setLinkProductSlug] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -53,10 +54,10 @@ export default function NewStoryScreen() {
 
   const createMutation = useMutation({
     mutationFn: () => {
-      if (!imageRemoteUrl) throw new Error("กรุณาเลือกรูปก่อน");
+      if (!imageRemoteUrl) throw new Error("กรุณาเลือกรูปหรือวิดีโอก่อน");
       return api.stories.create(activeSlug!, {
         mediaUrl: imageRemoteUrl,
-        mediaKind: "IMAGE",
+        mediaKind,
         caption: caption.trim() || undefined,
         linkProductSlug: linkProductSlug ?? undefined,
       });
@@ -80,28 +81,41 @@ export default function NewStoryScreen() {
     },
   });
 
-  async function pickAndUpload() {
+  async function pickAndUpload(kind: "IMAGE" | "VIDEO") {
     if (uploading) return;
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      // Stories are tall — 9:16 — so we let the user crop. Skipping cropping
-      // means stories rendered in `contain` mode get letterboxed, but at
-      // least nothing is lost.
+      mediaTypes:
+        kind === "VIDEO"
+          ? ImagePicker.MediaTypeOptions.Videos
+          : ImagePicker.MediaTypeOptions.Images,
+      // Stories are tall — 9:16 — so we let images crop. Videos can't be
+      // cropped through ImagePicker, but we cap duration at 15s server-side
+      // via the 25 MB Blob limit on /api/v1/upload.
       quality: 0.85,
-      allowsEditing: true,
-      aspect: [9, 16],
+      allowsEditing: kind === "IMAGE",
+      ...(kind === "IMAGE" ? { aspect: [9, 16] as [number, number] } : {}),
+      ...(kind === "VIDEO" ? { videoMaxDuration: 15 } : {}),
     });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
     setImageLocalUri(asset.uri);
+    setMediaKind(kind);
     setUploading(true);
     try {
       const base64 = await FileSystem.readAsStringAsync(asset.uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      const ext = (asset.uri.split(".").pop() ?? "jpg").toLowerCase();
+      const ext = (asset.uri.split(".").pop() ?? (kind === "VIDEO" ? "mp4" : "jpg")).toLowerCase();
       const contentType =
-        ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+        kind === "VIDEO"
+          ? ext === "mov"
+            ? "video/quicktime"
+            : "video/mp4"
+          : ext === "png"
+            ? "image/png"
+            : ext === "webp"
+              ? "image/webp"
+              : "image/jpeg";
       const uploaded = await api.upload.fromBase64({
         filename: `story-${Date.now()}.${ext}`,
         contentType,
@@ -112,6 +126,7 @@ export default function NewStoryScreen() {
       const msg = e instanceof ApiClientError ? e.message : "อัปโหลดล้มเหลว";
       Alert.alert("อัปโหลดล้มเหลว", msg);
       setImageLocalUri(null);
+      setImageRemoteUrl(null);
     } finally {
       setUploading(false);
     }
@@ -143,14 +158,12 @@ export default function NewStoryScreen() {
           </Text>
         </View>
 
-        {/* Image picker */}
+        {/* Image / video picker */}
         <View className="mx-5 mt-4">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-            รูปภาพ (จำเป็น)
+            สื่อ (จำเป็น)
           </Text>
-          <Pressable
-            onPress={pickAndUpload}
-            disabled={uploading}
+          <View
             className="mt-2 aspect-[9/16] w-full items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-border bg-soft"
             style={{ maxHeight: 480 }}
           >
@@ -159,24 +172,51 @@ export default function NewStoryScreen() {
                 <ActivityIndicator color="#e11d48" />
                 <Text className="text-[11px] text-muted">กำลังอัปโหลด...</Text>
               </View>
-            ) : imageLocalUri ? (
+            ) : imageLocalUri && mediaKind === "IMAGE" ? (
               <Image
                 source={{ uri: imageLocalUri }}
                 style={{ width: "100%", height: "100%" }}
                 contentFit="cover"
               />
+            ) : imageLocalUri && mediaKind === "VIDEO" ? (
+              <View className="items-center gap-1">
+                <Text className="text-[40px]">🎬</Text>
+                <Text className="text-[12px] font-semibold text-fg">
+                  วิดีโอพร้อมโพสต์
+                </Text>
+              </View>
             ) : (
               <View className="items-center gap-1">
                 <Text className="text-[40px]">📸</Text>
                 <Text className="text-[12px] font-semibold text-fg">
-                  แตะเพื่อเลือกรูป
+                  เลือกรูปหรือวิดีโอ
                 </Text>
                 <Text className="text-[10px] text-muted">
-                  สัดส่วน 9:16 (แนวตั้ง)
+                  สัดส่วน 9:16 · วิดีโอไม่เกิน 15 วินาที
                 </Text>
               </View>
             )}
-          </Pressable>
+          </View>
+          <View className="mt-3 flex-row gap-2">
+            <Pressable
+              onPress={() => pickAndUpload("IMAGE")}
+              disabled={uploading}
+              className="flex-1 items-center rounded-2xl border border-border bg-white py-2.5"
+            >
+              <Text className="text-[12px] font-semibold text-fg">
+                📷 เลือกรูป
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => pickAndUpload("VIDEO")}
+              disabled={uploading}
+              className="flex-1 items-center rounded-2xl border border-border bg-white py-2.5"
+            >
+              <Text className="text-[12px] font-semibold text-fg">
+                🎬 เลือกวิดีโอ
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Caption */}
