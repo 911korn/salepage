@@ -1,5 +1,5 @@
 import { ok, fail } from "@/lib/api";
-import { auth } from "@/lib/auth";
+import { resolveSession } from "@/lib/api-auth";
 import {
   db,
   ProductBadge,
@@ -39,8 +39,8 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   const { slug } = await context.params;
   const shop = await db.shop.findUnique({

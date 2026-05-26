@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
-import { auth } from "@/lib/auth";
+import { resolveSession } from "@/lib/api-auth";
 import { db, CouponType } from "@/lib/db";
 
 const PostBody = z
@@ -28,11 +28,11 @@ const PostBody = z
   );
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   const { slug } = await context.params;
   const shop = await db.shop.findUnique({
@@ -54,8 +54,8 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   const { slug } = await context.params;
   const shop = await db.shop.findUnique({

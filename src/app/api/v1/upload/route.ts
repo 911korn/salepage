@@ -1,6 +1,6 @@
 import { del, put } from "@vercel/blob";
 import { ok, fail } from "@/lib/api";
-import { auth } from "@/lib/auth";
+import { resolveSession } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -32,8 +32,8 @@ function maxBytesFor(type: string): number {
  * URL hosted on Vercel Blob — paste it into ProductForm.imageUrls.
  */
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     return fail(
@@ -123,8 +123,8 @@ export async function POST(request: Request) {
  * if they know the public Blob URL.
  */
 export async function DELETE(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     return fail(

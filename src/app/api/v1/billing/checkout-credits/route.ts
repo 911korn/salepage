@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
-import { auth } from "@/lib/auth";
+import { resolveSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { getStripe, getSiteUrl, stripeLocale } from "@/lib/stripe";
 import {
@@ -29,10 +29,8 @@ const Body = z.object({
  * Stripe checkout page additionally enforces email match for the customer.
  */
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return fail("unauthorized", "ต้อง sign in ก่อนถึงจะซื้อเครดิตได้", 401);
-  }
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   const parsed = await parseJson(request, Body);
   if (!parsed.ok) return parsed.response;

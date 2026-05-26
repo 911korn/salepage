@@ -1,5 +1,5 @@
 import { fail } from "@/lib/api";
-import { auth } from "@/lib/auth";
+import { resolveSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { rowsToCsv } from "@/lib/csv";
 
@@ -8,11 +8,11 @@ import { rowsToCsv } from "@/lib/csv";
  * product in the shop. Columns match the import schema 1:1.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   const { slug } = await context.params;
   const shop = await db.shop.findUnique({

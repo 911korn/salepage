@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
-import { auth } from "@/lib/auth";
+import { resolveSession } from "@/lib/api-auth";
 import { db, OrderStatus } from "@/lib/db";
 import { sendOrderShipped } from "@/lib/email";
 import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
@@ -43,9 +43,9 @@ const Body = z.object({
   markShipping: z.boolean().optional().default(false),
 });
 
-export async function GET(_request: Request, ctx: Ctx) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+export async function GET(request: Request, ctx: Ctx) {
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
   if (!(await hasProPlan(session.user.id))) {
     return fail(
       "plan_required",
@@ -75,8 +75,8 @@ export async function GET(_request: Request, ctx: Ctx) {
 }
 
 export async function POST(request: Request, ctx: Ctx) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
   if (!(await hasProPlan(session.user.id))) {
     return fail(
       "plan_required",

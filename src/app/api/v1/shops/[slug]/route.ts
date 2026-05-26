@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { auth } from "@/lib/auth";
+import { resolveSession } from "@/lib/api-auth";
 import { db, DisputeStatus, OrderStatus } from "@/lib/db";
 import { hasBusinessPlan } from "@/lib/plan";
 import { getShopBySlug as getDemoShop } from "@/lib/demo-data";
@@ -282,8 +283,12 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+  // 911korn 2026-05-27: seller mode in the mobile app sends JWT in the
+  // Authorization header, not a Next-Auth cookie. The previous `auth()`-
+  // only check returned 401 "Sign in required" to every mobile PATCH.
+  // Use resolveSession which accepts both Bearer + cookie.
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   const { slug } = await context.params;
   const shop = await db.shop.findUnique({

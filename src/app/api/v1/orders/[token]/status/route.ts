@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
-import { auth } from "@/lib/auth";
+import { resolveSession } from "@/lib/api-auth";
 import { db, OrderStatus } from "@/lib/db";
 import { sendOrderShipped } from "@/lib/email";
 import { applyPaidOrderInventory, buildOrderRef } from "@/lib/orders";
@@ -54,8 +54,8 @@ const ALLOWED_NEXT: Record<OrderStatus, OrderStatus[]> = {
 };
 
 export async function PATCH(request: Request, ctx: Ctx) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   const { token } = await ctx.params;
   const order = await db.order.findUnique({

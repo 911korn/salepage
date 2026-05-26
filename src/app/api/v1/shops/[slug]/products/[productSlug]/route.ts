@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
-import { auth } from "@/lib/auth";
+import { resolveSession } from "@/lib/api-auth";
 import { db, ProductBadge, ProductStatus, ProductType } from "@/lib/db";
 import { getProduct as getDemoProduct } from "@/lib/demo-data";
 
@@ -66,8 +66,8 @@ async function ensureOwnership(slug: string, userId: string) {
 }
 
 export async function PATCH(request: Request, context: RouteCtx) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   const { slug, productSlug } = await context.params;
   const own = await ensureOwnership(slug, session.user.id);
@@ -98,9 +98,9 @@ export async function PATCH(request: Request, context: RouteCtx) {
   return ok({ product });
 }
 
-export async function DELETE(_request: Request, context: RouteCtx) {
-  const session = await auth();
-  if (!session?.user?.id) return fail("unauthorized", "Sign in required", 401);
+export async function DELETE(request: Request, context: RouteCtx) {
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   const { slug, productSlug } = await context.params;
   const own = await ensureOwnership(slug, session.user.id);

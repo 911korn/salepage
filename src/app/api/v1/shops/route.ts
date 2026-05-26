@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
-import { auth } from "@/lib/auth";
 import { resolveSession } from "@/lib/api-auth";
 import { db, ShopStatus } from "@/lib/db";
 import { generateSlug } from "@/lib/dashboard";
@@ -59,10 +58,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return fail("unauthorized", "Sign in required", 401);
-  }
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
 
   const parsed = await parseJson(request, Body);
   if (!parsed.ok) return parsed.response;
