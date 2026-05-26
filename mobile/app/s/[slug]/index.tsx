@@ -9,12 +9,15 @@ import { VerifiedBadge, TrustMeter, RiskWarning } from "@/components/trust-badge
 import { ReviewsList } from "@/components/reviews-list";
 import { GroupBuyRail } from "@/components/group-buy-rail";
 import { ShopCover } from "@/components/shop-cover";
+import { useTranslation } from "react-i18next";
+import { i18n } from "@/lib/i18n";
 import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 import { shareShop } from "@/lib/share";
 import { useCart, selectItemCount } from "@/store/cart";
 
 export default function ShopScreen() {
+  const { t } = useTranslation(["shop", "common"]);
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { data, isLoading, error } = useQuery({
     queryKey: ["shop", slug],
@@ -37,10 +40,10 @@ export default function ShopScreen() {
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-fg">
-            ไม่พบร้าน <Text className="font-semibold">{slug}</Text>
+            {t("shopNotFound")} <Text className="font-semibold">{slug}</Text>
           </Text>
           <Button className="mt-4" variant="outline" onPress={() => router.back()}>
-            ย้อนกลับ
+            {t("common:actions.back")}
           </Button>
         </View>
       </Screen>
@@ -93,7 +96,7 @@ export default function ShopScreen() {
           <Pressable
             onPress={() => shareShop(shop.slug, shop.name)}
             className="size-9 items-center justify-center rounded-full border border-border bg-white"
-            accessibilityLabel="แชร์ร้าน"
+            accessibilityLabel={t("share")}
           >
             <Text className="text-[16px]">↑</Text>
           </Pressable>
@@ -112,9 +115,9 @@ export default function ShopScreen() {
         ) : null}
 
         <View className="mt-4 flex-row gap-2">
-          <StatPill label="สินค้า" value={String(products.length)} />
-          <StatPill label="คะแนน" value={shop.rating > 0 ? shop.rating.toFixed(1) : "—"} />
-          <StatPill label="ยอดขาย" value={shop.totalSold > 0 ? `${shop.totalSold}+` : "—"} />
+          <StatPill label={t("statProducts")} value={String(products.length)} />
+          <StatPill label={t("statRating")} value={shop.rating > 0 ? shop.rating.toFixed(1) : "—"} />
+          <StatPill label={t("statSold")} value={shop.totalSold > 0 ? `${shop.totalSold}+` : "—"} />
         </View>
 
         {/* Trust meter — always shown so buyers can compare across shops */}
@@ -125,7 +128,7 @@ export default function ShopScreen() {
         {/* Risk banner for very-new + unverified shops only */}
         {shop.kycStatus !== "VERIFIED" && shop.trustScore < 50 ? (
           <View className="mt-3">
-            <RiskWarning message="ร้านนี้ยังไม่ได้ยืนยันตัวตน (KYC) แนะนำให้สั่งยอดไม่สูง และตรวจสอบผู้ขายก่อนโอนเงิน" />
+            <RiskWarning message={t("riskNotice")} />
           </View>
         ) : null}
 
@@ -133,11 +136,14 @@ export default function ShopScreen() {
         {shop.disputeStats && shop.disputeStats.count > 0 ? (
           <View className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5">
             <Text className="text-[12px] font-semibold text-amber-900">
-              ⚠️ ข้อพิพาทล่าสุด (90 วัน)
+              {t("disputeStatsHeadline")}
             </Text>
             <Text className="mt-0.5 text-[11px] text-amber-800">
-              {shop.disputeStats.count} ออเดอร์จากทั้งหมด {shop.disputeStats.deliveredCount} —{" "}
-              {shop.disputeStats.ratePct}% ของยอดขายถูกร้องเรียน
+              {t("disputeStatsBody", {
+                count: shop.disputeStats.count,
+                delivered: shop.disputeStats.deliveredCount,
+                rate: shop.disputeStats.ratePct,
+              })}
             </Text>
           </View>
         ) : null}
@@ -147,11 +153,10 @@ export default function ShopScreen() {
         {shop.acceptsEscrow ? (
           <View className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
             <Text className="text-[12px] font-semibold text-emerald-900">
-              🛡️ Protected Pay พร้อมใช้
+              {t("protectedPayHeadline")}
             </Text>
             <Text className="mt-0.5 text-[11px] text-emerald-800">
-              เลือก &quot;Protected Pay&quot; ตอน checkout (+1.5%) —
-              เงินถูกกักจนคุณยืนยันได้รับสินค้า
+              {t("protectedPayBody")}
             </Text>
           </View>
         ) : null}
@@ -163,8 +168,8 @@ export default function ShopScreen() {
       {/* Products grid */}
       <View className="mx-5 mt-6">
         <View className="flex-row items-baseline justify-between">
-          <Text className="text-lg font-bold text-fg">สินค้าทั้งหมด</Text>
-          <Text className="text-[12px] text-muted">{products.length} รายการ</Text>
+          <Text className="text-lg font-bold text-fg">{t("products")}</Text>
+          <Text className="text-[12px] text-muted">{t("productCount", { count: products.length })}</Text>
         </View>
         <View className="mt-3 flex-row flex-wrap -mx-1">
           {products.map((p) => (
@@ -173,7 +178,7 @@ export default function ShopScreen() {
           {products.length === 0 ? (
             <View className="m-1 w-full rounded-2xl border border-dashed border-border bg-white p-8">
               <Text className="text-center text-[14px] text-muted">
-                ยังไม่มีสินค้าในร้านนี้
+                {t("noProducts")}
               </Text>
             </View>
           ) : null}
@@ -191,7 +196,9 @@ export default function ShopScreen() {
           onPress={() => router.push("/cart")}
           className="absolute bottom-8 right-5 flex-row items-center gap-2 rounded-full bg-brand-600 px-5 py-3 shadow-lg"
         >
-          <Text className="font-semibold text-white">ตะกร้า ({cartCount})</Text>
+          <Text className="font-semibold text-white">
+            {t("common:tabs.home", { defaultValue: "Cart" })} ({cartCount})
+          </Text>
         </Pressable>
       ) : null}
     </Screen>
@@ -270,7 +277,7 @@ function ProductCard({
             ) : null}
           </View>
           <Text className="mt-1 text-[10px] text-muted">
-            ขายแล้ว {product.sold.toLocaleString()}
+            {i18n.t("shop:soldCount", { count: product.sold.toLocaleString() })}
           </Text>
         </View>
       </Pressable>

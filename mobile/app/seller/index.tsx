@@ -16,6 +16,7 @@ import { VerifiedBadge, TrustMeter } from "@/components/trust-badge";
 import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 import { useSellerMode } from "@/store/seller-mode";
+import { useTranslation } from "react-i18next";
 
 /**
  * /seller — Seller dashboard home.
@@ -28,6 +29,7 @@ import { useSellerMode } from "@/store/seller-mode";
  * the seller from switching tabs to see fresh numbers.
  */
 export default function SellerHomeScreen() {
+  const { t } = useTranslation("seller");
   const activeSlug = useSellerMode((s) => s.activeShopSlug);
   const setActiveShop = useSellerMode((s) => s.setActiveShop);
   const setMode = useSellerMode((s) => s.setMode);
@@ -69,11 +71,10 @@ export default function SellerHomeScreen() {
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-[16px] font-semibold text-fg">
-            ยังไม่มีร้านในบัญชีนี้
+            {t("noShopHeadline")}
           </Text>
           <Text className="mt-2 text-center text-[12px] text-muted">
-            สร้างร้านบนเว็บที่ salepage.in.th/dashboard ก่อน {"\n"}
-            แล้วกลับมา toggle เป็น Seller เพื่อจัดการต่อในแอป
+            {t("noShopBody")}
           </Text>
           <Button
             variant="outline"
@@ -83,7 +84,7 @@ export default function SellerHomeScreen() {
               router.replace("/me");
             }}
           >
-            กลับโหมดผู้ซื้อ
+            {t("backToBuyer")}
           </Button>
         </View>
       </Screen>
@@ -110,10 +111,10 @@ export default function SellerHomeScreen() {
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">
-                โหมดผู้ขาย
+                {t("sellerModeLabel")}
               </Text>
               <Text className="mt-0.5 text-[12px] text-amber-900">
-                จัดการคำสั่งซื้อ + สินค้า
+                {t("sellerModeSub")}
               </Text>
             </View>
             <Pressable
@@ -124,7 +125,7 @@ export default function SellerHomeScreen() {
               className="rounded-full border border-amber-300 bg-white px-3 py-1.5"
             >
               <Text className="text-[11px] font-semibold text-amber-700">
-                ↺ โหมดผู้ซื้อ
+                {t("switchToBuyer")}
               </Text>
             </Pressable>
           </View>
@@ -134,7 +135,7 @@ export default function SellerHomeScreen() {
         {shopsQuery.data.shops.length > 1 ? (
           <View className="mt-4 px-5">
             <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-              เลือกร้าน
+              {t("pickShop")}
             </Text>
             <ScrollView
               horizontal
@@ -219,7 +220,7 @@ export default function SellerHomeScreen() {
           <View className="mx-5 mt-4 gap-2">
             <View className="flex-row gap-2">
               <StatCard
-                label="สลิปรอตรวจ"
+                label={t("home.stats.pending")}
                 value={String(statsQuery.data.pendingOrderCount)}
                 tone={
                   statsQuery.data.pendingOrderCount > 0 ? "urgent" : "default"
@@ -229,7 +230,7 @@ export default function SellerHomeScreen() {
                 }
               />
               <StatCard
-                label="รอจัดส่ง"
+                label={t("home.stats.paid")}
                 value={String(statsQuery.data.paidOrderCount)}
                 tone={
                   statsQuery.data.paidOrderCount > 0 ? "warn" : "default"
@@ -237,7 +238,7 @@ export default function SellerHomeScreen() {
                 onPress={() => router.push(`/seller/orders?status=PAID`)}
               />
               <StatCard
-                label="กำลังส่ง"
+                label={t("home.stats.shipping")}
                 value={String(statsQuery.data.shippingOrderCount)}
                 onPress={() =>
                   router.push(`/seller/orders?status=SHIPPING`)
@@ -246,15 +247,15 @@ export default function SellerHomeScreen() {
             </View>
             <View className="flex-row gap-2">
               <StatCard
-                label="ยอดวันนี้"
+                label={t("home.stats.todaySales")}
                 value={formatBaht(statsQuery.data.todaySalesSatang)}
               />
               <StatCard
-                label="7 วัน"
+                label={t("home.stats.last7d")}
                 value={formatBaht(statsQuery.data.last7dSalesSatang)}
               />
               <StatCard
-                label="30 วัน"
+                label={t("home.stats.last30d")}
                 value={formatBaht(statsQuery.data.last30dSalesSatang)}
               />
             </View>
@@ -268,66 +269,66 @@ export default function SellerHomeScreen() {
         {/* Action grid */}
         <View className="mx-5 mt-6">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-            จัดการ
+            {t("home.manage")}
           </Text>
           <View className="mt-2 gap-2">
             <ActionRow
               icon="📦"
-              title="คำสั่งซื้อ"
-              subtitle="ตรวจสลิป จัดส่ง อัปเดตสถานะ"
+              title={t("home.actions.orders")}
+              subtitle={t("home.actions.ordersSub")}
               onPress={() => router.push("/seller/orders")}
             />
             <ActionRow
               icon="🛍"
-              title="สินค้า"
-              subtitle="เพิ่ม / แก้ไข / สต็อก"
+              title={t("home.actions.products")}
+              subtitle={t("home.actions.productsSub")}
               onPress={() => router.push("/seller/products")}
             />
             <ActionRow
               icon="📸"
-              title="สตอรี่ร้าน"
-              subtitle="โพสต์สั้นๆ 24 ชั่วโมง"
+              title={t("home.actions.stories")}
+              subtitle={t("home.actions.storiesSub")}
               onPress={() => router.push("/seller/stories")}
             />
             <ActionRow
               icon="🔴"
-              title="ไลฟ์ขาย"
-              subtitle="V2 — ไลฟ์ + ปักหมุดสินค้า"
+              title={t("home.actions.live")}
+              subtitle={t("home.actions.liveSub")}
               onPress={() => router.push("/seller/live")}
             />
             <ActionRow
               icon="🧧"
-              title="Group Buy"
-              subtitle="เปิดให้ลูกค้ารวมซื้อราคาถูกลง"
+              title={t("home.actions.groupBuy")}
+              subtitle={t("home.actions.groupBuySub")}
               onPress={() => router.push("/seller/group-buys")}
             />
             <ActionRow
               icon="💬"
-              title="แชท"
+              title={t("home.actions.chat")}
               subtitle={
                 statsQuery.data?.unreadConversationCount
-                  ? `${statsQuery.data.unreadConversationCount} ข้อความใหม่`
-                  : "เฉพาะแพ็คเกจ Business+"
+                  ? t("home.actions.chatUnread", { count: statsQuery.data.unreadConversationCount })
+                  : t("home.actions.chatSubBusinessOnly")
               }
               badge={statsQuery.data?.unreadConversationCount || undefined}
               onPress={() => router.push("/seller/chat")}
             />
             <ActionRow
               icon="🌐"
-              title="เปิดร้าน"
-              subtitle="ดูในมุมมองลูกค้า"
+              title={t("home.actions.openShop")}
+              subtitle={t("home.actions.openShopSub")}
               onPress={() => router.push(`/s/${activeSlug}`)}
             />
             <ActionRow
               icon="🎨"
-              title="หน้าร้าน + ปก"
-              subtitle="แต่งปก โลโก้ สี ให้ดูมืออาชีพ"
+              title={t("home.actions.shopSettings")}
+              subtitle={t("home.actions.shopSettingsSub")}
               onPress={() => router.push("/seller/shop-settings")}
             />
             <ActionRow
               icon="⚙️"
-              title="KYC + บัตรประชาชน"
-              subtitle="ยืนยันตัวตน + รับ badge ✓"
+              title={t("home.actions.kyc")}
+              subtitle={t("home.actions.kycSub")}
               onPress={() => router.push("/me/kyc")}
             />
           </View>

@@ -1,4 +1,11 @@
 {
+  "noShopHeadline": "No shops on this account yet",
+  "noShopBody": "Create a shop on the web first at salepage.in.th/dashboard\nThen come back and toggle into Seller mode to manage it here.",
+  "backToBuyer": "Back to buyer mode",
+  "sellerModeLabel": "Seller mode",
+  "sellerModeSub": "Manage orders + products",
+  "switchToBuyer": "↺ Buyer mode",
+  "pickShop": "Pick a shop",
   "home": {
     "title": "Seller mode",
     "pickShopHint": "Pick a shop on /seller first",

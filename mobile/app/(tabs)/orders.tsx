@@ -1,6 +1,7 @@
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
@@ -9,9 +10,10 @@ import { formatBaht, orderStatusLabel, formatRelativeTime } from "@/lib/format";
 import { useEffect, useState } from "react";
 
 export default function OrdersScreen() {
+  const { t } = useTranslation(["order", "common"]);
   const [authed, setAuthed] = useState<boolean | null>(null);
   useEffect(() => {
-    void getAuthToken().then((t) => setAuthed(Boolean(t)));
+    void getAuthToken().then((tok) => setAuthed(Boolean(tok)));
   }, []);
 
   const ordersQuery = useQuery({
@@ -35,13 +37,13 @@ export default function OrdersScreen() {
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-[18px] font-semibold text-fg">
-            เข้าสู่ระบบเพื่อดูคำสั่งซื้อทุกร้าน
+            {t("list.guestHeadline")}
           </Text>
           <Text className="mt-1 text-center text-[13px] text-muted">
-            หรือใช้รหัสติดตามจากอีเมลของคุณ
+            {t("list.guestSubtitle")}
           </Text>
           <Button className="mt-6" onPress={() => router.push("/signin?redirect=/orders")}>
-            เข้าสู่ระบบ
+            {t("common:auth.signIn")}
           </Button>
         </View>
       </Screen>
@@ -52,10 +54,8 @@ export default function OrdersScreen() {
     <Screen>
       <ScrollView contentContainerClassName="pb-32">
         <View className="px-5 pt-10">
-          <Text className="text-[24px] font-bold text-fg">คำสั่งซื้อ</Text>
-          <Text className="mt-0.5 text-[13px] text-muted">
-            รวมทุกร้านที่ใช้อีเมลเดียวกัน
-          </Text>
+          <Text className="text-[24px] font-bold text-fg">{t("tabTitle")}</Text>
+          <Text className="mt-0.5 text-[13px] text-muted">{t("subtitle")}</Text>
         </View>
 
         {ordersQuery.isLoading ? (
@@ -100,21 +100,23 @@ export default function OrdersScreen() {
 }
 
 function EmptyState() {
+  const { t } = useTranslation("order");
   return (
     <View className="mx-5 mt-6 rounded-3xl border border-dashed border-border bg-white p-8">
       <Text className="text-center text-[15px] font-semibold text-fg">
-        ยังไม่มีคำสั่งซื้อ
+        {t("list.empty")}
       </Text>
       <Text className="mt-1 text-center text-[12px] text-muted">
-        เริ่มเลือกร้านได้ที่หน้า ค้นพบ
+        {t("list.emptyHint")}
       </Text>
     </View>
   );
 }
 
 function ErrorState({ error }: { error: unknown }) {
+  const { t } = useTranslation("order");
   const msg =
-    error instanceof ApiClientError ? error.message : "โหลดคำสั่งซื้อล้มเหลว";
+    error instanceof ApiClientError ? error.message : t("list.loadFailed");
   return (
     <View className="mx-5 mt-6 rounded-3xl border border-rose-200 bg-rose-50 p-6">
       <Text className="text-center text-[14px] text-rose-700">{msg}</Text>

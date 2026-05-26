@@ -23,6 +23,7 @@
     "manualReviewHeadline": "Slip received",
     "manualReviewBody": "This shop has auto-verify off — they'll review your slip manually.",
     "confirmReceived": "✓ Confirm received",
+    "confirmFinalBody": "Funds will be released to the shop permanently — this can't be undone.",
     "confirmReceivedTitle": "Thanks!",
     "confirmReceivedBody": "Funds released to the shop.",
     "confirmFailTitle": "Something went wrong",
@@ -38,7 +39,9 @@
     "escrowReleased": "Funds with shop",
     "escrowHeld": "Funds held by Protected Pay",
     "buyerNotConfirmed": "Tap confirm to release funds to the shop",
-    "openOnLine": "Open status in LINE @salepage"
+    "openOnLine": "Open status in LINE @salepage",
+    "recipient": "Recipient",
+    "refresh": "Refresh status"
   },
   "dispute": {
     "title": "Open a dispute",

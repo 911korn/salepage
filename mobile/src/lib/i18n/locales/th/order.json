@@ -23,6 +23,7 @@
     "manualReviewHeadline": "ระบบรับสลิปแล้ว",
     "manualReviewBody": "ร้านยังไม่ได้เปิดตรวจสลิปอัตโนมัติ ทีมร้านจะตรวจสอบให้",
     "confirmReceived": "✓ ยืนยันได้รับสินค้า",
+    "confirmFinalBody": "ระบบจะปล่อยเงินให้ร้านอย่างถาวร — ไม่สามารถยกเลิกได้หลังจากนี้",
     "confirmReceivedTitle": "ขอบคุณ!",
     "confirmReceivedBody": "เงินถูกปล่อยให้ร้านเรียบร้อยแล้ว",
     "confirmFailTitle": "เกิดข้อผิดพลาด",
@@ -38,7 +39,9 @@
     "escrowReleased": "เงินอยู่กับร้าน",
     "escrowHeld": "เงินถูกกักไว้ Protected Pay",
     "buyerNotConfirmed": "กดยืนยันรับสินค้าเพื่อปล่อยเงินให้ร้าน",
-    "openOnLine": "เปิดสถานะใน LINE @salepage"
+    "openOnLine": "เปิดสถานะใน LINE @salepage",
+    "recipient": "ข้อมูลผู้รับ",
+    "refresh": "รีเฟรชสถานะ"
   },
   "dispute": {
     "title": "เปิดข้อพิพาท",

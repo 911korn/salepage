@@ -1,5 +1,6 @@
 import { View, Text, Linking } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { useLineSignIn } from "@/hooks/use-line-signin";
@@ -12,15 +13,18 @@ import { useLineSignIn } from "@/hooks/use-line-signin";
  * the SalePage JWT in SecureStore. See `useLineSignIn` for orchestration.
  */
 export default function SignIn() {
+  const { t } = useTranslation("nav");
   const { redirect } = useLocalSearchParams<{ redirect?: string }>();
   const { signIn, loading } = useLineSignIn();
 
   return (
     <Screen>
       <View className="flex-1 items-center justify-center px-6">
-        <Text className="text-[28px] font-bold text-fg">เข้าสู่ระบบ</Text>
+        <Text className="text-[28px] font-bold text-fg">
+          {t("signin.title")}
+        </Text>
         <Text className="mt-2 text-center text-[14px] text-muted">
-          เข้าสู่ระบบด้วย LINE เพื่อบันทึกที่อยู่ + ดู order ทุกร้าน
+          {t("signin.subtitle")}
         </Text>
 
         <View className="mt-8 w-full gap-2">
@@ -28,7 +32,7 @@ export default function SignIn() {
             loading={loading}
             onPress={() => signIn({ redirectAfter: redirect })}
           >
-            ดำเนินการต่อด้วย LINE
+            {t("signin.lineBtn")}
           </Button>
           <Button
             variant="outline"
@@ -40,24 +44,24 @@ export default function SignIn() {
               Linking.openURL("https://salepage.in.th/signin?via=email");
             }}
           >
-            ใช้อีเมล (magic link)
+            {t("signin.emailBtn")}
           </Button>
         </View>
 
         <Text className="mt-6 text-center text-[11px] text-muted">
-          เข้าสู่ระบบแล้วถือว่ายอมรับ{" "}
+          {t("signin.termsAccept")}{" "}
           <Text
             className="text-brand-700 underline"
             onPress={() => Linking.openURL("https://salepage.in.th/terms")}
           >
-            เงื่อนไขการใช้งาน
+            {t("signin.terms")}
           </Text>{" "}
-          และ{" "}
+          {t("signin.and")}{" "}
           <Text
             className="text-brand-700 underline"
             onPress={() => Linking.openURL("https://salepage.in.th/privacy")}
           >
-            นโยบายความเป็นส่วนตัว
+            {t("signin.privacy")}
           </Text>
         </Text>
       </View>

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
@@ -17,6 +18,7 @@ import type { OrderStatus } from "@/types/api";
 const STATUS_FLOW: OrderStatus[] = ["PENDING", "PAID", "SHIPPING", "DELIVERED"];
 
 export default function TrackingScreen() {
+  const { t } = useTranslation(["order", "common"]);
   const { token } = useLocalSearchParams<{ token: string }>();
   const queryClient = useQueryClient();
   const { data, isLoading, refetch, isRefetching } = useQuery({
@@ -37,16 +39,16 @@ export default function TrackingScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["order", token] });
       Alert.alert(
-        "ขอบคุณ!",
-        "เงินถูกปล่อยให้ร้านเรียบร้อยแล้ว",
+        t("tracking.confirmReceivedTitle"),
+        t("tracking.confirmReceivedBody"),
       );
     },
     onError: (err) => {
       const msg =
         err instanceof ApiClientError
           ? err.message
-          : "ยืนยันไม่สำเร็จ ลองใหม่";
-      Alert.alert("เกิดข้อผิดพลาด", msg);
+          : t("tracking.confirmFailBody");
+      Alert.alert(t("tracking.confirmFailTitle"), msg);
     },
   });
 
@@ -66,14 +68,14 @@ export default function TrackingScreen() {
     <Screen scroll>
       <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
         <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-          คำสั่งซื้อ
+          {t("tracking.orderCode")}
         </Text>
         <Text className="font-mono text-[13px] text-fg">{data.publicToken}</Text>
         <Text className="mt-3 text-[24px] font-bold text-brand-700">
           {orderStatusLabel(data.status)}
         </Text>
         <Text className="mt-1 text-[12px] text-muted">
-          สั่งซื้อเมื่อ {formatRelativeTime(data.createdAt)}
+          {t("tracking.createdAt", { when: formatRelativeTime(data.createdAt) })}
         </Text>
       </View>
 
@@ -94,7 +96,7 @@ export default function TrackingScreen() {
       {data.trackingNumber ? (
         <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-            เลขพัสดุ
+            {t("tracking.trackingNumber")}
           </Text>
           <Text className="mt-1 font-mono text-[15px] text-fg">
             {data.trackingNumber}
@@ -111,7 +113,7 @@ export default function TrackingScreen() {
               )
             }
           >
-            ติดตามที่ไปรษณีย์ไทย
+            {t("tracking.openTrackingLink")}
           </Button>
         </View>
       ) : null}
@@ -119,7 +121,7 @@ export default function TrackingScreen() {
       {/* Items */}
       <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
         <Text className="text-[13px] font-semibold uppercase tracking-wider text-muted">
-          รายการสินค้า
+          {t("tracking.items")}
         </Text>
         {data.items.map((it) => (
           <View
@@ -139,14 +141,14 @@ export default function TrackingScreen() {
         ))}
         <View className="mt-4 border-t border-border pt-3">
           <View className="flex-row justify-between">
-            <Text className="text-[13px] text-muted">ยอดสินค้า</Text>
+            <Text className="text-[13px] text-muted">{t("tracking.subtotal")}</Text>
             <Text className="text-[13px] text-fg">
               {formatBaht(data.subtotalSatang)}
             </Text>
           </View>
           {data.shippingSatang > 0 ? (
             <View className="mt-1 flex-row justify-between">
-              <Text className="text-[13px] text-muted">ค่าส่ง</Text>
+              <Text className="text-[13px] text-muted">{t("tracking.shipping")}</Text>
               <Text className="text-[13px] text-fg">
                 {formatBaht(data.shippingSatang)}
               </Text>
@@ -163,7 +165,7 @@ export default function TrackingScreen() {
             </View>
           ) : null}
           <View className="mt-2 flex-row justify-between">
-            <Text className="text-[15px] font-semibold text-fg">ยอดรวม</Text>
+            <Text className="text-[15px] font-semibold text-fg">{t("tracking.total")}</Text>
             <Text className="text-[15px] font-bold text-brand-700">
               {formatBaht(data.totalSatang)}
             </Text>
@@ -181,12 +183,12 @@ export default function TrackingScreen() {
           orderStatus={data.status as OrderStatus}
           onConfirm={() => {
             Alert.alert(
-              "ยืนยันได้รับสินค้า?",
-              "ระบบจะปล่อยเงินให้ร้านอย่างถาวร — ไม่สามารถยกเลิกได้หลังจากนี้",
+              t("tracking.confirmReceived"),
+              t("tracking.confirmFinalBody"),
               [
-                { text: "ยกเลิก", style: "cancel" },
+                { text: t("common:actions.cancel"), style: "cancel" },
                 {
-                  text: "ยืนยันรับสินค้า",
+                  text: t("tracking.confirmReceived"),
                   style: "destructive",
                   onPress: () => confirmReceived.mutate(),
                 },
@@ -200,7 +202,7 @@ export default function TrackingScreen() {
       {/* Customer info */}
       <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
         <Text className="text-[13px] font-semibold uppercase tracking-wider text-muted">
-          ข้อมูลผู้รับ
+          {t("cart:recipient", { defaultValue: t("tracking.recipient") })}
         </Text>
         <Text className="mt-2 text-[14px] text-fg">{data.customerName}</Text>
         {data.customerPhone ? (
@@ -217,14 +219,14 @@ export default function TrackingScreen() {
           loading={isRefetching}
           onPress={() => void refetch()}
         >
-          รีเฟรชสถานะ
+          {t("tracking.refresh")}
         </Button>
         {data.status === "PENDING" ? (
           <Button
             className="mt-2"
             onPress={() => router.push(`/checkout/${data.publicToken}`)}
           >
-            ส่งสลิปอีกครั้ง
+            {t("tracking.shareSlip")}
           </Button>
         ) : null}
 
@@ -243,7 +245,7 @@ export default function TrackingScreen() {
               })
             }
           >
-            เขียนรีวิว
+            {t("tracking.review")}
           </Button>
         ) : null}
 
@@ -258,7 +260,7 @@ export default function TrackingScreen() {
               })
             }
           >
-            เปิดข้อพิพาท
+            {t("tracking.openDispute")}
           </Button>
         ) : null}
       </View>

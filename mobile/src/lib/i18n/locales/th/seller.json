@@ -1,4 +1,11 @@
 {
+  "noShopHeadline": "ยังไม่มีร้านในบัญชีนี้",
+  "noShopBody": "สร้างร้านบนเว็บที่ salepage.in.th/dashboard ก่อน\nแล้วกลับมา toggle เป็น Seller เพื่อจัดการต่อในแอป",
+  "backToBuyer": "กลับโหมดผู้ซื้อ",
+  "sellerModeLabel": "โหมดผู้ขาย",
+  "sellerModeSub": "จัดการคำสั่งซื้อ + สินค้า",
+  "switchToBuyer": "↺ โหมดผู้ซื้อ",
+  "pickShop": "เลือกร้าน",
   "home": {
     "title": "โหมดผู้ขาย",
     "pickShopHint": "เลือกร้านที่ /seller ก่อน",
