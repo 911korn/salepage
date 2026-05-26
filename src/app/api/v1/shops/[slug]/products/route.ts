@@ -83,6 +83,13 @@ const Body = z.object({
   imageUrls: z.array(z.string().url()).max(10).optional(),
   badge: z.enum(["HOT", "NEW", "SALE"]).optional().nullable(),
   type: z.enum(["PHYSICAL", "DIGITAL"]).default("PHYSICAL"),
+  /// Optional per-product category override (one of the 10 platform
+  /// category keys: fashion / food / tech / beauty / health / furniture
+  /// / pets / books / sport / other). Falls back to shop.category on
+  /// listing surfaces when omitted.
+  category: z.string().min(1).max(40).optional().nullable(),
+  /// V2.1 condition flag. PRE_OWNED renders a "มือสอง" badge on cards.
+  condition: z.enum(["NEW", "PRE_OWNED"]).optional(),
   stock: z.number().int().nonnegative().max(99999).optional(),
 });
 
@@ -141,6 +148,8 @@ export async function POST(
       imageUrls: input.imageUrls ?? [],
       badge: input.badge ? (input.badge as ProductBadge) : null,
       type: input.type as ProductType,
+      category: input.category?.trim() || null,
+      ...(input.condition ? { condition: input.condition } : {}),
       stock: input.stock ?? null,
       status: ProductStatus.ACTIVE,
     },

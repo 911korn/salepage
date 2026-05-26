@@ -1,4 +1,11 @@
-import { db, ShopStatus, ProductStatus, KycStatus, type Prisma } from "@/lib/db";
+import {
+  db,
+  ShopStatus,
+  ProductStatus,
+  KycStatus,
+  ProductCondition,
+  type Prisma,
+} from "@/lib/db";
 
 /**
  * Shared product-feed core. Used by BOTH `/api/v1/products-feed` (mobile)
@@ -22,6 +29,8 @@ interface ProductsFeedQuery {
   sort?: FeedSort;
   verified?: boolean;
   pageSize?: number;
+  /** Restrict to PRE_OWNED (มือสอง) listings only. */
+  condition?: ProductCondition;
 }
 
 export interface FeedProductRow {
@@ -41,6 +50,9 @@ export interface FeedProductRow {
   imageUrl: string | null;
   badge: string | null;
   sold: number;
+  category: string | null;
+  /** "NEW" | "PRE_OWNED". UI surfaces a "มือสอง" badge for PRE_OWNED. */
+  condition: ProductCondition;
 }
 
 export interface ProductsFeedResult {
@@ -57,9 +69,21 @@ export async function getProductsFeed(
   const shopFilter: Prisma.ShopWhereInput = {
     status: ShopStatus.ACTIVE,
     suspended: false,
-    ...(q.category ? { category: q.category } : {}),
     ...(q.verified ? { kycStatus: KycStatus.VERIFIED } : {}),
   };
+
+  // Category filter is on the PRODUCT itself when set, with a fallback
+  // to the shop's category for legacy rows whose products didn't carry
+  // their own category. (Most products before V2.1 will have null
+  // product.category.)
+  const categoryFilter: Prisma.ProductWhereInput | undefined = q.category
+    ? {
+        OR: [
+          { category: q.category },
+          { AND: [{ category: null }, { shop: { category: q.category } }] },
+        ],
+      }
+    : undefined;
 
   const orderBy: Prisma.ProductOrderByWithRelationInput[] =
     sort === "sold"
@@ -75,7 +99,12 @@ export async function getProductsFeed(
               [{ sold: "desc" }, { createdAt: "desc" }];
 
   const products = await db.product.findMany({
-    where: { status: ProductStatus.ACTIVE, shop: shopFilter },
+    where: {
+      status: ProductStatus.ACTIVE,
+      shop: shopFilter,
+      ...(categoryFilter ?? {}),
+      ...(q.condition ? { condition: q.condition } : {}),
+    },
     orderBy,
     take: pageSize + 1,
     ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
@@ -88,6 +117,8 @@ export async function getProductsFeed(
       imageUrls: true,
       badge: true,
       sold: true,
+      category: true,
+      condition: true,
       shop: {
         select: {
           slug: true,
@@ -98,6 +129,7 @@ export async function getProductsFeed(
           kycStatus: true,
           trustScore: true,
           rating: true,
+          category: true,
         },
       },
     },
@@ -123,6 +155,10 @@ export async function getProductsFeed(
       imageUrl: p.imageUrls[0] ?? null,
       badge: p.badge,
       sold: p.sold,
+      // Falls back to the shop-level category so legacy products still
+      // surface a category pill on the marketplace cards.
+      category: p.category ?? p.shop.category ?? null,
+      condition: p.condition,
     })),
     nextCursor: hasMore ? slice[slice.length - 1]!.id : null,
   };

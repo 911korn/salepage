@@ -275,6 +275,14 @@ model Product {
   imageUrls String[]      @default([])
   badge     ProductBadge?
   type      ProductType   @default(PHYSICAL)
+  // Optional per-product category override. Falls back to `shop.category`
+  // on listing surfaces. Allows a single shop to span multiple categories
+  // (e.g. a general store selling "food" + "beauty") without forcing the
+  // owner to spin up a second shop.
+  category  String?
+  // V2.1 condition flag — NEW vs PRE_OWNED. PRE_OWNED renders a prominent
+  // "มือสอง" badge on cards and the product detail page.
+  condition ProductCondition @default(NEW)
   stock     Int?
   sold      Int           @default(0)
   status    ProductStatus @default(ACTIVE)
@@ -302,6 +310,18 @@ enum ProductBadge {
 enum ProductType {
   PHYSICAL
   DIGITAL
+}
+
+/**
+ * Product condition. V2.1 — added "PRE_OWNED" so sellers can list
+ * second-hand items and we surface a distinct badge on the buyer-side
+ * (911korn 2026-05-27: "tag สินค้ามือสอง อันนี้น่าจะมีประโยชน์มาก ทำให้
+ * แอพดูมีจุดเด่นขึ้นมาเลย"). NEW is the default; existing rows backfill
+ * via the migration default.
+ */
+enum ProductCondition {
+  NEW
+  PRE_OWNED
 }
 
 enum ProductStatus {

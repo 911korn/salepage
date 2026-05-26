@@ -1236,6 +1236,8 @@ export const api = {
         imageUrls?: string[];
         badge?: "HOT" | "NEW" | "SALE" | null;
         type?: "PHYSICAL" | "DIGITAL";
+        category?: string | null;
+        condition?: "NEW" | "PRE_OWNED";
         stock?: number;
       },
     ) =>
@@ -1266,6 +1268,8 @@ export const api = {
         imageUrls?: string[];
         badge?: "HOT" | "NEW" | "SALE" | null;
         type?: "PHYSICAL" | "DIGITAL";
+        category?: string | null;
+        condition?: "NEW" | "PRE_OWNED";
         stock?: number | null;
         status?: "ACTIVE" | "HIDDEN" | "SOLD_OUT";
       },

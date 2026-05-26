@@ -124,6 +124,8 @@ export async function GET(
           imageUrls: true,
           badge: true,
           type: true,
+          category: true,
+          condition: true,
           stock: true,
           sold: true,
           status: true,

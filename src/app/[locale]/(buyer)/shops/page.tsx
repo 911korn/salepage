@@ -53,6 +53,8 @@ interface PageProps {
     sort?: string;
     category?: string;
     verified?: string;
+    /** `pre_owned` to show only second-hand listings. */
+    condition?: string;
   }>;
 }
 
@@ -63,15 +65,20 @@ export default async function ShopsListPage({ params, searchParams }: PageProps)
   const tCats = await getTranslations("categories");
 
   const sort = (SORT_TABS.find((t) => t.key === sp.sort)?.key ?? "relevance") as FeedSort;
-  const category = sp.category && CATEGORY_KEYS.includes(sp.category as CategoryKey)
-    ? (tCats(sp.category as CategoryKey) as string)
+  // Category filter — `getProductsFeed` matches Product.category strings
+  // (the platform 10-key set). Mobile stores the same key strings (not
+  // the localized label), so we pass the raw key through.
+  const categoryKey = sp.category && CATEGORY_KEYS.includes(sp.category as CategoryKey)
+    ? (sp.category as CategoryKey)
     : undefined;
   const verified = sp.verified === "true";
+  const preOwnedOnly = sp.condition === "pre_owned";
 
   const { products } = await getProductsFeed({
     sort,
-    category,
+    category: categoryKey,
     verified,
+    condition: preOwnedOnly ? "PRE_OWNED" : undefined,
     pageSize: 40,
   });
 
@@ -85,13 +92,14 @@ export default async function ShopsListPage({ params, searchParams }: PageProps)
         </p>
       </div>
 
-      {/* Sort + verified-only filter row */}
+      {/* Sort + filters */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {SORT_TABS.map((tab) => {
           const params = new URLSearchParams();
           if (tab.key !== "relevance") params.set("sort", tab.key);
           if (sp.category) params.set("category", sp.category);
           if (sp.verified === "true") params.set("verified", "true");
+          if (preOwnedOnly) params.set("condition", "pre_owned");
           const href = params.toString() ? `/shops?${params.toString()}` : "/shops";
           const isActive = sort === tab.key;
           return (
@@ -108,7 +116,18 @@ export default async function ShopsListPage({ params, searchParams }: PageProps)
             </Link>
           );
         })}
-        <VerifiedToggle active={verified} sort={sort} category={sp.category} />
+        <PreOwnedToggle
+          active={preOwnedOnly}
+          sort={sort}
+          category={sp.category}
+          verified={verified}
+        />
+        <VerifiedToggle
+          active={verified}
+          sort={sort}
+          category={sp.category}
+          preOwnedOnly={preOwnedOnly}
+        />
       </div>
 
       {/* Category chips */}
@@ -116,7 +135,7 @@ export default async function ShopsListPage({ params, searchParams }: PageProps)
         <CategoryChip
           label="ทั้งหมด"
           icon={<Store size={20} />}
-          href={buildHref({ sort, verified })}
+          href={buildHref({ sort, verified, preOwnedOnly })}
           isActive={!sp.category}
         />
         {CATEGORY_KEYS.map((key) => {
@@ -126,7 +145,7 @@ export default async function ShopsListPage({ params, searchParams }: PageProps)
               key={key}
               label={tCats(key)}
               icon={<Icon size={20} />}
-              href={buildHref({ sort, verified, category: key })}
+              href={buildHref({ sort, verified, preOwnedOnly, category: key })}
               isActive={sp.category === key}
             />
           );
@@ -163,15 +182,18 @@ function buildHref({
   sort,
   verified,
   category,
+  preOwnedOnly,
 }: {
   sort: FeedSort;
   verified: boolean;
   category?: string;
+  preOwnedOnly?: boolean;
 }) {
   const params = new URLSearchParams();
   if (sort !== "relevance") params.set("sort", sort);
   if (verified) params.set("verified", "true");
   if (category) params.set("category", category);
+  if (preOwnedOnly) params.set("condition", "pre_owned");
   return params.toString() ? `/shops?${params.toString()}` : "/shops";
 }
 
@@ -179,20 +201,23 @@ function VerifiedToggle({
   active,
   sort,
   category,
+  preOwnedOnly,
 }: {
   active: boolean;
   sort: FeedSort;
   category?: string;
+  preOwnedOnly: boolean;
 }) {
   const params = new URLSearchParams();
   if (sort !== "relevance") params.set("sort", sort);
   if (category) params.set("category", category);
+  if (preOwnedOnly) params.set("condition", "pre_owned");
   if (!active) params.set("verified", "true");
   const href = params.toString() ? `/shops?${params.toString()}` : "/shops";
   return (
     <Link
       href={href}
-      className={`ml-auto inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium ${
+      className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium ${
         active
           ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
           : "border border-[color:var(--color-border)] bg-white text-zinc-700"
@@ -200,6 +225,43 @@ function VerifiedToggle({
     >
       {active ? <Check size={12} /> : <ShieldCheck size={12} />}
       ยืนยันแล้ว
+    </Link>
+  );
+}
+
+/**
+ * Pre-owned only filter — the marketplace differentiator 911korn called
+ * out 2026-05-27 ("tag สินค้ามือสอง อันนี้น่าจะมีประโยชน์มาก ทำให้แอพ
+ * ดูมีจุดเด่นขึ้นมาเลย"). Standalone toggle so a buyer can flip into
+ * mode "show me only second-hand" with one tap.
+ */
+function PreOwnedToggle({
+  active,
+  sort,
+  category,
+  verified,
+}: {
+  active: boolean;
+  sort: FeedSort;
+  category?: string;
+  verified: boolean;
+}) {
+  const params = new URLSearchParams();
+  if (sort !== "relevance") params.set("sort", sort);
+  if (category) params.set("category", category);
+  if (verified) params.set("verified", "true");
+  if (!active) params.set("condition", "pre_owned");
+  const href = params.toString() ? `/shops?${params.toString()}` : "/shops";
+  return (
+    <Link
+      href={href}
+      className={`ml-auto inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium ${
+        active
+          ? "border border-amber-300 bg-amber-50 text-amber-800"
+          : "border border-[color:var(--color-border)] bg-white text-zinc-700"
+      }`}
+    >
+      ♻️ มือสอง
     </Link>
   );
 }
@@ -243,8 +305,23 @@ interface ProductCardProps {
     badge: string | null;
     sold: number;
     shopRating: number;
+    category: string | null;
+    condition: "NEW" | "PRE_OWNED";
   };
 }
+
+const CATEGORY_LABELS_INLINE: Record<string, string> = {
+  fashion: "แฟชั่น",
+  food: "อาหาร",
+  tech: "ไอที",
+  beauty: "ความงาม",
+  health: "สุขภาพ",
+  furniture: "เฟอร์นิเจอร์",
+  pets: "สัตว์เลี้ยง",
+  books: "หนังสือ",
+  sport: "กีฬา",
+  other: "อื่นๆ",
+};
 
 function ProductCard({ product }: ProductCardProps) {
   const discountPct =
@@ -253,10 +330,18 @@ function ProductCard({ product }: ProductCardProps) {
           ((product.compareAtSatang - product.priceSatang) / product.compareAtSatang) * 100,
         )
       : 0;
+  const isPreOwned = product.condition === "PRE_OWNED";
+  const categoryLabel = product.category
+    ? CATEGORY_LABELS_INLINE[product.category] ?? null
+    : null;
   return (
     <Link
       href={`/s/${product.shopSlug}/${product.slug}`}
-      className="group overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-white transition hover:-translate-y-0.5 hover:shadow-md"
+      className={`group overflow-hidden rounded-2xl border bg-white transition hover:-translate-y-0.5 hover:shadow-md ${
+        isPreOwned
+          ? "border-amber-300/70 ring-1 ring-amber-100"
+          : "border-[color:var(--color-border)]"
+      }`}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-[color:var(--color-soft)]">
         {product.imageUrl ? (
@@ -268,7 +353,8 @@ function ProductCard({ product }: ProductCardProps) {
             className="h-full w-full object-cover transition group-hover:scale-105"
           />
         ) : null}
-        <div className="absolute left-2 top-2 flex gap-1">
+        {/* Left stack — discount + product badge */}
+        <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
           {product.badge ? (
             <span className="rounded-md bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
               {product.badge.toUpperCase()}
@@ -280,8 +366,22 @@ function ProductCard({ product }: ProductCardProps) {
             </span>
           ) : null}
         </div>
+        {/* Right stack — condition pin. PRE_OWNED is the differentiator
+            we promote (911korn 2026-05-27: "tag สินค้ามือสอง อันนี้น่าจะ
+            มีประโยชน์มาก ทำให้แอพดูมีจุดเด่นขึ้นมาเลย"). NEW shows nothing
+            so we don't pollute every card. */}
+        {isPreOwned ? (
+          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-amber-500/95 px-2 py-0.5 text-[10px] font-bold text-white shadow">
+            ♻️ มือสอง
+          </span>
+        ) : null}
       </div>
       <div className="p-3">
+        {categoryLabel ? (
+          <span className="mb-1 inline-block rounded-full bg-[color:var(--color-soft)] px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+            {categoryLabel}
+          </span>
+        ) : null}
         <p className="line-clamp-2 min-h-[2.5rem] text-[13px] leading-tight text-[color:var(--color-fg)]">
           {product.name}
         </p>

@@ -8,6 +8,7 @@ export {
   ShopStatus,
   ProductBadge,
   ProductType,
+  ProductCondition,
   ProductStatus,
   OrderStatus,
   CouponType,

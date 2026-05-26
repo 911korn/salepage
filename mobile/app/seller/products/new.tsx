@@ -18,6 +18,10 @@ import { api, ApiClientError } from "@/lib/api";
 import { compressForSlipUpload } from "@/lib/image-compress";
 import { useSellerMode } from "@/store/seller-mode";
 import { Sentry } from "@/lib/sentry";
+import {
+  PRODUCT_CATEGORIES,
+  type CategoryKey,
+} from "@/lib/product-categories";
 
 /**
  * /seller/products/new — owner-only mobile create-product flow.
@@ -54,6 +58,9 @@ export default function NewProductScreen() {
   const [description, setDescription] = useState("");
   const [priceBaht, setPriceBaht] = useState("");
   const [stock, setStock] = useState("");
+  const [type, setType] = useState<"PHYSICAL" | "DIGITAL">("PHYSICAL");
+  const [category, setCategory] = useState<CategoryKey | null>(null);
+  const [condition, setCondition] = useState<"NEW" | "PRE_OWNED">("NEW");
 
   async function handlePickFromGallery() {
     if (images.length >= MAX_IMAGES) return;
@@ -146,6 +153,9 @@ export default function NewProductScreen() {
         description: description.trim() || undefined,
         priceBaht: priceBahtNum,
         imageUrls: uploadedUrls,
+        type,
+        condition,
+        category: category ?? undefined,
         ...(stockNum !== null ? { stock: stockNum } : {}),
       });
     },
@@ -280,6 +290,78 @@ export default function NewProductScreen() {
           </View>
         </Section>
 
+        {/* Product type — Physical vs Digital. Default Physical; digital
+            products skip shipping fields server-side. */}
+        <Section title="ประเภทสินค้า">
+          <View className="flex-row gap-2">
+            <TogglePill
+              active={type === "PHYSICAL"}
+              onPress={() => setType("PHYSICAL")}
+              icon="📦"
+              label="จัดส่งจริง"
+              hint="สินค้าที่ต้องส่งของ"
+            />
+            <TogglePill
+              active={type === "DIGITAL"}
+              onPress={() => setType("DIGITAL")}
+              icon="💾"
+              label="ดิจิทัล"
+              hint="ไฟล์ / โค้ด / บริการ"
+            />
+          </View>
+        </Section>
+
+        {/* Condition — New vs Pre-owned (มือสอง). Pre-owned surfaces a
+            distinct badge on the marketplace + product detail. */}
+        <Section title="สภาพสินค้า">
+          <View className="flex-row gap-2">
+            <TogglePill
+              active={condition === "NEW"}
+              onPress={() => setCondition("NEW")}
+              icon="✨"
+              label="ของใหม่"
+              hint="ป้ายห้อย ยังไม่เคยใช้"
+            />
+            <TogglePill
+              active={condition === "PRE_OWNED"}
+              onPress={() => setCondition("PRE_OWNED")}
+              icon="♻️"
+              label="มือสอง"
+              hint="ใช้แล้ว / สภาพดี"
+              tone="rose"
+            />
+          </View>
+        </Section>
+
+        {/* Category — chip grid, single-select. Optional; falls back to
+            shop category on listing surfaces if left blank. */}
+        <Section title="หมวดหมู่ (ไม่จำเป็น)">
+          <View className="flex-row flex-wrap gap-2">
+            {PRODUCT_CATEGORIES.map((c) => {
+              const isActive = category === c.key;
+              return (
+                <Pressable
+                  key={c.key}
+                  onPress={() => setCategory(isActive ? null : c.key)}
+                  className={`rounded-full border px-3 py-1.5 ${
+                    isActive
+                      ? "border-brand-300 bg-brand-50"
+                      : "border-border bg-white"
+                  }`}
+                >
+                  <Text
+                    className={`text-[12px] ${
+                      isActive ? "font-semibold text-brand-700" : "text-fg"
+                    }`}
+                  >
+                    {c.labelTh}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Section>
+
         {/* Description */}
         <Section title="คำอธิบาย (ไม่จำเป็น)">
           <TextInput
@@ -331,5 +413,53 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </Text>
       {children}
     </View>
+  );
+}
+
+/**
+ * Toggle-style pill with icon + label + hint. Used for binary product
+ * fields (type / condition) where the choice should feel concrete.
+ * Pass `tone="rose"` to flip the active state from brand-pink to a
+ * cooler emerald (used for "มือสอง" so the toggle reads as a "yes,
+ * I'm aware" affirmation rather than a brand CTA).
+ */
+function TogglePill({
+  active,
+  onPress,
+  icon,
+  label,
+  hint,
+  tone = "brand",
+}: {
+  active: boolean;
+  onPress: () => void;
+  icon: string;
+  label: string;
+  hint: string;
+  tone?: "brand" | "rose";
+}) {
+  const activeBorder =
+    tone === "rose" ? "border-rose-300" : "border-brand-300";
+  const activeBg = tone === "rose" ? "bg-rose-50" : "bg-brand-50";
+  const activeText = tone === "rose" ? "text-rose-700" : "text-brand-700";
+  return (
+    <Pressable
+      onPress={onPress}
+      className={`flex-1 rounded-2xl border px-3 py-3 ${
+        active
+          ? `${activeBorder} ${activeBg}`
+          : "border-border bg-white"
+      }`}
+    >
+      <Text className="text-[20px]">{icon}</Text>
+      <Text
+        className={`mt-1 text-[14px] font-semibold ${
+          active ? activeText : "text-fg"
+        }`}
+      >
+        {label}
+      </Text>
+      <Text className="text-[11px] text-muted">{hint}</Text>
+    </Pressable>
   );
 }

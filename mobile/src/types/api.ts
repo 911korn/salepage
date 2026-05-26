@@ -25,6 +25,7 @@ export type ApiResponse<T> = ApiSuccess<T> | ApiError;
 
 export type ProductBadge = "HOT" | "NEW" | "SALE";
 export type ProductType = "PHYSICAL" | "DIGITAL";
+export type ProductCondition = "NEW" | "PRE_OWNED";
 export type ProductStatus = "ACTIVE" | "HIDDEN" | "SOLD_OUT";
 export type OrderStatus =
   | "PENDING"
@@ -164,6 +165,8 @@ export interface ProductSummary {
   imageUrls: string[];
   badge: ProductBadge | null;
   type: ProductType;
+  category: string | null;
+  condition: ProductCondition;
   stock: number | null;
   sold: number;
   status: ProductStatus;
