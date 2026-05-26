@@ -140,10 +140,16 @@ export async function loginWithGoogle(): Promise<GoogleBridgeResult> {
     void tick();
   });
 
-  const browserPromise = WebBrowser.openAuthSessionAsync(
-    openUrl,
-    "salepage://auth/google",
-  );
+  // openBrowserAsync (SFSafariViewController on iOS, Chrome Custom Tabs on
+  // Android) is dismissable via WebBrowser.dismissBrowser() — which is
+  // what our poll loop relies on. openAuthSessionAsync (SFAuthSession)
+  // is NOT dismissable that way, which is why 911korn got stuck on the
+  // "You're signed in" page after Google completed — the poll succeeded
+  // but the in-app browser stayed open.
+  const browserPromise = WebBrowser.openBrowserAsync(openUrl, {
+    presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+    dismissButtonStyle: "close",
+  });
 
   // Whichever finishes first wins:
   //   - poll returns token  → dismiss browser + return token

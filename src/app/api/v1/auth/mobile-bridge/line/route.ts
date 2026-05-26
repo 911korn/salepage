@@ -54,16 +54,60 @@ export async function GET(request: Request) {
   lineUrl.searchParams.set("redirect_uri", callbackUrl);
   lineUrl.searchParams.set("state", state);
   lineUrl.searchParams.set("scope", "profile openid email");
-  // Hint LINE to launch the native iOS/Android LINE app when available
-  // instead of dropping the user on access.line.me's email/password form
-  // (911korn 2026-05-26: "LINE ต้องทำให้ Auto redirect ออกไปแอพไลน์").
-  // bot_prompt + initial_amr_display + switch_amr together signal "we
-  // want the app experience, fall back to web if the app isn't here".
   lineUrl.searchParams.set("bot_prompt", "normal");
-  lineUrl.searchParams.set("initial_amr_display", "lineqr");
-  lineUrl.searchParams.set("switch_amr", "true");
 
-  const res = NextResponse.redirect(lineUrl);
+  // 911korn 2026-05-26: "LINE ต้องทำให้ Auto redirect ออกไปแอพไลน์".
+  // First attempt (initial_amr_display=lineqr) forced LINE into QR mode
+  // which was the wrong direction. The real fix is to render a small
+  // intermediate page that JavaScript-redirects to LINE's `line://` URL
+  // scheme first — iOS sees the scheme is registered to the LINE app
+  // and switches to it. We fall back to access.line.me/oauth/v2.1/
+  // authorize for users without the LINE app installed.
+  //
+  // The fallback timer is intentionally short (250ms) so the user
+  // doesn't see a flash of the launcher page on devices with LINE app
+  // installed (iOS hands off almost instantly).
+  const lineAppUrl = `line://oauth?${lineUrl.searchParams.toString()}`;
+  const launcherHtml = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Opening LINE...</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #06C755; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; color: #ffffff; }
+  body { display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+  .card { max-width: 320px; }
+  h1 { font-size: 24px; margin: 0 0 8px 0; font-weight: 800; letter-spacing: 0.4px; }
+  p { font-size: 14px; line-height: 1.5; margin: 0 0 20px 0; opacity: 0.95; }
+  .spinner { width: 36px; height: 36px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.35); border-top-color: #ffffff; animation: spin 0.8s linear infinite; margin: 0 auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>LINE</h1>
+  <p>Opening the LINE app...</p>
+  <div class="spinner" aria-hidden="true"></div>
+</div>
+<script>
+  // Try the app-scheme deep link first. iOS routes line:// to the LINE
+  // app if installed; if not installed, the navigation no-ops and the
+  // setTimeout below fires the web fallback.
+  window.location.href = ${JSON.stringify(lineAppUrl)};
+  setTimeout(() => {
+    window.location.href = ${JSON.stringify(lineUrl.toString())};
+  }, 350);
+</script>
+</body>
+</html>`;
+
+  const res = new NextResponse(launcherHtml, {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
   const jar = await cookies();
   // Cookie value is `<bridgeId>:<state>` — two ephemerals bound together
   // so a stolen cookie alone (without the state forwarded by LINE) can't
