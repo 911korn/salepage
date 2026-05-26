@@ -13,6 +13,14 @@ export {
   CouponType,
   ConversationMessageDirection,
   UserRole,
+  KycStatus,
+  KycDocType,
+  DisputeStatus,
+  DisputeReason,
+  AffiliatePayoutStatus,
+  LiveBroadcastStatus,
+  EscrowStatus,
+  GroupBuyStatus,
 } from "@/generated/prisma";
 
 function makeClient() {

@@ -21,7 +21,7 @@ export async function GET(
   });
   if (!shop) return fail("not_found", "ไม่พบร้านค้านี้", 404);
 
-  const reviews = await db.review.findMany({
+  const rawReviews = await db.review.findMany({
     where: { shopId: shop.id },
     orderBy: { createdAt: "desc" },
     take: 50,
@@ -34,8 +34,18 @@ export async function GET(
       repliedAt: true,
       createdAt: true,
       product: { select: { slug: true, name: true } },
+      // V1.5 Trust signal: every legit review's order has slipVerifiedAt
+      // (we enforce that on POST). Surface a flat `verified` boolean to
+      // clients so the UI can render a "✓ ยืนยันการชำระแล้ว" pill without
+      // needing to expose the full order relation.
+      order: { select: { slipVerifiedAt: true } },
     },
   });
+
+  const reviews = rawReviews.map(({ order, ...rest }) => ({
+    ...rest,
+    verified: Boolean(order?.slipVerifiedAt),
+  }));
 
   const agg = await db.review.aggregate({
     where: { shopId: shop.id },
@@ -78,6 +88,10 @@ export async function POST(
       status: true,
       customerName: true,
       customerPhone: true,
+      // V1.5 Trust: require slipVerifiedAt → reviews are only from verified
+      // payments. This blocks fake review farms and review-bombing that don't
+      // run through the actual AI-verified slip pipeline.
+      slipVerifiedAt: true,
     },
   });
   if (!order || order.shopId !== shop.id) {
@@ -90,6 +104,17 @@ export async function POST(
     return fail(
       "order_not_eligible",
       "รีวิวได้หลังจากออเดอร์ถูกจัดส่งแล้วเท่านั้น",
+      400,
+    );
+  }
+  if (!order.slipVerifiedAt) {
+    // Hard block — every legit DELIVERED/SHIPPING order goes through
+    // slip verification, so a missing `slipVerifiedAt` means this Order
+    // was manually flipped by an admin/dev without the receipt trail.
+    // We don't want those counting toward marketplace trust signals.
+    return fail(
+      "slip_not_verified",
+      "รีวิวต้องมาจากออเดอร์ที่ระบบยืนยันสลิปแล้วเท่านั้น",
       400,
     );
   }

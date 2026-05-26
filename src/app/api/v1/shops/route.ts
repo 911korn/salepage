@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { auth } from "@/lib/auth";
+import { resolveSession } from "@/lib/api-auth";
 import { db, ShopStatus } from "@/lib/db";
 import { generateSlug } from "@/lib/dashboard";
 import { isReservedShopSlug } from "@/lib/storefront-url";
@@ -46,11 +47,10 @@ const Body = z.object({
     .optional(),
 });
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return fail("unauthorized", "Sign in required", 401);
-  }
+export async function GET(request: Request) {
+  // Web cookie session OR mobile Bearer JWT — `resolveSession` handles both.
+  const session = await resolveSession(request);
+  if (!session.ok) return session.response;
   const shops = await db.shop.findMany({
     where: { ownerId: session.user.id },
     orderBy: { createdAt: "asc" },

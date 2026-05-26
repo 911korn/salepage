@@ -53,3 +53,11 @@ next-env.d.ts
 # Prisma generated client
 /src/generated/
 .env*.local
+
+# Mobile (Expo) — see mobile/.gitignore for full list
+mobile/.expo/
+mobile/dist/
+mobile/ios/
+mobile/android/
+mobile/node_modules/
+mobile/.eas/

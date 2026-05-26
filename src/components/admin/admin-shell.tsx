@@ -10,11 +10,14 @@ import {
   LogOut,
   Menu,
   Package,
+  Lock,
   ScrollText,
   Settings,
   ShieldAlert,
+  ShieldCheck,
   Star,
   Ticket,
+  Wallet,
   Users,
   X,
 } from "lucide-react";
@@ -49,7 +52,9 @@ const NAV_SECTIONS = [
     links: [
       { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/shops", label: "Shops", icon: Building2 },
+      { href: "/admin/kyc", label: "KYC review", icon: ShieldCheck },
       { href: "/admin/orders", label: "Orders", icon: Package },
+      { href: "/admin/disputes", label: "Disputes", icon: ShieldAlert },
     ],
   },
   {
@@ -57,6 +62,8 @@ const NAV_SECTIONS = [
     links: [
       { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
       { href: "/admin/events", label: "Stripe events", icon: Activity },
+      { href: "/admin/payouts", label: "Affiliate payouts", icon: Wallet },
+      { href: "/admin/escrow", label: "Protected Pay", icon: Lock },
     ],
   },
   {

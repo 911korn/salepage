@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, DisputeStatus, OrderStatus } from "@/lib/db";
 import { hasBusinessPlan } from "@/lib/plan";
 import { getShopBySlug as getDemoShop } from "@/lib/demo-data";
 
@@ -59,10 +59,12 @@ export async function GET(
 ) {
   const { slug } = await context.params;
 
-  // 1) Try DB
+  // 1) Try DB. Pull the catalog inline (`include products`) since the mobile
+  // reads `data.shop` and `data.products` from a single round-trip.
   const shop = await db.shop.findUnique({
     where: { slug },
     select: {
+      id: true,
       slug: true,
       name: true,
       description: true,
@@ -71,30 +73,119 @@ export async function GET(
       category: true,
       themeColor: true,
       verified: true,
+      kycStatus: true,
+      kycVerifiedAt: true,
+      trustScore: true,
       rating: true,
       totalSold: true,
       bannerUrls: true,
       contact: true,
+      announcement: true,
       status: true,
+      createdAt: true,
+      // V1.5 Protected Pay opt-in — surfaced on storefront as a shield badge
+      // and as the checkout toggle gate.
+      acceptsEscrow: true,
+      products: {
+        where: { status: "ACTIVE" },
+        orderBy: [{ sold: "desc" }, { createdAt: "desc" }],
+        take: 60,
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          priceSatang: true,
+          compareAtSatang: true,
+          imageUrls: true,
+          badge: true,
+          type: true,
+          stock: true,
+          sold: true,
+          status: true,
+        },
+      },
       _count: { select: { products: true } },
     },
   });
 
   if (shop && shop.status === "ACTIVE") {
+    // Public dispute trust signal: ratio of disputed orders to delivered+
+    // shipping over the last 90 days. We deliberately ignore CANCELLED in
+    // the denominator because those never had a chance to be disputed.
+    // Capped at 0–100; 0 displays as "no disputes".
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const [disputeCount, deliveredOrderCount] = await Promise.all([
+      db.dispute.count({
+        where: {
+          order: { shopId: shop.id },
+          createdAt: { gte: ninetyDaysAgo },
+          // Don't count NO_ACTION (buyer was wrong) toward the public stat —
+          // only count refund/replace + still-open ones since those represent
+          // real shop-side issues.
+          status: {
+            in: [
+              DisputeStatus.OPEN,
+              DisputeStatus.AWAITING_SHOP_RESPONSE,
+              DisputeStatus.AWAITING_BUYER_RESPONSE,
+              DisputeStatus.RESOLVED_REFUND,
+              DisputeStatus.RESOLVED_REPLACE,
+            ],
+          },
+        },
+      }),
+      db.order.count({
+        where: {
+          shopId: shop.id,
+          status: {
+            in: [
+              OrderStatus.SHIPPING,
+              OrderStatus.DELIVERED,
+            ],
+          },
+          createdAt: { gte: ninetyDaysAgo },
+        },
+      }),
+    ]);
+
+    const disputeRatePct =
+      deliveredOrderCount > 0
+        ? Math.round((disputeCount / deliveredOrderCount) * 1000) / 10 // 1 decimal
+        : 0;
+
     return ok({
-      slug: shop.slug,
-      name: shop.name,
-      description: shop.description,
-      logo: shop.logoText,
-      logoUrl: shop.logoUrl,
-      category: shop.category,
-      themeColor: shop.themeColor,
-      verified: shop.verified,
-      rating: shop.rating,
+      shop: {
+        id: shop.id,
+        slug: shop.slug,
+        name: shop.name,
+        description: shop.description,
+        logoText: shop.logoText,
+        logoUrl: shop.logoUrl,
+        bannerUrls: shop.bannerUrls,
+        category: shop.category,
+        themeColor: shop.themeColor,
+        verified: shop.verified,
+        kycStatus: shop.kycStatus,
+        kycVerifiedAt: shop.kycVerifiedAt,
+        trustScore: shop.trustScore,
+        rating: shop.rating,
+        totalSold: shop.totalSold,
+        contact: shop.contact ?? null,
+        announcement: shop.announcement,
+        acceptsEscrow: shop.acceptsEscrow,
+        // V1.6: public dispute stats over the last 90 days. UI shows the
+        // pill only when `count > 0` so trustworthy shops aren't penalized
+        // by having an empty "0% disputed" badge.
+        disputeStats: {
+          count: disputeCount,
+          deliveredCount: deliveredOrderCount,
+          ratePct: disputeRatePct,
+          windowDays: 90,
+        },
+      },
+      products: shop.products,
       productCount: shop._count.products,
-      totalSold: shop.totalSold,
-      contact: shop.contact ?? {},
-      banners: shop.bannerUrls,
+      createdAt: shop.createdAt,
     });
   }
 
@@ -102,18 +193,34 @@ export async function GET(
   const demo = getDemoShop(slug);
   if (demo) {
     return ok({
-      slug: demo.slug,
-      name: demo.name,
-      description: demo.description,
-      logo: demo.logo,
-      category: demo.category,
-      themeColor: demo.themeColor,
-      verified: demo.verified,
-      rating: demo.rating,
+      shop: {
+        id: `demo-${demo.slug}`,
+        slug: demo.slug,
+        name: demo.name,
+        description: demo.description,
+        logoText: demo.logo,
+        logoUrl: null,
+        bannerUrls: demo.banners,
+        category: demo.category,
+        themeColor: demo.themeColor,
+        verified: demo.verified,
+        kycStatus: demo.verified ? "VERIFIED" : "NONE",
+        kycVerifiedAt: null,
+        trustScore: demo.verified ? 80 : 50,
+        rating: demo.rating,
+        totalSold: demo.totalSold,
+        contact: demo.contact ?? null,
+        announcement: null,
+        disputeStats: {
+          count: 0,
+          deliveredCount: 0,
+          ratePct: 0,
+          windowDays: 90,
+        },
+      },
+      products: demo.products ?? [],
       productCount: demo.productCount,
-      totalSold: demo.totalSold,
-      contact: demo.contact,
-      banners: demo.banners,
+      createdAt: null,
     });
   }
 

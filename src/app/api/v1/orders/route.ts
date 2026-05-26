@@ -3,6 +3,7 @@ import { ok, fail, parseJson } from "@/lib/api";
 import { db, OrderStatus, ProductStatus } from "@/lib/db";
 import { generateOrderToken, buildOrderRef } from "@/lib/orders";
 import { generatePromptPay } from "@/lib/promptpay";
+import { computeEscrowFeeSatang } from "@/lib/escrow-provider";
 import { sendOrderCreated, sendNewOrderAlert } from "@/lib/email";
 import { verifyPlatformLineIdToken } from "@/lib/line";
 import { getPlatformSetting } from "@/lib/platform-settings";
@@ -32,6 +33,17 @@ const Body = z.object({
   couponCode: z.string().min(1).max(40).optional().nullable(),
   redeemPoints: z.number().int().min(0).optional().default(0),
   lineIdToken: z.string().min(10).max(5000).optional(),
+  /** V1.5 affiliate ref — the SalePage user.id of whoever shared the link. */
+  referrerUserId: z.string().min(3).max(50).optional(),
+  /** Optional freeform campaign code, e.g. "yt-thaifood-may26". */
+  referrerCode: z.string().min(1).max(60).optional(),
+  /**
+   * V1.5 Protected Pay (Escrow). When TRUE, the platform holds the funds
+   * after slip-verify and releases on buyer-confirm OR DELIVERED+72h.
+   * Adds a 1.5% buyer-paid fee to `totalSatang`. Shop must have
+   * `acceptsEscrow=true` (defaults to TRUE).
+   */
+  useEscrow: z.boolean().optional().default(false),
 });
 
 /**
@@ -72,6 +84,7 @@ export async function POST(request: Request) {
       promptpayId: true,
       contact: true,
       loyaltyBahtValuePerPoint: true,
+      acceptsEscrow: true,
       owner: { select: { email: true } },
     },
   });
@@ -166,10 +179,25 @@ export async function POST(request: Request) {
     }
   }
 
-  const totalSatang = Math.max(
+  const totalBeforeEscrow = Math.max(
     0,
     subtotalSatang + input.shippingSatang - couponDiscountSatang - pointsDiscountSatang,
   );
+
+  // V1.5 Protected Pay: validate shop opt-in + compute buyer-paid fee.
+  // Fee is added on top of the post-discount total so the shop still receives
+  // the full pre-fee amount (no platform commission charged on the seller side).
+  if (input.useEscrow && !shop.acceptsEscrow) {
+    return fail(
+      "escrow_not_accepted",
+      "ร้านนี้ไม่รองรับ Protected Pay — บีบตรงได้ตามปกติ",
+      409,
+    );
+  }
+  const escrowFeeSatang = input.useEscrow
+    ? computeEscrowFeeSatang(totalBeforeEscrow)
+    : 0;
+  const totalSatang = totalBeforeEscrow + escrowFeeSatang;
 
   let lineProfile: Awaited<ReturnType<typeof verifyPlatformLineIdToken>> | null = null;
   if (input.lineIdToken) {
@@ -216,6 +244,14 @@ export async function POST(request: Request) {
       couponId,
       couponDiscountSatang,
       pointsRedeemed,
+      // Best-effort attribution — if the value looks bogus we still create
+      // the order without it. We don't validate that referrerUserId points
+      // to a real User because (a) self-referrals are rare and harmless and
+      // (b) we don't want to leak User existence via a 422.
+      referrerUserId: input.referrerUserId?.trim() || null,
+      referrerCode: input.referrerCode?.trim() || null,
+      useEscrow: input.useEscrow,
+      escrowFeeSatang,
       customerLineUserId: lineProfile?.sub,
       customerLineDisplayName: lineProfile?.name,
       customerLinePictureUrl: lineProfile?.picture,

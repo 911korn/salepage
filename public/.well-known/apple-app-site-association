@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMIDPLACEHOLDER.in.th.salepage.mobile"],
+        "components": [
+          {
+            "/": "/o/*",
+            "comment": "Order tracking — open in app when installed"
+          },
+          {
+            "/": "/s/*",
+            "comment": "Shop / product pages — open in app"
+          }
+        ]
+      }
+    ]
+  }
+}

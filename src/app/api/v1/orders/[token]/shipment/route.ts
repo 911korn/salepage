@@ -6,6 +6,7 @@ import { sendOrderShipped } from "@/lib/email";
 import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
 import { buildOrderRef } from "@/lib/orders";
 import { hasProPlan } from "@/lib/plan";
+import { notifyOrderShipping, resolveCustomerUserId } from "@/lib/push-notify";
 import {
   COURIER_OPTIONS,
   SHIPMENT_HANDOFFS,
@@ -222,6 +223,24 @@ export async function POST(request: Request, ctx: Ctx) {
 
   if (shouldMarkShipping || trackingNumber !== order.trackingNumber) {
     void notifyLineOrderUpdate(result.order);
+  }
+
+  // Push notify customer's mobile device once we flip into SHIPPING.
+  // Only on the actual transition (not on subsequent tracking-number tweaks).
+  if (shouldMarkShipping) {
+    void resolveCustomerUserId({
+      customerLineUserId: result.order.customerLineUserId,
+      customerEmail: result.order.customerEmail,
+    }).then((customerUserId) =>
+      notifyOrderShipping({
+        customerUserId,
+        orderToken: result.order.publicToken,
+        shopName: result.order.shop.name,
+        courierName:
+          input.courierName?.trim() || courier.name || "พัสดุ",
+        trackingNumber: result.order.trackingNumber ?? "",
+      }),
+    );
   }
 
   return ok(result);

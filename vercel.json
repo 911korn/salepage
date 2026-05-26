@@ -1,3 +1,29 @@
 {
-  "regions": ["sin1"]
+  "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/api/v1/cron/trust-score-sweep",
+      "schedule": "0 18 1 * *"
+    },
+    {
+      "path": "/api/v1/cron/expire-pending-orders",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/v1/cron/expire-stories",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/v1/cron/auto-resolve-disputes",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/v1/cron/auto-release-escrow",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/v1/cron/expire-group-buys",
+      "schedule": "*/10 * * * *"
+    }
+  ]
 }

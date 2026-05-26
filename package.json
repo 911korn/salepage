@@ -19,6 +19,7 @@
     "@vercel/blob": "^2.4.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
+    "jose": "^6.2.3",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.16.0",
     "next": "16.2.6",

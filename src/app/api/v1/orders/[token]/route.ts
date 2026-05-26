@@ -22,6 +22,16 @@ export async function GET(_request: Request, ctx: Ctx) {
           contact: true,
         },
       },
+      // V1.5 Protected Pay summary — null for legacy/non-escrow orders.
+      escrow: {
+        select: {
+          status: true,
+          amountSatang: true,
+          feeSatang: true,
+          scheduledReleaseAt: true,
+          closeReason: true,
+        },
+      },
     },
   });
   if (!order) return fail("not_found", "ไม่พบออเดอร์นี้", 404);
@@ -39,7 +49,10 @@ export async function GET(_request: Request, ctx: Ctx) {
   }
 
   return ok({
+    // Web tracking-panel reads `token`; mobile reads `publicToken`. We
+    // emit both so neither has to coordinate a rename.
     token: order.publicToken,
+    publicToken: order.publicToken,
     status: order.status,
     customerName: order.customerName,
     customerPhone: order.customerPhone,
@@ -56,6 +69,11 @@ export async function GET(_request: Request, ctx: Ctx) {
     trackingNumber: order.trackingNumber,
     notes: order.notes,
     createdAt: order.createdAt,
+    // V1.5 Protected Pay surface. `escrow` is null on non-escrow orders.
+    useEscrow: order.useEscrow,
+    escrowFeeSatang: order.escrowFeeSatang,
+    buyerConfirmedAt: order.buyerConfirmedAt,
+    escrow: order.escrow,
     shop: order.shop,
     qr: qr
       ? { dataUrl: qr.dataUrl, payload: qr.payload, amount: qr.amount }

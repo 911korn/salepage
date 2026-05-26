@@ -5,6 +5,17 @@ import { db, OrderStatus } from "@/lib/db";
 import { sendOrderShipped } from "@/lib/email";
 import { applyPaidOrderInventory, buildOrderRef } from "@/lib/orders";
 import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
+import {
+  notifyOrderPaid,
+  notifyOrderShipping,
+  notifyOrderDelivered,
+  resolveCustomerUserId,
+} from "@/lib/push-notify";
+import {
+  createEscrowHoldOnPaid,
+  markEscrowDelivered,
+  refundEscrowHold,
+} from "@/lib/escrow";
 
 interface Ctx {
   params: Promise<{ token: string }>;
@@ -85,6 +96,41 @@ export async function PATCH(request: Request, ctx: Ctx) {
     void notifyLineOrderUpdate(updated);
   }
 
+  // Fire push notifications based on terminal status changes (fire-and-forget).
+  // We resolve the customer User once and dispatch the matching trigger.
+  if (status !== undefined && status !== order.status) {
+    void resolveCustomerUserId({
+      customerLineUserId: updated.customerLineUserId,
+      customerEmail: updated.customerEmail,
+    }).then((customerUserId) => {
+      if (status === "PAID") {
+        return notifyOrderPaid({
+          customerUserId,
+          orderToken: updated.publicToken,
+          shopName: updated.shop.name,
+          totalSatang: updated.totalSatang,
+        });
+      }
+      if (status === "SHIPPING") {
+        return notifyOrderShipping({
+          customerUserId,
+          orderToken: updated.publicToken,
+          shopName: updated.shop.name,
+          courierName: "พัสดุ",
+          trackingNumber: updated.trackingNumber ?? "",
+        });
+      }
+      if (status === "DELIVERED") {
+        return notifyOrderDelivered({
+          customerUserId,
+          orderToken: updated.publicToken,
+          shopName: updated.shop.name,
+        });
+      }
+      return undefined;
+    });
+  }
+
   if (trackingNumber !== undefined || status === "DELIVERED" || status === "CANCELLED") {
     await db.shipment
       .update({
@@ -104,6 +150,57 @@ export async function PATCH(request: Request, ctx: Ctx) {
   // by checking we transitioned FROM PENDING). 1 point per Shop.loyaltyBahtPerPoint THB spent.
   if (status === "PAID" && order.status === OrderStatus.PENDING) {
     await applyPaidOrderInventory(order);
+
+    // V1.5 Protected Pay: same hold-creation as the auto slip-verify path.
+    // Seller-side manual mark-paid is rare (skipped slip upload entirely)
+    // but the buyer's escrow opt-in still applies.
+    if (order.useEscrow) {
+      try {
+        await createEscrowHoldOnPaid({
+          orderId: order.id,
+          amountSatang: order.subtotalSatang + order.shippingSatang,
+          feeSatang: order.escrowFeeSatang,
+        });
+      } catch (e) {
+        console.warn("[escrow] createEscrowHoldOnPaid failed:", e);
+      }
+    }
+  }
+
+  // V1.5 Protected Pay: start the 72h auto-release clock when DELIVERED first
+  // fires. We pass `new Date()` (not the Shipment.deliveredAt) so the timer
+  // begins at the actual seller action, regardless of any backdated marking.
+  if (status === "DELIVERED" && order.status !== OrderStatus.DELIVERED) {
+    if (order.useEscrow) {
+      try {
+        await markEscrowDelivered(order.id, new Date());
+      } catch (e) {
+        console.warn("[escrow] markEscrowDelivered failed:", e);
+      }
+    }
+  }
+
+  // V1.5 Protected Pay: refund the buyer if the seller cancels a PAID order
+  // (e.g. discovered out-of-stock). REFUNDED state is treated the same.
+  if (
+    (status === "CANCELLED" || status === "REFUNDED") &&
+    order.useEscrow &&
+    order.status !== OrderStatus.PENDING
+  ) {
+    try {
+      const existingHold = await db.escrowHold.findUnique({
+        where: { orderId: order.id },
+        select: { id: true },
+      });
+      if (existingHold) {
+        await refundEscrowHold({
+          holdId: existingHold.id,
+          reason: "admin_refund",
+        });
+      }
+    } catch (e) {
+      console.warn("[escrow] refundEscrowHold on cancel failed:", e);
+    }
   }
 
   if (status === "PAID" && order.status === OrderStatus.PENDING && updated.customerPhone) {

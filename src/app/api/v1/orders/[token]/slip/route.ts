@@ -8,6 +8,8 @@ import { applyPaidOrderInventory, buildOrderRef } from "@/lib/orders";
 import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
 import { tryConsumeSlip } from "@/lib/slip-credits";
 import { extractSlipQrPayloadFromBase64 } from "@/lib/slip-qr";
+import { notifyOrderPaid, resolveCustomerUserId } from "@/lib/push-notify";
+import { createEscrowHoldOnPaid } from "@/lib/escrow";
 
 interface Ctx {
   params: Promise<{ token: string }>;
@@ -175,7 +177,38 @@ export async function POST(request: Request, ctx: Ctx) {
   });
 
   await applyPaidOrderInventory(order);
+
+  // V1.5 Protected Pay: hold funds in escrow if the buyer opted in at checkout.
+  // The hold sits at HELD until either (a) the buyer confirms receipt, (b) the
+  // auto-release cron fires DELIVERED+72h, or (c) admin/dispute resolves it.
+  // We intentionally hold the full `subtotalSatang + shippingSatang` (NOT the
+  // escrow fee) — the fee accrues to the platform regardless of release path.
+  if (order.useEscrow) {
+    try {
+      await createEscrowHoldOnPaid({
+        orderId: order.id,
+        amountSatang: order.subtotalSatang + order.shippingSatang,
+        feeSatang: order.escrowFeeSatang,
+      });
+    } catch (e) {
+      console.warn("[escrow] createEscrowHoldOnPaid failed:", e);
+    }
+  }
+
   void notifyLineOrderUpdate(updated);
+
+  // Fire push notification (non-blocking) — fan-out to mobile devices
+  void resolveCustomerUserId({
+    customerLineUserId: order.customerLineUserId,
+    customerEmail: order.customerEmail,
+  }).then((customerUserId) =>
+    notifyOrderPaid({
+      customerUserId,
+      orderToken: order.publicToken,
+      shopName: order.shop.name,
+      totalSatang: order.totalSatang,
+    }),
+  );
 
   // Fire email notifications (non-blocking, errors swallowed)
   const ref = buildOrderRef(order.createdAt, order.id);

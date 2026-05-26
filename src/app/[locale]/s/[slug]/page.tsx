@@ -102,7 +102,10 @@ export default async function StorefrontPage({ params }: PageProps) {
   const ownerPlan = dbShop ? await getEffectivePlan(dbShop.ownerId) : null;
   const showWatermark = ownerPlan === PlanKey.FREE;
 
-  const dbReviews = dbShop
+  // V1.5: include `order.slipVerifiedAt` so we can render the
+  // "✓ ยืนยันการชำระ" pill next to verified reviewers. The reviews POST
+  // route already enforces this — every legit review will have it set.
+  const dbReviewsRaw = dbShop
     ? await db.review.findMany({
         where: { shopId: dbShop.id },
         orderBy: { createdAt: "desc" },
@@ -114,9 +117,14 @@ export default async function StorefrontPage({ params }: PageProps) {
           customerName: true,
           reply: true,
           createdAt: true,
+          order: { select: { slipVerifiedAt: true } },
         },
       })
     : [];
+  const dbReviews = dbReviewsRaw.map(({ order, ...rest }) => ({
+    ...rest,
+    verified: Boolean(order?.slipVerifiedAt),
+  }));
 
   let view: ShopView | null = null;
 
@@ -430,8 +438,16 @@ export default async function StorefrontPage({ params }: PageProps) {
                     className="rounded-2xl border border-[color:var(--color-border)] bg-white p-4"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold">
+                      <span className="flex items-center gap-1.5 text-sm font-semibold">
                         {r.customerName}
+                        {r.verified ? (
+                          <span
+                            title="รีวิวจากลูกค้าที่ยืนยันการชำระแล้ว"
+                            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-700"
+                          >
+                            ✓ verified
+                          </span>
+                        ) : null}
                       </span>
                       <span className="inline-flex items-center gap-0.5">
                         {Array.from({ length: 5 }).map((_, i) => (

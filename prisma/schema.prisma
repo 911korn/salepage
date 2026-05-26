@@ -41,11 +41,25 @@ model User {
   // signIn callback; does not delete data.
   suspended Boolean @default(false)
 
+  // Expo push notification token (set by mobile app on launch).
+  // Cleared on logout via DELETE /api/v1/me/push-token. Single device for now;
+  // multi-device support lands when we add a separate UserDevice model.
+  expoPushToken String?
+
   accounts     Account[]
   sessions     Session[]
   shops        Shop[]
   subscription Subscription?
   adminActions AdminAuditLog[] @relation("AdminActor")
+
+  // V1 marketplace — buyer-side surfaces.
+  shopFavorites ShopFavorite[]
+  shopFollows   ShopFollow[]
+  productViews  ProductView[]
+
+  // V1.5 affiliate — payouts requested by this user (when they earned
+  // commissions referring others).
+  affiliatePayouts AffiliatePayout[]
 }
 
 enum UserRole {
@@ -105,8 +119,37 @@ model Shop {
   category    String? // matches messages/*.json categories.* keys
 
   themeColor String     @default("#e11d48")
+  /// @deprecated kept for backward compatibility — derive from kycStatus instead.
+  /// We keep both during migration so existing UI code that reads `verified`
+  /// keeps working until we sweep callsites.
   verified   Boolean    @default(false)
   status     ShopStatus @default(ACTIVE)
+
+  // ── Trust & Verification (V1.5) ──────────────────────────────────────
+  // KYC pipeline: NONE → PENDING (docs uploaded) → VERIFIED | REJECTED.
+  // EXPIRED used when verification is renewed annually and lapses.
+  kycStatus         KycStatus @default(NONE)
+  kycVerifiedAt     DateTime?
+  kycRejectedReason String?
+
+  // KYC submission payload — set when shop owner submits documents.
+  // Cleared on REJECTED (so they can resubmit fresh) but kept on VERIFIED for
+  // audit. We store doc URLs as Vercel Blob URLs (signed/public).
+  kycDocType        KycDocType?
+  kycLegalName      String?
+  /// Last 4 digits only — full ID never persisted in plaintext.
+  kycIdLast4        String?
+  kycDocFrontUrl    String?
+  kycDocBackUrl     String?
+  kycSelfieUrl      String?
+  kycSubmittedAt    DateTime?
+  kycReviewedAt     DateTime?
+  kycReviewedById   String? // User.id of admin who approved/rejected
+
+  // Computed 0–100 score; refreshed by recomputeTrustScore() on key events
+  // (review post, order delivery, KYC change). UI buckets it into tiers.
+  trustScore       Int       @default(50)
+  trustComputedAt  DateTime?
 
   // Owner
   ownerId String
@@ -138,6 +181,10 @@ model Shop {
   rating    Float @default(0)
   totalSold Int   @default(0)
 
+  // V1 marketplace — buyer-side reverse relations.
+  favoritedBy ShopFavorite[]
+  followedBy  ShopFollow[]
+
   // Admin-only flags. Distinct from owner-controlled `status` (PAUSED/ARCHIVED).
   // `suspended` = platform admin took shop offline (returns 503 on storefront).
   // `featured`  = pinned on landing/discover surfaces by admin.
@@ -148,6 +195,18 @@ model Shop {
   // Decremented per /api/v1/slip/verify call once the plan's monthly quota
   // is exhausted. Defaults to 0 so paid tiers fall back gracefully.
   slipCredits Int @default(0)
+
+  // V1.5 affiliate rate override. NULL means use the platform default (2%).
+  // Shops that want to drive virality can opt into a higher rate (max 10%).
+  // Stored as integer percent (e.g. 5 = 5%) to avoid float drift.
+  affiliateRatePct Int? @db.SmallInt
+
+  // V1.5 Protected Pay opt-in. When TRUE, buyers see a "Protected Pay" toggle
+  // at checkout (adds 1.5% fee, funds held in escrow until DELIVERED + 72h
+  // or buyer-confirm). When FALSE, all orders are Direct Pay (0% fee, funds
+  // settle immediately on slip-verify). Defaults to TRUE because trust is a
+  // major friction for new buyers — sellers can opt out via shop settings.
+  acceptsEscrow Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -160,15 +219,34 @@ model Shop {
   loyalty           CustomerLoyalty[]
   customerAddresses CustomerAddress[]
   conversations     Conversation[]
+  stories           ShopStory[]
+  liveBroadcasts    LiveBroadcast[]
+  groupBuys         GroupBuy[]
 
   @@index([ownerId])
   @@index([featured, status])
+  @@index([kycStatus, status])
+  @@index([trustScore])
 }
 
 enum ShopStatus {
   ACTIVE
   PAUSED
   ARCHIVED
+}
+
+enum KycDocType {
+  NID // Thai national ID card
+  PASSPORT
+  COMPANY_REG // ทะเบียนพาณิชย์ / หนังสือรับรองบริษัท
+}
+
+enum KycStatus {
+  NONE
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
 }
 
 model Product {
@@ -191,7 +269,9 @@ model Product {
   shopId String
   shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
-  reviews Review[]
+  reviews   Review[]
+  views     ProductView[]
+  groupBuys GroupBuy[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -271,7 +351,27 @@ model Order {
   pointsRedeemed       Int     @default(0)
   pointsEarned         Int     @default(0)
 
-  reviews Review[]
+  // V1.5 affiliate attribution. `referrerUserId` is the salepage user who
+  // shared the link (`?ref=<userId>`). `referrerCode` is a freeform short
+  // code for ad-campaign tracking (e.g. "yt-thaifood-may26"). Both nullable;
+  // we never block checkout on a bad ref.
+  referrerUserId String?
+  referrerCode   String?
+
+  // V1.5 Protected Pay. When TRUE, an EscrowHold row is created on PAID
+  // transition (`slipVerifiedAt` first set), funds are released to the shop
+  // only on buyer-confirm or 72h after DELIVERED. `escrowFeeSatang` is the
+  // 1.5% buyer-paid fee baked into `totalSatang`.
+  useEscrow       Boolean    @default(false)
+  escrowFeeSatang Int        @default(0)
+  // Buyer's explicit "I got it, release funds" timestamp. Cleared by admin
+  // refunds. Used to gate the confirm endpoint (no double-release).
+  buyerConfirmedAt DateTime?
+  escrow          EscrowHold?
+
+  reviews         Review[]
+  disputes        Dispute[]
+  groupBuyMember  GroupBuyMember?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -341,6 +441,266 @@ model Shipment {
 
   @@index([shopId, status, createdAt])
   @@index([trackingNumber])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shop Stories (V2) — 24-hour ephemeral content
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Ephemeral 24h shop posts (Instagram-style stories). Used to surface
+/// promotions, new arrivals, and behind-the-scenes content without
+/// polluting the permanent product catalog.
+///
+/// We don't store views as a per-user table (would explode for popular
+/// shops) — `viewCount` is a simple counter, optionally augmented by a
+/// V2.1 sampled analytics table if we ever need cohorts.
+model ShopStory {
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  // Asset URL — Vercel Blob. Either an image (jpeg/png/webp) or a short
+  // video (mp4, ≤ 30s, ≤ 20MB). Mobile uploader enforces the limits.
+  mediaUrl  String
+  mediaKind ShopStoryMediaKind @default(IMAGE)
+
+  // Optional caption rendered at the bottom of the story.
+  caption String? @db.Text
+
+  // Optional deep link target (product slug or external URL). Tapping the
+  // story opens this link inside the app.
+  linkProductSlug String?
+  linkUrl         String?
+
+  // Lifetime: stories surface in the feed for 24h, then auto-hide. The cron
+  // that recomputes trust also nukes expired stories every hour.
+  expiresAt DateTime
+
+  viewCount Int @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([shopId, expiresAt])
+  @@index([expiresAt])
+}
+
+enum ShopStoryMediaKind {
+  IMAGE
+  VIDEO
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Live Shopping (V2.0)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A live broadcast stream owned by a shop. Provider-agnostic — we store an
+/// opaque `rtcChannelId` and `rtcToken` (or playback URL) so the actual
+/// streaming stack can be swapped (Agora / 100ms / LiveKit / Cloudflare
+/// Realtime / etc.) without schema changes.
+///
+/// Lifecycle:
+///   SCHEDULED → LIVE → ENDED (terminal)
+///
+/// During LIVE: viewerCount is bumped via `/live/:id/heartbeat`, comments
+/// stream via `LiveComment`, and `pinnedProductSlug` highlights one product
+/// at a time (seller can rotate).
+model LiveBroadcast {
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String? @db.Text
+
+  // Pre-go-live cover image — shown on the discovery feed before SCHEDULED
+  // streams go live, and used as a fallback poster on the watch screen.
+  coverImageUrl String?
+
+  // Provider-agnostic RTC handles. `rtcChannelId` is whatever the provider
+  // uses to identify the broadcast room. `rtcPublishToken` is the seller's
+  // (write) token; `rtcSubscribeToken` is the public (read) token. For
+  // HTTP-based providers (HLS), `playbackUrl` carries the .m3u8 URL.
+  rtcProvider       String? // "agora" | "100ms" | "livekit" | "cloudflare"
+  rtcChannelId      String?
+  rtcPublishToken   String?
+  rtcSubscribeToken String?
+  playbackUrl       String?
+  replayUrl         String? // Set when ENDED + transcode completes
+
+  status      LiveBroadcastStatus @default(SCHEDULED)
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  endedAt     DateTime?
+
+  // Featured product slot. The seller can pin different products throughout
+  // the live to drive in-stream conversion. We just store a slug so we can
+  // resolve to the current product at render time (price/stock fresh).
+  pinnedProductSlug String?
+
+  // Approximate live viewer count, bumped via heartbeats. NOT precise — the
+  // V2.1 sampled analytics table will compute true unique-viewers.
+  viewerCount Int @default(0)
+  // Cumulative views across the lifetime of the broadcast (incremented on
+  // each new viewer connect; never decremented).
+  totalViews Int @default(0)
+
+  comments LiveComment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopId, status, scheduledAt])
+  @@index([status, startedAt])
+}
+
+enum LiveBroadcastStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELLED
+}
+
+/// One comment posted by a viewer during a LiveBroadcast. Public, attribution
+/// optional — anonymous viewers can comment with just a display name. We
+/// rely on a soft moderation queue (V2.1) for abuse handling; for now,
+/// sellers can manually delete any comment via the broadcast control panel.
+model LiveComment {
+  id          String @id @default(cuid())
+  broadcastId String
+  broadcast   LiveBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+
+  // Anonymous-friendly. If the user is logged in we capture the userId for
+  // moderation; otherwise we just keep the display name.
+  userId      String?
+  displayName String
+  body        String  @db.Text
+
+  // Special "system" comments (e.g. "📦 ลูกค้าสั่งสินค้า X") are flagged so
+  // the UI can render them differently. Default false = normal user comment.
+  isSystem Boolean @default(false)
+
+  // Soft delete by seller (or auto-mod). Hidden from public list but kept
+  // in DB for audit.
+  deleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([broadcastId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Disputes (V1.5 Trust Layer)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Buyer-initiated dispute on an Order. Opens within 7 days of DELIVERED;
+/// admin can auto-resolve in favor of buyer if shop misses the 72h response
+/// window. Evidence is a Json array of {kind: "image"|"text", value: string}.
+model Dispute {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Buyer who opened the dispute (denormalized so we still know who when
+  // the order's customerLineUserId field changes due to LINE re-link).
+  openedByUserId  String?
+  openedByName    String
+  openedByPhone   String?
+  openedByLineId  String?
+
+  reason     DisputeReason
+  // Free text description from the buyer. Capped to keep DB clean.
+  description String        @db.Text
+  // [{ kind: "image" | "text", value: string }, ...] — images are Vercel Blob URLs.
+  evidence    Json          @default("[]")
+
+  status     DisputeStatus @default(OPEN)
+  resolution String?       @db.Text
+  // Set when admin (or auto-resolver) closes the dispute.
+  resolvedByUserId String?
+  resolvedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([status, createdAt])
+}
+
+enum DisputeReason {
+  NOT_RECEIVED          // ของไม่มาส่ง
+  WRONG_ITEM            // ของผิด
+  DAMAGED               // ของเสียหาย
+  NOT_AS_DESCRIBED      // ของไม่ตรงปก
+  PAYMENT_ISSUE         // ปัญหาการชำระเงิน
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  AWAITING_SHOP_RESPONSE
+  AWAITING_BUYER_RESPONSE
+  RESOLVED_REFUND
+  RESOLVED_REPLACE
+  RESOLVED_NO_ACTION
+  CLOSED
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Affiliate Payouts (V1.6.1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// User-initiated request to cash out accumulated affiliate commissions.
+///
+/// Flow:
+///   1. User taps "ขอรับเงิน" in /me/earnings → POST /api/v1/me/payouts with
+///      desired PromptPay account.
+///   2. Row inserted with REQUESTED status.
+///   3. Admin reviews in /admin/payouts → APPROVED or REJECTED.
+///   4. Admin manually transfers via PromptPay → marks PAID with `providerRef`.
+///
+/// `amountSatang` is locked at request time. We recompute the user's
+/// available balance from delivered orders ON request — payouts that get
+/// rejected free the locked amount automatically because the running
+/// balance derivation is based on `Order.status === DELIVERED MINUS sum
+/// of payouts in (REQUESTED, APPROVED, PAID)`.
+model AffiliatePayout {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Locked-in commission amount at request time (in satang).
+  amountSatang Int
+
+  // PromptPay destination — phone or NID. Whatever the user wants the
+  // money sent to. We don't validate format strictly; admin handles.
+  promptpayId String
+
+  status AffiliatePayoutStatus @default(REQUESTED)
+
+  // Set when admin transfers money; opaque ref like "txn-2026-05-26-001".
+  // Surfaced to the user in their payouts history.
+  providerRef String?
+
+  // Admin's reason for rejection (so the user understands why).
+  rejectedReason String? @db.Text
+
+  // Audit trail.
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  paidAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+enum AffiliatePayoutStatus {
+  REQUESTED // User submitted, awaiting admin
+  APPROVED  // Admin approved, awaiting bank transfer
+  PAID      // Money sent
+  REJECTED  // Admin rejected (with reason)
+  CANCELLED // User withdrew before review
 }
 
 // Anonymous checkout address memory. Scoped by shop + normalized phone so repeat
@@ -553,6 +913,198 @@ model PlatformSetting {
   updatedAt DateTime @updatedAt
   updatedBy String?
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// V1 marketplace — buyer-side discovery
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Heart-icon favorite. Lightweight signal — used to show "saved" tab and to
+/// boost rank in the discover feed. Not a follow (that has notification opt-ins).
+model ShopFavorite {
+  userId    String
+  shopId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@id([userId, shopId])
+  @@index([userId, createdAt])
+  @@index([shopId, createdAt])
+}
+
+/// Subscribing to a shop. Generates push notifications on opt-in events
+/// (new product, going live, flash sale). Stronger signal than a favorite.
+model ShopFollow {
+  userId     String
+  shopId     String
+  notifyNew  Boolean @default(true)  // new product
+  notifyLive Boolean @default(true)  // V2 live shopping
+  notifySale Boolean @default(true)  // flash sale / coupon drops
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@id([userId, shopId])
+  @@index([userId, createdAt])
+  @@index([shopId, createdAt])
+}
+
+/// Implicit signal for "For You" feed ranking. Anonymous-friendly: userId is
+/// nullable so we can also track LIFF/web sessions cookie-based later. Rows
+/// are aggressively expired (older than 30 days) by a cron job — keep small.
+model ProductView {
+  id        String   @id @default(cuid())
+  userId    String?
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  viewedAt  DateTime @default(now())
+
+  @@index([userId, viewedAt])
+  @@index([productId, viewedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Group Buy / Pre-order — V2.0 Social Commerce
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A `GroupBuy` campaign tied to a single Product. Buyers join by placing an
+/// order during the campaign window; once the cumulative `currentQty` hits
+/// `minQty` before `deadline`, the group fills and member orders become
+/// confirmable. Falls back to refund if it doesn't fill in time.
+///
+/// Tier pricing is shop-friendly: the price the buyer pays depends on the
+/// total group size at fill time. Modeled as a Json array of
+/// `{ minQty, priceSatang }` — tier with the largest `minQty` <= currentQty
+/// wins. Empty `tiers` means single-price (use `Product.priceSatang`).
+///
+/// Statuses:
+///   ACTIVE      Campaign open, accepting orders.
+///   FILLED      Reached `minQty` before deadline. Member orders unlock.
+///   EXPIRED     Deadline passed without filling. Member orders auto-cancel + refund.
+///   CANCELLED   Shop owner pulled the plug. Member orders auto-refund.
+model GroupBuy {
+  id        String         @id @default(cuid())
+  shopId    String
+  shop      Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  title       String // Headline shown on the buy button + share card.
+  description String? // Optional rich description.
+  minQty      Int // Threshold to flip the group from ACTIVE → FILLED.
+  maxQty      Int? // Optional cap; nullable = unlimited.
+  /// Quantity already committed by joined orders. Bumped atomically on join,
+  /// decremented on member-order cancel. We snapshot this on FILLED so late
+  /// cancels don't accidentally reopen the group.
+  currentQty  Int @default(0)
+
+  /// Tier pricing. Json array of `{ minQty, priceSatang }`. Empty → use
+  /// Product.priceSatang flat. Tiers are validated server-side at create
+  /// time (monotonically increasing minQty, decreasing price).
+  tiers Json @default("[]")
+
+  deadline  DateTime
+  filledAt  DateTime?
+  expiredAt DateTime?
+
+  status   GroupBuyStatus    @default(ACTIVE)
+  members  GroupBuyMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopId, status, deadline])
+  @@index([status, deadline])
+  @@index([productId, status])
+}
+
+enum GroupBuyStatus {
+  ACTIVE
+  FILLED
+  EXPIRED
+  CANCELLED
+}
+
+/// Junction row connecting an Order to a GroupBuy. One member row per
+/// participating order. We keep `qty` denormalized so the auto-fill cron
+/// can compute currentQty by SUM without joining Order (cheaper at scale).
+///
+/// On member-order CANCELLED before fill: row is deleted + `GroupBuy.currentQty`
+/// is decremented. After fill: row is kept for audit but currentQty is frozen.
+model GroupBuyMember {
+  id         String   @id @default(cuid())
+  groupBuyId String
+  groupBuy   GroupBuy @relation(fields: [groupBuyId], references: [id], onDelete: Cascade)
+  orderId    String   @unique
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  qty           Int // Snapshot of this order's contribution to currentQty.
+  priceLockedSatang Int // Price this buyer locked in at join time.
+
+  createdAt DateTime @default(now())
+
+  @@index([groupBuyId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Protected Pay (Escrow) — V1.5 Trust Layer
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Per-order escrow record. Lifecycle:
+///   HELD     — funds captured at PAID (slip-verify). Money sits with platform.
+///   RELEASED — funds released to shop. Reason: buyer-confirm OR auto-release
+///              cron (DELIVERED + 72h) OR admin manual OR dispute RESOLVED_NO_ACTION.
+///   REFUNDED — money returned to buyer. Reason: dispute RESOLVED_REFUND OR admin manual.
+///   DISPUTED — temporarily frozen while a dispute is being investigated.
+///
+/// `providerRef` is the external escrow provider's reference (2C2P / Beam /
+/// KBank Open API) once we wire one. Until then the stub provider just
+/// generates a synthetic ref so the audit log has something to point at.
+model EscrowHold {
+  id      String @id @default(cuid())
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  amountSatang Int // Total being held (subtotal + shipping; does NOT include fee)
+  feeSatang    Int // Buyer-paid escrow fee (1.5% of subtotal+shipping, rounded up)
+
+  status         EscrowStatus @default(HELD)
+  // Calculated at HELD time = DELIVERED time + 72h. Cron uses this to find
+  // releaseable rows. If null, cron skips (waiting for DELIVERED transition
+  // to set it via a separate update).
+  scheduledReleaseAt DateTime?
+
+  heldAt      DateTime  @default(now())
+  releasedAt  DateTime?
+  refundedAt  DateTime?
+  // Free-text audit hint: "buyer_confirmed" | "auto_release_72h" | "admin_manual"
+  // | "dispute_no_action" | "dispute_refund" | "admin_refund". Helps trace
+  // which actor closed the hold during incident review.
+  closeReason String?
+
+  // Provider reference (stub returns "stub-<id>" today).
+  providerRef String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, scheduledReleaseAt])
+  @@index([status, heldAt])
+}
+
+enum EscrowStatus {
+  HELD
+  RELEASED
+  REFUNDED
+  DISPUTED
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Platform admin — audit trail (existing)
+// ─────────────────────────────────────────────────────────────────────────────
 
 /// Every mutating admin action gets a row here. Append-only — no UI to edit.
 /// Surfaced at /admin/audit, used for incident review + accountability.
