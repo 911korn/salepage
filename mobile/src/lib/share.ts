@@ -30,11 +30,14 @@ export async function shareUrl(input: {
     : "";
   const url = `${webBaseUrl}${basePath}${refSuffix}`;
 
-  const content: ShareContent =
-    input.message != null
-      ? // iOS: combines message + url into the shared text. Android: ignores `url`.
-        { title: input.title, message: `${input.message}\n${url}`, url }
-      : { title: input.title, message: url, url };
+  // Only pass `message` (URL embedded), never both `message` and `url`.
+  // iOS exposes both fields independently to the share target, and apps
+  // like Telegram + LINE serialize each as a separate text chunk —
+  // resulting in the URL appearing twice in the sent message (911korn
+  // 2026-05-27 screenshot). Recipients still get an OG preview because
+  // Telegram/LINE/iMessage detect URLs inside text.
+  const messageWithUrl = input.message ? `${input.message}\n${url}` : url;
+  const content: ShareContent = { title: input.title, message: messageWithUrl };
 
   const options: ShareOptions = {
     dialogTitle: input.title,
