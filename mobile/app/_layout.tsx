@@ -293,6 +293,13 @@ function RootLayout() {
                 headerLeft: () => <BrandBackButton tone="dark" />,
               }}
             />
+            {/* Deep-link receivers — the LIFF / Google bridge success
+                pages fire `salepage://auth/{line,google}?ok=1` to bring
+                the user back into the app. These hidden screens absorb
+                that navigation, dismiss any open signin modal, and route
+                to /me so the user lands on a signed-in surface. */}
+            <Stack.Screen name="auth/line" options={{ headerShown: false }} />
+            <Stack.Screen name="auth/google" options={{ headerShown: false }} />
             <Stack.Screen
               name="s/[slug]/index"
               options={{

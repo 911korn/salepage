@@ -1,5 +1,5 @@
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
@@ -8,14 +8,18 @@ import { AppLogo } from "@/components/brand/app-logo";
 import { api, ApiClientError } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth";
 import { formatBaht, orderStatusLabel, formatRelativeTime } from "@/lib/format";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 export default function OrdersScreen() {
   const { t } = useTranslation(["order", "common"]);
   const [authed, setAuthed] = useState<boolean | null>(null);
-  useEffect(() => {
-    void getAuthToken().then((tok) => setAuthed(Boolean(tok)));
-  }, []);
+  // Re-read on focus, not just once on mount — so the modal-based signin
+  // flow refreshes the gate after dismissal.
+  useFocusEffect(
+    useCallback(() => {
+      void getAuthToken().then((tok) => setAuthed(Boolean(tok)));
+    }, []),
+  );
 
   const ordersQuery = useQuery({
     queryKey: ["me", "orders"],

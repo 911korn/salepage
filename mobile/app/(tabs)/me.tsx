@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   Alert,
   Linking,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
@@ -27,9 +28,15 @@ export default function MeScreen() {
   const queryClient = useQueryClient();
   const setMode = useSellerMode((s) => s.setMode);
 
-  useEffect(() => {
-    void getAuthToken().then((tok) => setAuthed(Boolean(tok)));
-  }, []);
+  // Re-read the auth token on every focus — not just once on mount.
+  // Without this, the modal-based signin flow leaves /me with
+  // `authed===null/false` after the modal dismisses, because /me never
+  // unmounts and the original useEffect doesn't re-run.
+  useFocusEffect(
+    useCallback(() => {
+      void getAuthToken().then((tok) => setAuthed(Boolean(tok)));
+    }, []),
+  );
 
   const profileQuery = useQuery({
     queryKey: ["me"],

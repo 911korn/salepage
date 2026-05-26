@@ -94,7 +94,16 @@ export default function EmailSignIn() {
       const result = await api.auth.emailOtpVerify(email, code);
       await setAuthToken(result.token);
       void registerPushToken().catch(() => undefined);
-      router.replace((redirect ?? "/") as never);
+      // Signin is a modal — dismiss it before navigating so the tabs
+      // underneath re-mount with the new auth state. Otherwise the
+      // parent /me would still read getAuthToken()===null from its
+      // initial mount.
+      try {
+        router.dismissAll();
+      } catch {
+        // No modal open — fine.
+      }
+      router.replace((redirect ?? "/me") as never);
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.message : "ลองใหม่อีกครั้ง";
       Alert.alert(t("signin.errorTitle"), msg);

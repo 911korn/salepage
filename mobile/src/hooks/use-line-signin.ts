@@ -28,7 +28,20 @@ export function useLineSignIn() {
       const result = await loginWithLine();
       await setAuthToken(result.token);
       void registerPushToken().catch(() => undefined);
-      router.replace((opts.redirectAfter ?? "/") as never);
+      // Signin is a modal — `router.replace` inside the modal would just
+      // swap the modal's content, leaving the parent screen with stale
+      // auth state. Dismiss all modals first, then navigate the parent
+      // stack so the tabs re-mount with the new token.
+      try {
+        router.dismissAll();
+      } catch {
+        // No modals open — fine.
+      }
+      if (opts.redirectAfter) {
+        router.replace(opts.redirectAfter as never);
+      } else {
+        router.replace("/me");
+      }
     } catch (err) {
       if (err instanceof LineLoginCancelledError) return;
       const msg = err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ";

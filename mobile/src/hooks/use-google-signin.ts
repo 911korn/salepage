@@ -57,8 +57,16 @@ export function useGoogleSignIn() {
         return;
       }
       void registerPushToken().catch(() => undefined);
-      const dest = opts.redirectAfter ?? "/";
+      const dest = opts.redirectAfter ?? "/me";
       console.log("[google] navigating to", dest);
+      // Signin is a modal — `router.replace` inside it just swaps the
+      // modal's content, leaving the parent screen with stale auth.
+      // Dismiss the modal first, then navigate the parent stack.
+      try {
+        router.dismissAll();
+      } catch {
+        // No modals open — fine.
+      }
       router.replace(dest as never);
     } catch (err) {
       if (err instanceof GoogleLoginCancelledError) {
