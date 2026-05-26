@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   Pressable,
   ScrollView,
   ActivityIndicator,
@@ -317,14 +318,19 @@ function OrderCard({
           </View>
         ) : order.status === "PAID" ? (
           <View className="gap-2">
+            {/* Inline tracking number input — typed value gets passed to the
+                ship mutation as `trackingNumber`. Previously this was a
+                non-interactive <Text> which silently dropped seller input. */}
             <View className="flex-row items-center gap-2 rounded-xl border border-border bg-white px-3 py-2">
               <Text className="text-[11px] text-muted">เลขพัสดุ</Text>
-              <Text
-                className="flex-1 text-[12px] text-fg"
-                onPress={() => router.push(`/o/${order.publicToken}`)}
-              >
-                {trackingInput || "(ใส่ที่หน้าออเดอร์)"}
-              </Text>
+              <TextInput
+                value={trackingInput}
+                onChangeText={setTrackingInput}
+                placeholder="เช่น TH001234567"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                className="flex-1 text-[13px] text-fg"
+              />
             </View>
             <Button
               onPress={() => shipMutation.mutate()}
