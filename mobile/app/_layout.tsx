@@ -34,6 +34,7 @@ import { useEffect, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import * as Linking from "expo-linking";
+import * as Updates from "expo-updates";
 import { registerPushToken, deepLinkFromNotification } from "@/lib/push";
 import { setAuthToken } from "@/lib/auth";
 import { saveReferrer } from "@/lib/affiliate";
@@ -90,8 +91,56 @@ function RootLayout() {
   // is unmounted and the user sees the real app. We default to true because
   // we want the brand beat to run on cold start.
   const [splashAnimating, setSplashAnimating] = useState(true);
+  // Gate the entire UI on the OTA check. While true, we render nothing and
+  // the native splash stays visible (which is fine — the OTA check is
+  // usually 200–800ms on a warm CDN). When false, either no update was
+  // available (proceed normally) or the update finished applying via
+  // Updates.reloadAsync() (which restarts the JS engine — this hook never
+  // gets to see the reload).
+  const [otaChecking, setOtaChecking] = useState(true);
   useEffect(() => {
     void i18nReady.then(() => setI18nLoaded(true));
+  }, []);
+
+  // OTA force-check on cold start. Behaviour:
+  //   1. Ask EAS Update whether a newer bundle exists for this runtimeVersion.
+  //   2. If yes — download it + reloadAsync(). React Native restarts with
+  //      the new JS, this function never returns.
+  //   3. If no, or any error (no network, EAS down, expo-updates disabled
+  //      because we're in Expo Go) — clear the gate and let the app boot
+  //      normally on the cached bundle.
+  //
+  // Expo Go ALWAYS returns `Updates.isEnabled === false`, so dev sessions
+  // bypass the check instantly. Production EAS builds with the EAS Update
+  // URL set in app.config.ts run the full flow.
+  useEffect(() => {
+    let cancelled = false;
+    async function checkAndApplyUpdate() {
+      try {
+        if (!Updates.isEnabled) {
+          if (!cancelled) setOtaChecking(false);
+          return;
+        }
+        const result = await Updates.checkForUpdateAsync();
+        if (result.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          // Force-apply: this restarts the app with the new bundle. We
+          // never reach the line after — the JS context is replaced.
+          await Updates.reloadAsync();
+          return;
+        }
+      } catch {
+        // Network blip, EAS hiccup, or running on a build without OTA
+        // configured — proceed with the cached bundle. Don't block the
+        // user.
+      } finally {
+        if (!cancelled) setOtaChecking(false);
+      }
+    }
+    void checkAndApplyUpdate();
+    return () => {
+      cancelled = true;
+    };
   }, []);
   // Kanit (Thai + Latin) — same family as the web. We ship the font as an
   // npm dep (@expo-google-fonts/kanit) so the .ttf is bundled by Metro
@@ -179,7 +228,10 @@ function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  if (!fontsLoaded || !i18nLoaded) return null;
+  // Hold the entire UI until OTA check resolves — the native splash
+  // remains visible behind us. This is the "force update before app
+  // even mounts" behaviour 911korn asked for.
+  if (otaChecking || !fontsLoaded || !i18nLoaded) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

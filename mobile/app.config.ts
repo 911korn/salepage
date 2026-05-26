@@ -26,6 +26,29 @@ const config: ExpoConfig = {
     backgroundColor: "#ffffff",
   },
   assetBundlePatterns: ["**/*"],
+
+  // EAS Update — force-check on every cold start (911korn 2026-05-26:
+  // "ติดตั้งระบบ OTA แบบ Force update ให้หน่อย ไม่ต้องสนใจใดๆ เข้าแอพใหม่
+  // ให้ Auto check update ทุกรอบ"). The actual URL is filled in by
+  // `eas update:configure` once we run it from the mobile/ dir.
+  //
+  // `runtimeVersion: policy=appVersion` pins JS bundles per-app-version,
+  // so bumping `version` above forces a native rebuild rather than a
+  // silent OTA — which is correct, because native code changes can't be
+  // OTA'd safely.
+  //
+  // Cold-start force-apply logic lives in app/_layout.tsx — it checks
+  // for an available update, downloads it, then reloadAsync() before
+  // the React tree mounts, so users always run the latest JS bundle.
+  runtimeVersion: { policy: "appVersion" },
+  updates: {
+    enabled: true,
+    checkAutomatically: "ON_LOAD",
+    fallbackToCacheTimeout: 0,
+    ...(process.env.EXPO_PUBLIC_UPDATES_URL
+      ? { url: process.env.EXPO_PUBLIC_UPDATES_URL }
+      : {}),
+  },
   ios: {
     supportsTablet: true,
     bundleIdentifier: "in.th.salepage.mobile",
