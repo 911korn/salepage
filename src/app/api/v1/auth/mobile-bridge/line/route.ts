@@ -1,26 +1,30 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { db } from "@/lib/db";
-import { getPlatformLineLoginChannelId } from "@/lib/line";
-import { randomBytes } from "node:crypto";
+import { getPlatformLineLiffId } from "@/lib/line";
 
 /**
  * GET /api/v1/auth/mobile-bridge/line?bridge=ID
  *
- * Native LINE PKCE in mobile/src/lib/line-login.ts redirects to
- * `salepage://auth/line`, but Expo Go's bundle id is `host.exp.Exponent`
- * so the OS doesn't register that scheme. The bridge runs the OAuth on
- * the server side: we 302 to LINE's authorize endpoint with our backend
- * as the redirect URI, set a cookie carrying the bridge id, and let the
- * /line-callback route handle the code exchange.
+ * 911korn 2026-05-26: "Login with LINE บังคับให้ไป LINE LIFF ของ
+ * @salepage ไปเลย จะได้ไป แอดเพื่อนและเชื่อมต่อ LINE Connect ไปเลยด้วย".
  *
- * Compared to Google bridge: simpler — LINE doesn't go through Auth.js,
- * so there's no CSRF auto-submit form. We hold the OAuth state in a
- * cookie + bridge row instead.
+ * The previous OAuth-on-access.line.me approach was unreliable in
+ * SFSafariViewController (didn't auto-launch the LINE app), and worse
+ * — even on success it didn't add the user as a friend of the @salepage
+ * Official Account, so we couldn't push them notifications via the
+ * Messaging API.
+ *
+ * The fix: redirect the browser to the LIFF Universal Link
+ * `https://liff.line.me/<LIFF_ID>?bridge=<bridgeId>`. iOS recognises
+ * this as a LINE Universal Link and hands off to the LINE app. The LIFF
+ * page (rendered at /auth/liff-line) handles login + access token
+ * extraction + POST to our bridge endpoint. The friend-add prompt is
+ * triggered by LIFF itself when the LIFF app's "Add friend option" is
+ * enabled in the LINE Developers Console.
+ *
+ * No CSRF cookie needed any more — LIFF's access token is the auth
+ * artefact, and we verify it server-side against our LINE channel id.
  */
-const COOKIE_NAME = "salepage_mb_line";
-const LINE_AUTH_ENDPOINT = "https://access.line.me/oauth2/v2.1/authorize";
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const bridgeId = url.searchParams.get("bridge");
@@ -34,51 +38,17 @@ export async function GET(request: Request) {
     return errorPage("This sign-in link was already used.");
   }
 
-  const channelId = getPlatformLineLoginChannelId();
-  if (!channelId) {
-    return errorPage("LINE login is not configured on this server.");
+  const liffId = getPlatformLineLiffId();
+  if (!liffId) {
+    return errorPage("LIFF not configured on this server.");
   }
 
-  // Random CSRF state — verified by /line-callback. We carry it in the
-  // cookie + in LINE's OAuth state param; both must match on return.
-  const state = randomBytes(16).toString("base64url");
+  // Forward the bridge id via the LIFF URL's `?bridge=...` query — LIFF
+  // SDK preserves the URL on liff.login() roundtrip via redirectUri.
+  const liffUrl = new URL(`https://liff.line.me/${liffId}`);
+  liffUrl.searchParams.set("bridge", row.id);
 
-  const callbackUrl = new URL(
-    "/api/v1/auth/mobile-bridge/line-callback",
-    url.origin,
-  ).toString();
-
-  const lineUrl = new URL(LINE_AUTH_ENDPOINT);
-  lineUrl.searchParams.set("response_type", "code");
-  lineUrl.searchParams.set("client_id", channelId);
-  lineUrl.searchParams.set("redirect_uri", callbackUrl);
-  lineUrl.searchParams.set("state", state);
-  lineUrl.searchParams.set("scope", "profile openid email");
-  lineUrl.searchParams.set("bot_prompt", "normal");
-
-  // 911korn 2026-05-26: native LINE app auto-launch from
-  // SFSafariViewController is unreliable across iOS versions — `line://
-  // oauth?...` is NOT a real LINE deep-link scheme (verified by the
-  // "Unable to connect" error the LINE app showed when we tried it).
-  //
-  // We just 302 straight to access.line.me/oauth2/v2.1/authorize. The
-  // page on LINE's side may still trigger Universal Link to the LINE
-  // app on devices where it's configured; on devices where it doesn't,
-  // the user signs in via email/QR. Either way the OAuth completes and
-  // bounces back to /line-callback, which mints the JWT.
-  const res = NextResponse.redirect(lineUrl);
-  const jar = await cookies();
-  // Cookie value is `<bridgeId>:<state>` — two ephemerals bound together
-  // so a stolen cookie alone (without the state forwarded by LINE) can't
-  // be replayed.
-  jar.set(COOKIE_NAME, `${row.id}:${state}`, {
-    httpOnly: true,
-    secure: url.protocol === "https:",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 10,
-  });
-  return res;
+  return NextResponse.redirect(liffUrl);
 }
 
 function errorPage(message: string) {

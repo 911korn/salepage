@@ -46,6 +46,13 @@ model User {
   // multi-device support lands when we add a separate UserDevice model.
   expoPushToken String?
 
+  // LINE user id captured during LIFF-based LINE login (V2.1+). When set,
+  // we can send order updates + reminders via LINE Messaging API to the
+  // user's @salepage chat. Populated by /api/v1/auth/mobile-bridge/line-liff
+  // after liff.getProfile() succeeds; null for users who only signed in
+  // via Google or email.
+  lineUserId    String? @unique
+
   accounts     Account[]
   sessions     Session[]
   shops        Shop[]
