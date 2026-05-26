@@ -1243,6 +1243,37 @@ export const api = {
         body: input,
       }),
 
+    /// Seller edit/PATCH product fields. Pass only the keys you want to
+    /// change — server merges with existing row.
+    updateProduct: (
+      shopSlug: string,
+      productSlug: string,
+      input: {
+        name?: string;
+        description?: string | null;
+        priceBaht?: number;
+        compareAtBaht?: number | null;
+        imageUrls?: string[];
+        badge?: "HOT" | "NEW" | "SALE" | null;
+        type?: "PHYSICAL" | "DIGITAL";
+        stock?: number | null;
+        status?: "ACTIVE" | "HIDDEN" | "SOLD_OUT";
+      },
+    ) =>
+      apiFetch<{
+        product: { id: string; slug: string; name: string };
+      }>(`/api/v1/shops/${shopSlug}/products/${productSlug}`, {
+        method: "PATCH",
+        body: input,
+      }),
+
+    /// Seller delete product. Returns { deleted: true } on success.
+    deleteProduct: (shopSlug: string, productSlug: string) =>
+      apiFetch<{ deleted: true }>(
+        `/api/v1/shops/${shopSlug}/products/${productSlug}`,
+        { method: "DELETE" },
+      ),
+
     /** Seller dashboard summary — counts + revenue rollups. */
     stats: (slug: string) =>
       apiFetch<{

@@ -395,6 +395,10 @@ function RootLayout() {
               options={{ headerTitle: brandHeader("sellerProductsNew") }}
             />
             <Stack.Screen
+              name="seller/products/[productSlug]/edit"
+              options={{ headerTitle: brandHeader("sellerProductsEdit") }}
+            />
+            <Stack.Screen
               name="seller/shop-settings"
               options={{ headerTitle: brandHeader("shopSettings") }}
             />

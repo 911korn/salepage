@@ -160,7 +160,11 @@ export default function ShopSettingsScreen() {
     const idx = banners.length;
     setBanners([...banners, { url: "", status: "uploading", localUri: uri }]);
     try {
-      const { base64 } = await compressForSlipUpload(uri);
+      // Banner preset: 1280px / q 0.78 → typically 80–180 KB. The
+      // default `slip` preset's 1600px / q 0.82 was producing 300-600 KB
+      // banner uploads which felt sluggish on Thai 4G (911korn 2026-05-27
+      // "รูปปก อัพช้ามาก").
+      const { base64 } = await compressForSlipUpload(uri, "banner");
       const res = await api.upload.fromBase64({
         filename: `shop-banner-${Date.now()}.jpg`,
         contentType: "image/jpeg",
@@ -210,7 +214,9 @@ export default function ShopSettingsScreen() {
     const uri = result.assets[0].uri;
     setLogo({ url: "", status: "uploading", localUri: uri });
     try {
-      const { base64 } = await compressForSlipUpload(uri);
+      // Logos are small (renders ~64px). Thumb preset = 640px / q 0.75
+      // → ~30-60 KB on the wire.
+      const { base64 } = await compressForSlipUpload(uri, "thumb");
       const res = await api.upload.fromBase64({
         filename: `shop-logo-${Date.now()}.jpg`,
         contentType: "image/jpeg",

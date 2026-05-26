@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Pressable,
   RefreshControl,
-  Linking,
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -18,13 +17,12 @@ import { formatBaht } from "@/lib/format";
 import { useSellerMode } from "@/store/seller-mode";
 
 /**
- * /seller/products — read-only list for the seller dashboard.
+ * /seller/products — seller product list.
  *
- * V1.5 scope: tap a product → opens the public product page (which the
- * seller can preview). Create/edit still happens on the web dashboard at
- * salepage.in.th/dashboard/<slug>/products — that has the full form, image
- * upload UX, and AI-assist that doesn't make sense to rebuild on mobile in
- * the first iteration. We surface a deep link to it from this screen.
+ * Tap a row → /seller/products/[productSlug]/edit (in-app edit flow,
+ * 911korn 2026-05-27 directive: "ไม่เอา Edit on Web ต้องการให้ Add
+ * Product Edit Product จัดการทุกอย่างได้ผ่าน App ทั้งหมดเลย").
+ * "+ Add product" → /seller/products/new.
  */
 export default function SellerProductsScreen() {
   const { t } = useTranslation(["seller", "shop"]);
@@ -84,19 +82,6 @@ export default function SellerProductsScreen() {
                 {t("products.addInApp")}
               </Text>
             </Pressable>
-            <Pressable
-              onPress={() =>
-                Linking.openURL(
-                  `https://salepage.in.th/dashboard/${slug}/products`,
-                )
-              }
-              className="flex-row items-center gap-2 rounded-full border border-border bg-white px-4 py-2"
-            >
-              <Text className="text-[12px] font-semibold text-fg">
-                {t("products.editOnWeb")}
-              </Text>
-              <Text className="text-[10px] text-muted">↗</Text>
-            </Pressable>
           </View>
         </View>
 
@@ -118,7 +103,11 @@ export default function SellerProductsScreen() {
               {products.map((p) => (
                 <Pressable
                   key={p.slug}
-                  onPress={() => router.push(`/s/${slug}/${p.slug}`)}
+                  onPress={() =>
+                    router.push(
+                      `/seller/products/${p.slug}/edit` as never,
+                    )
+                  }
                   className="m-1 w-[48%] overflow-hidden rounded-2xl border border-border bg-white"
                 >
                   <View className="aspect-square w-full bg-brand-50">
