@@ -26,6 +26,7 @@
     "language": "ภาษา"
   },
   "nav": {
+    "shop": "ร้านค้าทั้งหมด",
     "features": "ฟีเจอร์",
     "promptpay": "PromptPay & สลิป",
     "preview": "ตัวอย่างร้าน",

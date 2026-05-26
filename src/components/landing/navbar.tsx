@@ -10,6 +10,11 @@ import { LocaleSwitcher } from "@/components/ui/locale-switcher";
 import { cn } from "@/lib/cn";
 
 const NAV_KEYS = [
+  // Buyer entry point — first item so it's the most prominent landing
+  // CTA after the SalePage logo. Links to the buyer hub `/shops`
+  // (911korn 2026-05-27: "หน้าแรกกดตรงไหน ถึงจะไปหน้า Shopping Page
+  // ได้"). The other items are still in-page anchors for marketing.
+  { href: "/shops", key: "shop" },
   { href: "#features", key: "features" },
   { href: "#promptpay", key: "promptpay" },
   { href: "#preview", key: "preview" },
