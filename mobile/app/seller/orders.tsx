@@ -78,17 +78,22 @@ export default function SellerOrdersScreen() {
 
   return (
     <Screen>
-      {/* Status tabs */}
+      {/* Status tabs — horizontal scroller. Wrap with `flexGrow: 0` so
+          the ScrollView sizes to its content height instead of greedily
+          stretching to fill the parent flex-1 column (which made each
+          rounded-full pill render as a tall vertical bar — 911korn
+          2026-05-27 screenshots IMG_5223–5226). */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
         contentContainerClassName="gap-2 px-5 py-3"
       >
         {STATUS_TAB_KEYS.map((tabKey) => (
           <Pressable
             key={tabKey}
             onPress={() => setStatus(tabKey)}
-            className={`rounded-full border px-3 py-1.5 ${
+            className={`self-start rounded-full border px-3 py-1.5 ${
               status === tabKey
                 ? "border-brand-300 bg-brand-50"
                 : "border-border bg-white"
@@ -106,6 +111,7 @@ export default function SellerOrdersScreen() {
       </ScrollView>
 
       <ScrollView
+        className="flex-1"
         contentContainerClassName="pb-16"
         refreshControl={
           <RefreshControl
