@@ -9,6 +9,7 @@ import { verifyPlatformLineIdToken } from "@/lib/line";
 import { getPlatformSetting } from "@/lib/platform-settings";
 import { viewerCanBypassMaintenance } from "@/lib/admin";
 import { normalizeCustomerPhone } from "@/lib/customer-addresses";
+import { optionalSession } from "@/lib/api-auth";
 
 /**
  * POST /api/v1/orders/multi — public; no auth required.
@@ -94,6 +95,12 @@ export async function POST(request: Request) {
   const parsed = await parseJson(request, Body);
   if (!parsed.ok) return parsed.response;
   const input = parsed.data;
+
+  // Opportunistic session — see /orders/route.ts for context. Signed-in
+  // multi-shop checkouts get tagged so /me/orders surfaces them.
+  const sessionUser = await optionalSession(request);
+  const effectiveCustomerEmail =
+    input.customerEmail ?? sessionUser?.email ?? undefined;
 
   // Reject duplicate shopSlug entries (clients should merge before posting).
   const slugs = input.shops.map((s) => s.shopSlug);
@@ -364,7 +371,7 @@ export async function POST(request: Request) {
           publicToken: p.publicToken,
           customerName: input.customerName.trim(),
           customerPhone: normalizedCustomerPhone || input.customerPhone,
-          customerEmail: input.customerEmail,
+          customerEmail: effectiveCustomerEmail,
           customerAddress: input.customerAddress,
           notes: p.notes,
           items: p.items,
@@ -436,7 +443,7 @@ export async function POST(request: Request) {
   }
 
   // Fire confirmation emails (best-effort; non-blocking)
-  if (input.customerEmail) {
+  if (effectiveCustomerEmail) {
     for (let i = 0; i < created.length; i++) {
       const order = created[i]!;
       const p = prepared[i]!;
@@ -444,7 +451,7 @@ export async function POST(request: Request) {
         ref: buildOrderRef(order.createdAt, order.id),
         token: order.publicToken,
         customerName: order.customerName,
-        customerEmail: input.customerEmail,
+        customerEmail: effectiveCustomerEmail,
         totalSatang: order.totalSatang,
         items: p.items,
         shopName: p.shopName,

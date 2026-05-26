@@ -122,43 +122,59 @@ export function AddressPicker({ value, onChange, initialPostcode = "" }: Props) 
         />
       </View>
 
-      {/* Subdistrict / district / province picker */}
+      {/* Subdistrict / district / province picker.
+          Two visual states:
+            1. After selection — collapsed pill + "เปลี่ยน" link so the
+               choices don't pile up below and the parent ScrollView can keep
+               flowing (911korn 2026-05-27 IMG_5247/IMG_5248 "ใส่ที่อยู่
+               เลื่อนไม่ได้ ทับกันมั่ว").
+            2. Before selection — full list, no maxHeight clip so each
+               option's hit target stays a normal Pressable inside the
+               parent ScrollView. */}
       {loading ? (
         <View className="py-3">
           <ActivityIndicator color="#e11d48" />
+        </View>
+      ) : selected ? (
+        <View className="flex-row items-center gap-2 rounded-2xl border border-brand-300 bg-brand-50 px-3 py-2">
+          <View className="flex-1">
+            <Text className="text-[13px] font-semibold text-brand-700">
+              ต.{selected.subdistrict} · อ.{selected.district}
+            </Text>
+            <Text className="text-[11px] text-muted">
+              จ.{selected.province} {selected.postcode}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => setSelected(null)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="เปลี่ยนที่อยู่"
+          >
+            <Text className="text-[12px] font-semibold text-brand-700">
+              เปลี่ยน
+            </Text>
+          </Pressable>
         </View>
       ) : options.length > 0 ? (
         <View className="gap-1.5">
           <Text className="text-[12px] text-muted">
             เลือกตำบล/อำเภอ/จังหวัด
           </Text>
-          <View className="max-h-56 gap-1.5">
-            {options.map((opt) => {
-              const isSelected = selected?.key === opt.key;
-              return (
-                <Pressable
-                  key={opt.key}
-                  onPress={() => setSelected(opt)}
-                  className={`rounded-2xl border px-3 py-2 ${
-                    isSelected
-                      ? "border-brand-300 bg-brand-50"
-                      : "border-border bg-white"
-                  }`}
-                >
-                  <Text
-                    className={`text-[13px] ${
-                      isSelected ? "font-semibold text-brand-700" : "text-fg"
-                    }`}
-                  >
-                    ต.{opt.subdistrict} · อ.{opt.district}
-                  </Text>
-                  <Text className="text-[11px] text-muted">
-                    จ.{opt.province} {opt.postcode}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          {options.map((opt) => (
+            <Pressable
+              key={opt.key}
+              onPress={() => setSelected(opt)}
+              className="rounded-2xl border border-border bg-white px-3 py-2"
+            >
+              <Text className="text-[13px] text-fg">
+                ต.{opt.subdistrict} · อ.{opt.district}
+              </Text>
+              <Text className="text-[11px] text-muted">
+                จ.{opt.province} {opt.postcode}
+              </Text>
+            </Pressable>
+          ))}
         </View>
       ) : postcode.length === 5 ? (
         <Text className="text-[12px] text-rose-600">

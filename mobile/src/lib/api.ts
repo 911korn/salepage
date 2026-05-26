@@ -149,7 +149,12 @@ export const api = {
       referrerCode?: string;
       /** V1.5 Protected Pay opt-in — adds 1.5% buyer-paid fee. */
       useEscrow?: boolean;
-    }) => apiFetch<CreateOrderResponse>("/api/v1/orders", { method: "POST", body: input, anonymous: true }),
+      // NOT anonymous: when the buyer is signed-in, attach the Bearer JWT so
+      // the server can tag the Order with their email (→ /me/orders surfaces
+      // the pending PromptPay order on the Orders tab). Anonymous checkout
+      // still works because the helper only sends the header when a token
+      // exists (911korn 2026-05-27 IMG_5250 "Order ที่ยังไม่ได้จ่ายหาไม่เจอ").
+    }) => apiFetch<CreateOrderResponse>("/api/v1/orders", { method: "POST", body: input }),
 
     /**
      * V1.0 multi-shop checkout — creates one Order per shop in a single
@@ -188,7 +193,7 @@ export const api = {
           qr: { dataUrl: string; payload: string; amount: number } | null;
         }>;
         grandTotalSatang: number;
-      }>("/api/v1/orders/multi", { method: "POST", body: input, anonymous: true }),
+      }>("/api/v1/orders/multi", { method: "POST", body: input }),
 
     get: (token: string) => apiFetch<OrderDetail>(`/api/v1/orders/${token}`, { anonymous: true }),
 

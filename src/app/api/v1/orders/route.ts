@@ -8,6 +8,7 @@ import { sendOrderCreated, sendNewOrderAlert } from "@/lib/email";
 import { verifyPlatformLineIdToken } from "@/lib/line";
 import { getPlatformSetting } from "@/lib/platform-settings";
 import { viewerCanBypassMaintenance } from "@/lib/admin";
+import { optionalSession } from "@/lib/api-auth";
 import {
   extractThaiPostcode,
   makeAddressKey,
@@ -72,6 +73,13 @@ export async function POST(request: Request) {
   const normalizedCustomerPhone = input.customerPhone
     ? normalizeCustomerPhone(input.customerPhone)
     : undefined;
+
+  // Opportunistic session — anonymous checkout is still allowed, but if the
+  // buyer is signed in we tag the order with their email so it shows up in
+  // /me/orders (911korn 2026-05-27 IMG_5250 "Order ที่ยังไม่ได้จ่ายหาไม่เจอ").
+  const sessionUser = await optionalSession(request);
+  const effectiveCustomerEmail =
+    input.customerEmail ?? sessionUser?.email ?? undefined;
 
   const shop = await db.shop.findUnique({
     where: { slug: input.shopSlug },
@@ -232,7 +240,7 @@ export async function POST(request: Request) {
       publicToken: token,
       customerName: input.customerName.trim(),
       customerPhone: normalizedCustomerPhone || input.customerPhone,
-      customerEmail: input.customerEmail,
+      customerEmail: effectiveCustomerEmail,
       customerAddress: input.customerAddress,
       items: itemsSnapshot,
       subtotalSatang,

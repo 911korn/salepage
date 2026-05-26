@@ -68,3 +68,35 @@ export async function resolveSession(request: Request): Promise<
   }
   return { ok: true, user, via: "cookie" };
 }
+
+/**
+ * Soft variant of `resolveSession` — returns the authenticated `User` if a
+ * valid Bearer token or cookie session is present, or `null` if anonymous.
+ * Never 401s. Use on routes that allow anonymous AND authenticated callers
+ * (e.g. `POST /api/v1/orders`) so the handler can opportunistically tag the
+ * order with the buyer's `user.email`/`user.id` without forcing sign-in.
+ *
+ * 911korn 2026-05-27 IMG_5250: signed-in mobile buyers had orders created
+ * without `customerEmail`, so the Orders tab (filtered by email) couldn't
+ * find their pending PromptPay orders.
+ */
+export async function optionalSession(request: Request): Promise<User | null> {
+  const header = request.headers.get("authorization") ?? request.headers.get("Authorization");
+  if (header && header.toLowerCase().startsWith("bearer ")) {
+    const token = header.slice(7).trim();
+    const payload = await verifyMobileJwt(token);
+    if (!payload) return null;
+    const user = await db.user.findUnique({ where: { id: payload.sub } });
+    if (!user || user.suspended) return null;
+    return user;
+  }
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return null;
+    const user = await db.user.findUnique({ where: { id: session.user.id } });
+    if (!user || user.suspended) return null;
+    return user;
+  } catch {
+    return null;
+  }
+}
