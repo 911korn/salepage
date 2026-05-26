@@ -16,6 +16,7 @@ import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
 import { compressForSlipUpload } from "@/lib/image-compress";
+import { ShopCover, ShopCoverFallback } from "@/components/shop-cover";
 import { useSellerMode } from "@/store/seller-mode";
 import { Sentry } from "@/lib/sentry";
 
@@ -263,20 +264,34 @@ export default function ShopSettingsScreen() {
           </Text>
         </View>
 
-        {/* Live preview */}
+        {/* Live preview — mirrors what buyers will see in the shops tab. */}
         <View className="mx-5 mt-4 overflow-hidden rounded-3xl border border-border bg-white">
-          <View
-            className="h-24 w-full"
-            style={{ backgroundColor: themeColor ?? shop.themeColor }}
-          >
-            {banners[0]?.url ? (
-              <Image
-                source={{ uri: banners[0].localUri ?? banners[0].url }}
-                style={{ width: "100%", height: "100%" }}
-                contentFit="cover"
-              />
-            ) : null}
-          </View>
+          {banners[0]?.url || banners[0]?.localUri ? (
+            <ShopCover
+              bannerUrl={banners[0].localUri ?? banners[0].url}
+              themeColor={themeColor ?? shop.themeColor}
+              logoText={shop.logoText}
+              logoUrl={
+                logo && logo !== "cleared"
+                  ? logo.localUri ?? logo.url
+                  : shop.logoUrl
+              }
+              shopName={name?.trim() || shop.name}
+              height={96}
+            />
+          ) : (
+            <ShopCoverFallback
+              themeColor={themeColor ?? shop.themeColor}
+              logoText={shop.logoText}
+              logoUrl={
+                logo && logo !== "cleared"
+                  ? logo.localUri ?? logo.url
+                  : shop.logoUrl
+              }
+              shopName={name?.trim() || shop.name}
+              height={96}
+            />
+          )}
           <View className="flex-row gap-3 p-4">
             <View
               className="-mt-10 size-14 items-center justify-center overflow-hidden rounded-2xl border-2 border-white"

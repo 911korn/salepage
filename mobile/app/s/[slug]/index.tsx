@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { VerifiedBadge, TrustMeter, RiskWarning } from "@/components/trust-badge";
 import { ReviewsList } from "@/components/reviews-list";
 import { GroupBuyRail } from "@/components/group-buy-rail";
+import { ShopCover } from "@/components/shop-cover";
 import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 import { shareShop } from "@/lib/share";
@@ -50,21 +51,17 @@ export default function ShopScreen() {
 
   return (
     <Screen scroll>
-      {/* Banner */}
-      <View
-        className="h-44 w-full"
-        style={{
-          backgroundColor: shop.themeColor,
-        }}
-      >
-        {shop.bannerUrls[0] ? (
-          <Image
-            source={{ uri: shop.bannerUrls[0] }}
-            style={{ width: "100%", height: "100%" }}
-            contentFit="cover"
-          />
-        ) : null}
-      </View>
+      {/* Banner — buyer's first impression. Falls back to a branded
+          gradient + shop initial if the owner hasn't uploaded a cover. */}
+      <ShopCover
+        bannerUrl={shop.bannerUrls[0]}
+        themeColor={shop.themeColor}
+        logoText={shop.logoText}
+        logoUrl={shop.logoUrl}
+        shopName={shop.name}
+        height={176}
+        showWordmark={false}
+      />
 
       {/* Shop card */}
       <View className="-mt-12 mx-5 rounded-3xl border border-border bg-white p-5 shadow-sm">

@@ -15,6 +15,7 @@ import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Screen } from "@/components/ui/screen";
 import { VerifiedBadge, TrustMeter } from "@/components/trust-badge";
+import { ShopCover } from "@/components/shop-cover";
 import { DiscoveryRails } from "@/components/discovery-rails";
 import {
   SearchFilterSheet,
@@ -551,18 +552,14 @@ function ShopCard({ shop }: { shop: ShopSummary }) {
       onPress={() => router.push(`/s/${shop.slug}`)}
       className="overflow-hidden rounded-3xl border border-border bg-white"
     >
-      <View
-        className="h-24 w-full"
-        style={{ backgroundColor: shop.themeColor }}
-      >
-        {shop.bannerUrls[0] ? (
-          <Image
-            source={{ uri: shop.bannerUrls[0] }}
-            style={{ width: "100%", height: "100%" }}
-            contentFit="cover"
-          />
-        ) : null}
-      </View>
+      <ShopCover
+        bannerUrl={shop.bannerUrls[0]}
+        themeColor={shop.themeColor}
+        logoText={shop.logoText}
+        logoUrl={shop.logoUrl}
+        shopName={shop.name}
+        height={96}
+      />
       <View className="flex-row gap-3 p-4">
         <View
           className="-mt-10 size-14 items-center justify-center overflow-hidden rounded-2xl border-2 border-white"
