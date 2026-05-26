@@ -41,6 +41,15 @@ export function Screen({
         className={`flex-1 ${contentClassName}`}
         contentContainerClassName={scroll ? "pb-24" : undefined}
         showsVerticalScrollIndicator={false}
+        // Disable iOS's automatic content-inset adjustment. Default
+        // ("automatic") adds a top inset equal to the nav bar height —
+        // even when the header is transparent — which left a white
+        // band above hero images on shop/product screens (911korn
+        // 2026-05-27). Setting "never" makes ScrollView content start
+        // at y=0; opaque-header screens are unaffected because the
+        // Stack header positions Screen's view below the bar anyway.
+        contentInsetAdjustmentBehavior={scroll ? "never" : undefined}
+        automaticallyAdjustContentInsets={scroll ? false : undefined}
       >
         {children}
       </Container>
