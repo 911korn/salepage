@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db, DisputeStatus, OrderStatus } from "@/lib/db";
 import { hasBusinessPlan } from "@/lib/plan";
 import { getShopBySlug as getDemoShop } from "@/lib/demo-data";
+import { verifyMobileJwt } from "@/lib/mobile-jwt";
 
 const CATEGORIES = [
   "fashion",
@@ -58,11 +59,28 @@ const PatchBody = z.object({
   lineWebhookEnabled: z.boolean().optional(),
 });
 
+/**
+ * Resolve the current viewer's userId from either a mobile Bearer JWT or
+ * the web Auth.js cookie session. Returns null for anonymous viewers;
+ * we don't 401 here because this is a public GET — only privileged
+ * fields (isFollowing, isFavorite) are gated on having a viewer.
+ */
+async function viewerId(request: Request): Promise<string | null> {
+  const header = request.headers.get("authorization") ?? request.headers.get("Authorization");
+  if (header && header.toLowerCase().startsWith("bearer ")) {
+    const payload = await verifyMobileJwt(header.slice(7).trim());
+    if (payload) return payload.sub;
+  }
+  const session = await auth();
+  return session?.user?.id ?? null;
+}
+
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await context.params;
+  const userId = await viewerId(request);
 
   // 1) Try DB. Pull the catalog inline (`include products`) since the mobile
   // reads `data.shop` and `data.products` from a single round-trip.
@@ -120,6 +138,22 @@ export async function GET(
     // the denominator because those never had a chance to be disputed.
     // Capped at 0–100; 0 displays as "no disputes".
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+    // Follower count + per-viewer isFollowing flag. Counts shipping with
+    // the rest of the trust badges so social proof + own-state share one
+    // DB round-trip rather than two.
+    const followerCount = await db.shopFollow.count({
+      where: { shopId: shop.id },
+    });
+    const isFollowing = userId
+      ? Boolean(
+          await db.shopFollow.findUnique({
+            where: { userId_shopId: { userId, shopId: shop.id } },
+            select: { userId: true },
+          }),
+        )
+      : false;
+
     const [disputeCount, deliveredOrderCount] = await Promise.all([
       db.dispute.count({
         where: {
@@ -187,6 +221,12 @@ export async function GET(
           ratePct: disputeRatePct,
           windowDays: 90,
         },
+        // Social-proof + viewer state for the Follow button on the shop
+        // hero. `followerCount` is the public count (visible to anon);
+        // `isFollowing` is null for anon and true/false when viewer is
+        // signed in.
+        followerCount,
+        isFollowing,
       },
       products: shop.products,
       productCount: shop._count.products,
@@ -222,6 +262,8 @@ export async function GET(
           ratePct: 0,
           windowDays: 90,
         },
+        followerCount: 0,
+        isFollowing: false,
       },
       products: demo.products ?? [],
       productCount: demo.productCount,

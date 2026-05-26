@@ -1,6 +1,6 @@
 import { useLocalSearchParams, router, Link } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useMemo } from "react";
 import { Screen } from "@/components/ui/screen";
@@ -9,12 +9,14 @@ import { VerifiedBadge, TrustMeter, RiskWarning } from "@/components/trust-badge
 import { ReviewsList } from "@/components/reviews-list";
 import { GroupBuyRail } from "@/components/group-buy-rail";
 import { ShopCover } from "@/components/shop-cover";
-import { Share2 } from "lucide-react-native";
+import { Share2, Heart, Plus, Check } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { i18n } from "@/lib/i18n";
-import { api } from "@/lib/api";
+import { api, ApiClientError } from "@/lib/api";
+import { getAuthToken } from "@/lib/auth";
 import { formatBaht } from "@/lib/format";
 import { shareShop } from "@/lib/share";
+import type { ShopSummary } from "@/types/api";
 
 export default function ShopScreen() {
   const { t } = useTranslation(["shop", "common"]);
@@ -98,6 +100,9 @@ export default function ShopScreen() {
             <Share2 size={16} color="#0a0a0a" strokeWidth={2} />
           </Pressable>
         </View>
+
+        {/* Follow + follower count */}
+        <FollowRow shop={shop} />
 
         {shop.description ? (
           <Text className="mt-4 text-[14px] leading-relaxed text-fg">
@@ -273,3 +278,97 @@ function ProductCard({
 
 // Silence unused-import lint for ScrollView (left here for future filters tab).
 void ScrollView;
+
+/**
+ * Follow row — shows follower count + Follow/Following toggle button.
+ * Optimistic update: flips the button state immediately, rolls back if
+ * the network call fails. Anonymous viewers get bounced to /signin with
+ * `redirect` pointing back here so they land on the shop after auth.
+ */
+function FollowRow({ shop }: { shop: ShopSummary }) {
+  const { t } = useTranslation("shop");
+  const qc = useQueryClient();
+  const following = shop.isFollowing ?? false;
+  const followerCount = shop.followerCount ?? 0;
+
+  const mutation = useMutation({
+    mutationFn: async (next: boolean) => {
+      if (next) await api.shops.follow(shop.slug);
+      else await api.shops.unfollow(shop.slug);
+      return next;
+    },
+    onMutate: async (next) => {
+      // Optimistic: patch the cached shop GET so the button + count flip
+      // immediately. The shop GET key matches the parent useQuery.
+      await qc.cancelQueries({ queryKey: ["shop", shop.slug] });
+      const prev = qc.getQueryData<{ shop: ShopSummary }>(["shop", shop.slug]);
+      qc.setQueryData(["shop", shop.slug], (old: { shop: ShopSummary } | undefined) =>
+        old
+          ? {
+              ...old,
+              shop: {
+                ...old.shop,
+                isFollowing: next,
+                followerCount: Math.max(
+                  0,
+                  (old.shop.followerCount ?? 0) + (next ? 1 : -1),
+                ),
+              },
+            }
+          : old,
+      );
+      return { prev };
+    },
+    onError: (err, _next, ctx) => {
+      // Roll back and surface the error
+      if (ctx?.prev) qc.setQueryData(["shop", shop.slug], ctx.prev);
+      const msg = err instanceof ApiClientError ? err.message : "ลองใหม่อีกครั้ง";
+      Alert.alert(t("followError", { defaultValue: "ติดตามไม่สำเร็จ" }), msg);
+    },
+  });
+
+  async function onPress() {
+    const token = await getAuthToken();
+    if (!token) {
+      // Anonymous viewer → send to signin then back here
+      router.push(`/signin?redirect=/s/${shop.slug}`);
+      return;
+    }
+    mutation.mutate(!following);
+  }
+
+  return (
+    <View className="mt-3 flex-row items-center gap-3">
+      <Pressable
+        onPress={onPress}
+        disabled={mutation.isPending}
+        className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl px-4 py-2.5 ${
+          following
+            ? "border border-border bg-soft active:bg-border/40"
+            : "bg-brand-600 active:bg-brand-700"
+        } ${mutation.isPending ? "opacity-70" : ""}`}
+      >
+        {following ? (
+          <Check size={16} color="#0a0a0a" strokeWidth={2.4} />
+        ) : (
+          <Plus size={16} color="#ffffff" strokeWidth={2.4} />
+        )}
+        <Text
+          className={`text-[14px] font-semibold ${following ? "text-fg" : "text-white"}`}
+        >
+          {following ? t("following", { defaultValue: "กำลังติดตาม" }) : t("follow", { defaultValue: "ติดตาม" })}
+        </Text>
+      </Pressable>
+
+      <View className="flex-row items-center gap-1.5">
+        <Heart size={14} color="#737373" strokeWidth={2} />
+        <Text className="text-[13px] text-muted">
+          {t("followers", {
+            count: followerCount,
+            defaultValue: `${followerCount.toLocaleString()} ผู้ติดตาม`,
+          })}
+        </Text>
+      </View>
+    </View>
+  );
+}

@@ -145,6 +145,13 @@ export interface ShopSummary {
    * When false, the checkout toggle is hidden + the shop badge isn't shown.
    */
   acceptsEscrow?: boolean;
+  /**
+   * V2.1 follower social proof — count of users following this shop and
+   * the current viewer's follow state. Only populated by the per-shop
+   * GET; list endpoints omit them.
+   */
+  followerCount?: number;
+  isFollowing?: boolean;
 }
 
 export interface ProductSummary {
