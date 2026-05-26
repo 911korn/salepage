@@ -1,4 +1,5 @@
 import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import { getEnv } from "@/lib/env";
 
 /**
