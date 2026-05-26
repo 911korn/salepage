@@ -136,10 +136,16 @@ export async function loginWithLine(): Promise<LineBridgeResult> {
     void tick();
   });
 
-  const browserPromise = WebBrowser.openAuthSessionAsync(
-    openUrl,
-    "salepage://auth/line",
-  );
+  // openBrowserAsync (SFSafariViewController on iOS, Chrome Custom Tabs on
+  // Android) ALLOWS deep links to other apps — so when LINE's web page
+  // hits its `line://` Universal Link, iOS hands off to the native LINE
+  // app. openAuthSessionAsync (SFAuthSession) sandboxes the session and
+  // blocks those redirects, which is why the user saw access.line.me's
+  // email/password form instead of LINE app auto-open.
+  const browserPromise = WebBrowser.openBrowserAsync(openUrl, {
+    presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+    dismissButtonStyle: "close",
+  });
 
   await Promise.race([pollPromise, browserPromise]);
 

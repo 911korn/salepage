@@ -54,6 +54,14 @@ export async function GET(request: Request) {
   lineUrl.searchParams.set("redirect_uri", callbackUrl);
   lineUrl.searchParams.set("state", state);
   lineUrl.searchParams.set("scope", "profile openid email");
+  // Hint LINE to launch the native iOS/Android LINE app when available
+  // instead of dropping the user on access.line.me's email/password form
+  // (911korn 2026-05-26: "LINE ต้องทำให้ Auto redirect ออกไปแอพไลน์").
+  // bot_prompt + initial_amr_display + switch_amr together signal "we
+  // want the app experience, fall back to web if the app isn't here".
+  lineUrl.searchParams.set("bot_prompt", "normal");
+  lineUrl.searchParams.set("initial_amr_display", "lineqr");
+  lineUrl.searchParams.set("switch_amr", "true");
 
   const res = NextResponse.redirect(lineUrl);
   const jar = await cookies();
