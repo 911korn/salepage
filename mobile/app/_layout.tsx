@@ -11,7 +11,11 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useFonts } from "expo-font";
+import {
+  useFonts,
+  Kanit_400Regular,
+  Kanit_700Bold,
+} from "@expo-google-fonts/kanit";
 import { useEffect } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
@@ -34,11 +38,13 @@ const queryClient = new QueryClient({
 });
 
 function RootLayout() {
-  // Kanit (Thai + Latin) — same family as the web (src/app/[locale]/layout.tsx).
-  // Loaded via expo-font so we don't ship a Google Fonts request at runtime.
+  // Kanit (Thai + Latin) — same family as the web. We ship the font as an
+  // npm dep (@expo-google-fonts/kanit) so the .ttf is bundled by Metro
+  // without us needing to commit binary files to repo. Aliased to "Kanit" /
+  // "Kanit-Bold" so existing className styles keep working.
   const [fontsLoaded] = useFonts({
-    Kanit: require("../assets/fonts/Kanit-Regular.ttf"),
-    "Kanit-Bold": require("../assets/fonts/Kanit-Bold.ttf"),
+    Kanit: Kanit_400Regular,
+    "Kanit-Bold": Kanit_700Bold,
   });
 
   useEffect(() => {

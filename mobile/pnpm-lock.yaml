@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@expo-google-fonts/kanit':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@hookform/resolvers':
         specifier: ^5.4.0
         version: 5.4.0(react-hook-form@7.76.1(react@19.0.0))
@@ -656,6 +659,9 @@ packages:
   '@egjs/hammerjs@2.0.17':
     resolution: {integrity: sha512-XQsZgjm2EcVUiZQf11UBJQfmZeEmOW8DpI1gsFeln6w0ae0ii4dMQEQ0kjl6DspdWX1aGY1/loyXnP0JS06e/A==}
     engines: {node: '>=0.8.0'}
+
+  '@expo-google-fonts/kanit@0.4.1':
+    resolution: {integrity: sha512-bm5lhr3iUjMtAzsr9wStxd307T2kK2e5LUVH1ALbp4/HKcluNw5MYLFYzcN93dnbo02x4ulRdzSeKi1nnT46Zg==}
 
   '@expo/cli@0.24.24':
     resolution: {integrity: sha512-XybHfF2QNPJNnHoUKHcG796iEkX5126UuTAs6MSpZuvZRRQRj/sGCLX+driCOVHbDOpcCOusMuHrhxHbtTApyg==}
@@ -4163,6 +4169,8 @@ snapshots:
   '@egjs/hammerjs@2.0.17':
     dependencies:
       '@types/hammerjs': 2.0.46
+
+  '@expo-google-fonts/kanit@0.4.1': {}
 
   '@expo/cli@0.24.24':
     dependencies:

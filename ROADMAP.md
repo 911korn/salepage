@@ -99,7 +99,8 @@
 - [x] เพิ่ม `/api/v1/auth/line-mobile` route 🔥
 - [x] JWT signing/verifying lib (`src/lib/mobile-jwt.ts`)
 - [x] `src/lib/api-auth.ts` — Bearer + cookie unified resolver
-- [ ] App icon + splash screen (brand rose + LogoMark) — _user uploads_
+- [x] App icon + splash screen — solid `#e11d48` (brand rose-600) placeholders generated at `mobile/assets/{icon,adaptive-icon,splash}.png`. Replace with branded LogoMark before App Store / Play Store submission.
+- [x] Bundled Kanit font via `@expo-google-fonts/kanit` npm package — no `assets/fonts/*.ttf` to commit, ships same font family as the web side
 
 #### Auth
 - [x] LINE Login native via `expo-auth-session` (PKCE) 🔥

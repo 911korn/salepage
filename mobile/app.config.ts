@@ -49,7 +49,7 @@ const config: ExpoConfig = {
   android: {
     package: "in.th.salepage.mobile",
     adaptiveIcon: {
-      foregroundImage: "./assets/icon.png",
+      foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",
     },
     permissions: [
