@@ -335,6 +335,21 @@ export const api = {
         anonymous: true,
       }),
 
+    /// Exchange a Google id_token (from native Google OAuth PKCE) for a SalePage JWT.
+    /// Same user row as Auth.js's Google provider on the web — both find/
+    /// create by lower-cased email.
+    googleMobile: (idToken: string) =>
+      apiFetch<{
+        token: string;
+        expiresAt: string;
+        userId: string;
+        user: { id: string; name: string | null; email: string; image: string | null };
+      }>("/api/v1/auth/google-mobile", {
+        method: "POST",
+        body: { idToken },
+        anonymous: true,
+      }),
+
     /// Refresh JWT — must include current Bearer token in Authorization header.
     refresh: () =>
       apiFetch<{ token: string; expiresAt: string; userId: string }>("/api/v1/auth/refresh", {

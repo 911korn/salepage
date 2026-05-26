@@ -126,6 +126,9 @@ const config: ExpoConfig = {
     ...(process.env.EXPO_PUBLIC_LINE_LOGIN_CHANNEL_ID
       ? { lineLoginChannelId: process.env.EXPO_PUBLIC_LINE_LOGIN_CHANNEL_ID }
       : {}),
+    ...(process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID
+      ? { googleOAuthClientId: process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID }
+      : {}),
     // CET TELEMETRY FIRST law: ship the DSN so init can fire on every cold
     // start. Without this, native crashes go uninvestigatable per the STOP
     // GUESSING crash debug rule.

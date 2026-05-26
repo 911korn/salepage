@@ -29,9 +29,11 @@
   },
   "signin": {
     "title": "Sign in",
-    "subtitle": "Sign in with LINE to save addresses + see all your orders.",
+    "subtitle": "Save addresses + see all your orders in one place.",
     "lineBtn": "Continue with LINE",
+    "googleBtn": "Continue with Google",
     "emailBtn": "Email (magic link)",
+    "or": "or",
     "termsAccept": "By signing in you accept the",
     "terms": "Terms",
     "and": "and",

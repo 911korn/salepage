@@ -10,6 +10,8 @@ interface AppEnv {
   webBaseUrl: string;
   lineLiffId: string | null;
   lineLoginChannelId: string | null;
+  /** Google OAuth client ID — same value as the web's `AUTH_GOOGLE_ID`. */
+  googleOAuthClientId: string | null;
   /** Sentry DSN — null disables capture entirely (Expo Go / dev without DSN). */
   sentryDsn: string | null;
 }
@@ -37,6 +39,10 @@ export function getEnv(): AppEnv {
     lineLoginChannelId:
       typeof extra.lineLoginChannelId === "string" && extra.lineLoginChannelId
         ? extra.lineLoginChannelId
+        : null,
+    googleOAuthClientId:
+      typeof extra.googleOAuthClientId === "string" && extra.googleOAuthClientId
+        ? extra.googleOAuthClientId
         : null,
     sentryDsn:
       typeof extra.sentryDsn === "string" && extra.sentryDsn
