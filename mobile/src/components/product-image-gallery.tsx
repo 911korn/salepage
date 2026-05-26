@@ -105,11 +105,11 @@ export function ProductImageGallery({ images, aspectRatio = 1 }: Props) {
           </View>
         ) : null}
 
-        {/* Index pill — top-right, matches Shopee's style */}
-        <View
-          style={{ top: insets.top + 8 }}
-          className="absolute right-3 rounded-full bg-black/55 px-2.5 py-1"
-        >
+        {/* Index pill — bottom-right of the gallery so it doesn't collide
+            with the floating cart pill we added at top-right of the
+            product modal (911korn 2026-05-27 "UI ตระกร้าทับ กับ เลขจำนวน
+            รูป ขยับลงมาหน่อย"). */}
+        <View className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1">
           <Text className="text-[11px] font-medium text-white">
             {activeIndex + 1}/{images.length}
           </Text>
