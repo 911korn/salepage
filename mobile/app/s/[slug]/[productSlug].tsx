@@ -4,7 +4,7 @@ import { View, Text, ScrollView, ActivityIndicator, Pressable, Dimensions } from
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, ShoppingBag } from "lucide-react-native";
+import { X, ShoppingBag, Share2 } from "lucide-react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -318,7 +318,7 @@ export default function ProductScreen() {
               className="size-9 items-center justify-center rounded-full border border-border bg-white"
               accessibilityLabel={t("share")}
             >
-              <Text className="text-[16px]">↑</Text>
+              <Share2 size={16} color="#0a0a0a" strokeWidth={2} />
             </Pressable>
           </View>
 
