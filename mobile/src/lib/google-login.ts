@@ -140,47 +140,34 @@ export async function loginWithGoogle(): Promise<GoogleBridgeResult> {
     void tick();
   });
 
-  // openBrowserAsync (SFSafariViewController on iOS, Chrome Custom Tabs on
-  // Android) is dismissable via WebBrowser.dismissBrowser() — which is
-  // what our poll loop relies on. openAuthSessionAsync (SFAuthSession)
-  // is NOT dismissable that way, which is why 911korn got stuck on the
-  // "You're signed in" page after Google completed — the poll succeeded
-  // but the in-app browser stayed open.
-  const browserPromise = WebBrowser.openBrowserAsync(openUrl, {
+  // openBrowserAsync's promise resolves IMMEDIATELY on iOS with
+  // `{ type: 'opened' }` — it doesn't wait for the browser to close.
+  // So we deliberately ignore the browser promise and just wait for
+  // the poll to win (or time out at MAX_WAIT_MS = 5 min).
+  //
+  // Cancellation detection: bridge row TTL is 5 min server-side, so
+  // if the user dismisses the browser without finishing OAuth, the
+  // poll keeps running until the row expires → server returns
+  // `bridge_expired` → we throw GoogleLoginTimeoutError.
+  void WebBrowser.openBrowserAsync(openUrl, {
     presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
     dismissButtonStyle: "close",
   });
 
-  // Whichever finishes first wins:
-  //   - poll returns token  → dismiss browser + return token
-  //   - browser dismissed   → mark cancelled + reject (unless poll already won)
-  await Promise.race([pollPromise, browserPromise]);
-
-  if (finalResult) {
-    cancelled = true;
-    if (pollHandle) clearTimeout(pollHandle);
-    try {
-      WebBrowser.dismissBrowser();
-    } catch {
-      // Some Expo runtimes throw if no browser is open — safe to ignore.
-    }
-    return finalResult;
-  }
-
-  // Wait briefly to see if the poll catches up (the user may have hit the
-  // success page just as they dismissed the browser).
-  cancelled = false;
-  await Promise.race([
-    pollPromise,
-    new Promise((r) => setTimeout(r, 2000)),
-  ]);
+  await pollPromise;
 
   cancelled = true;
   if (pollHandle) clearTimeout(pollHandle);
 
-  if (finalResult) {
-    return finalResult;
+  // Always try to dismiss the browser — if the user is still on the
+  // success page when poll completes, this brings them back to the app.
+  try {
+    await WebBrowser.dismissBrowser();
+  } catch {
+    // No browser open or already dismissed — safe to ignore.
   }
+
+  if (finalResult) return finalResult;
   if (finalError) throw finalError;
   throw new GoogleLoginCancelledError();
 }
