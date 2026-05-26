@@ -60,6 +60,9 @@ model User {
   // V1.5 affiliate — payouts requested by this user (when they earned
   // commissions referring others).
   affiliatePayouts AffiliatePayout[]
+
+  // V2.1 mobile bridge — rows minted while signing this user in on a phone.
+  mobileAuthBridges MobileAuthBridge[] @relation("MobileAuthBridgeUser")
 }
 
 enum UserRole {
@@ -1121,4 +1124,39 @@ model AdminAuditLog {
   @@index([actorId, createdAt])
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mobile auth bridge — V2.1 native sign-in handoff
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Short-lived (5 min) handoff slot used by the mobile app to receive a
+/// SalePage JWT after the user completes Auth.js's normal Google sign-in on
+/// the web. Flow:
+///   1. Mobile app POSTs /api/v1/auth/mobile-bridge/start → row created
+///   2. Mobile opens /api/v1/auth/mobile-bridge/google?bridge=ID in the
+///      system browser; that route sets a signed cookie + redirects into the
+///      same Google OAuth flow the web uses. On completion the /complete
+///      route writes a freshly-minted JWT into `token` here.
+///   3. Mobile polls /api/v1/auth/mobile-bridge/poll?bridge=ID until `token`
+///      is filled, then stores it and closes the browser.
+///
+/// This sidesteps the SDK 54 `useProxy` removal: the user signs into the same
+/// Web OAuth client (`AUTH_GOOGLE_ID`) the web uses, so the user lands on the
+/// exact same `User` row keyed by lower-cased email.
+model MobileAuthBridge {
+  id        String   @id @default(cuid())
+  provider  String // "google" | "line" (future) — distinguishes bridge purpose
+  token     String? // Filled by /complete with the SalePage mobile JWT. Single-read.
+  userId    String? // User id once known. Cascade-deletes if the user is deleted.
+  user      User?    @relation("MobileAuthBridgeUser", fields: [userId], references: [id], onDelete: Cascade)
+  // 5 minutes from createdAt. Rows past this are deleted by the same daily
+  // cron that prunes other auth ephemerals.
+  expiresAt DateTime
+  // Set when /poll returns the token to mobile — prevents replay.
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+  @@index([userId])
 }
