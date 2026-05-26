@@ -38,24 +38,25 @@ export function GlobalCartButton() {
       pointerEvents="box-none"
       style={{
         position: "absolute",
+        // top + right deliberately mirror the tab headers' `px-5 pt-2`
+        // (20px horizontal, 8px below the safe-area top). The 28×28
+        // pill height also matches `AppLogo size={28}` on the home tab
+        // so the two pieces of top chrome share the same baseline +
+        // visual weight (911korn 2026-05-27 "วางให้ Balance · ยังไม่ดี").
         top: insets.top + 8,
-        right: 16,
-        // Sits above the Stack content. The animated splash also uses
-        // absolute positioning but it covers the whole screen during the
-        // intro beat — by the time the cart actually has anything in it
-        // the splash is long gone.
+        right: 20,
         zIndex: 50,
       }}
     >
       <Pressable
         onPress={() => router.push("/cart")}
-        hitSlop={8}
+        hitSlop={10}
         accessibilityRole="button"
         accessibilityLabel="View cart"
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 18,
+          width: 28,
+          height: 28,
+          borderRadius: 14,
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: "rgba(15,15,15,0.55)",
@@ -68,24 +69,24 @@ export function GlobalCartButton() {
           elevation: 4,
         }}
       >
-        <ShoppingBag size={18} color="#ffffff" strokeWidth={2.4} />
+        <ShoppingBag size={14} color="#ffffff" strokeWidth={2.4} />
         <View
           style={{
             position: "absolute",
-            top: -4,
-            right: -4,
-            minWidth: 18,
-            height: 18,
-            paddingHorizontal: 4,
-            borderRadius: 9,
+            top: -5,
+            right: -5,
+            minWidth: 16,
+            height: 16,
+            paddingHorizontal: 3,
+            borderRadius: 8,
             backgroundColor: "#e11d48",
-            borderWidth: 2,
+            borderWidth: 1.5,
             borderColor: "#ffffff",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Text style={{ color: "#ffffff", fontSize: 10, fontWeight: "700" }}>
+          <Text style={{ color: "#ffffff", fontSize: 9, fontWeight: "700" }}>
             {itemCount > 99 ? "99+" : itemCount}
           </Text>
         </View>
