@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -133,7 +133,13 @@ export default function CheckoutPayScreen() {
           <Text className="mt-1 text-[12px] text-muted">
             {t("shopRef", { name: order.shop.name })}
           </Text>
-          <CountdownTimer createdAt={order.createdAt} />
+          {/* Calm reassurance instead of a pressure-pattern countdown
+              (911korn 2026-05-27): the 7-day window lets a buyer who
+              already paid but forgot to upload the slip come back later
+              without losing their order. */}
+          <Text className="mt-2 text-[12px] leading-relaxed text-muted">
+            {t("uploadAnytime")}
+          </Text>
         </View>
 
         <View className="mx-5 mt-4 items-center rounded-3xl border border-border bg-white p-5">
@@ -208,46 +214,6 @@ export default function CheckoutPayScreen() {
         </Pressable>
       </ScrollView>
     </Screen>
-  );
-}
-
-/**
- * 15-minute payment window countdown.
- *
- * We don't auto-cancel the order client-side — the backend's cron handles
- * expiry. This is a visual hint so the buyer knows their slot is finite,
- * which materially lifts conversion vs. an open-ended QR.
- */
-function CountdownTimer({ createdAt }: { createdAt: string }) {
-  const { t } = useTranslation("checkout");
-  const expiresAt = useMemo(
-    () => new Date(createdAt).getTime() + 15 * 60 * 1000,
-    [createdAt],
-  );
-  const [remaining, setRemaining] = useState(() =>
-    Math.max(0, expiresAt - Date.now()),
-  );
-  useEffect(() => {
-    if (remaining <= 0) return;
-    const id = setInterval(() => {
-      setRemaining(Math.max(0, expiresAt - Date.now()));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [expiresAt, remaining]);
-
-  if (remaining <= 0) {
-    return (
-      <Text className="mt-2 text-[12px] text-rose-600">{t("expired")}</Text>
-    );
-  }
-  const mins = Math.floor(remaining / 60_000);
-  const secs = Math.floor((remaining % 60_000) / 1000);
-  const formatted = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  const color = remaining < 60_000 ? "text-rose-600" : "text-amber-700";
-  return (
-    <Text className={`mt-2 text-[12px] font-semibold ${color}`}>
-      {t("timeLeft", { time: formatted })}
-    </Text>
   );
 }
 

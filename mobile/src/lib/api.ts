@@ -262,7 +262,8 @@ export const api = {
     /**
      * Public cancel — allowed only while the order is PENDING. Used by the
      * "ยกเลิกคำสั่งซื้อ" link on the checkout screen so a buyer who picked
-     * the wrong shop doesn't have to wait for the 15-min auto-expiry.
+     * the wrong shop can drop the order immediately instead of waiting on
+     * the 7-day auto-expiry cron.
      */
     cancel: (token: string) =>
       apiFetch<{ status: string }>(`/api/v1/orders/${token}/cancel`, {
