@@ -32,10 +32,13 @@ export function getEnv(): AppEnv {
       typeof extra.webBaseUrl === "string" && extra.webBaseUrl
         ? extra.webBaseUrl
         : "https://salepage.in.th",
+    // LIFF id — hard-coded fallback so a fresh Expo Go scan that missed
+    // the EXPO_PUBLIC_LINE_LIFF_ID env var doesn't break LINE login
+    // entirely. The id is public anyway (it's the LIFF URL slug).
     lineLiffId:
       typeof extra.lineLiffId === "string" && extra.lineLiffId
         ? extra.lineLiffId
-        : null,
+        : "2010178186-eE4vww3H",
     lineLoginChannelId:
       typeof extra.lineLoginChannelId === "string" && extra.lineLoginChannelId
         ? extra.lineLoginChannelId
