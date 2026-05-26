@@ -26,30 +26,33 @@ async function loadSvg(filepath: string): Promise<Buffer> {
 }
 
 /**
- * iOS icon — 1024x1024 with the brand gradient as the full background and
- * the SalePage mark prominent in the center. iOS applies its own rounded
- * mask, so we ship a full-bleed square (no padding in the artwork itself).
+ * iOS icon — 1024×1024. The mark fills nearly the full canvas (88%) so
+ * the folded-tag silhouette + white S-curl are still readable when iOS
+ * (or Expo Go's dev loader) shrinks the icon to ~80px. iOS applies its
+ * own rounded mask, so a near-full-bleed square is the standard layout.
+ *
+ * Earlier version used a 70% mark inside a soft pink backdrop, which at
+ * thumbnail size made the icon read as "tiny detail inside pink frame"
+ * — 911korn 2026-05-26 saw it as a flat red square in the Expo Go loader.
+ * Inflating the mark + dropping the pink frame fixes the legibility.
  */
 async function buildIos(iconSvg: Buffer) {
   const SIZE = 1024;
-  const MARK_SIZE = 720; // ~70% of canvas for breathing room inside the iOS rounded mask
+  const MARK_SIZE = 900; // 88% canvas — leaves a hair of breathing inside iOS's mask
   const markPng = await sharp(iconSvg).resize(MARK_SIZE, MARK_SIZE).png().toBuffer();
 
-  // Background: same brand gradient as the SVG itself, baked into a 1024 PNG.
-  // We use a soft pink-to-rose linear so the mark (which is itself the same
-  // gradient) still pops against it via the inner highlight + ink stroke.
-  const bgSvg = Buffer.from(
-    `<svg viewBox="0 0 ${SIZE} ${SIZE}" xmlns="http://www.w3.org/2000/svg">
-       <defs>
-         <linearGradient id="bg" x1="0" y1="0" x2="${SIZE}" y2="${SIZE}" gradientUnits="userSpaceOnUse">
-           <stop offset="0%" stop-color="#ffe4e6"/>
-           <stop offset="100%" stop-color="#fda4af"/>
-         </linearGradient>
-       </defs>
-       <rect width="${SIZE}" height="${SIZE}" fill="url(#bg)"/>
-     </svg>`,
-  );
-  const bgPng = await sharp(bgSvg).png().toBuffer();
+  // White underlay so any transparent pixels in the SVG (the corner outside
+  // the folded-tag silhouette) render against white instead of black.
+  const bgPng = await sharp({
+    create: {
+      width: SIZE,
+      height: SIZE,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    },
+  })
+    .png()
+    .toBuffer();
 
   await sharp(bgPng)
     .composite([
