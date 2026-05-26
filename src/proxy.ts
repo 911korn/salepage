@@ -43,5 +43,9 @@ function isLiffStateShellPath(pathname: string) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  // Skip intl rewriting for /auth/* (LIFF + OAuth-bridge surfaces that
+  // must render at exactly the path LINE Developer Console points at,
+  // no `/th/...` locale prefix), plus the standard api / _next / _vercel
+  // / static asset exclusions.
+  matcher: ["/((?!api|auth|_next|_vercel|.*\\..*).*)"],
 };
