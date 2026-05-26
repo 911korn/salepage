@@ -1,7 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { ProductForm } from "@/components/dashboard/product-form";
-import { db, type ProductBadge, type ProductStatus, type ProductType } from "@/lib/db";
+import {
+  db,
+  type ProductBadge,
+  type ProductCondition,
+  type ProductStatus,
+  type ProductType,
+} from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
 import { resolveDashboardShop } from "@/lib/dashboard-routing";
 import type { Locale } from "@/i18n/routing";
@@ -43,6 +49,8 @@ export default async function EditProductPage({
         imageUrls: product.imageUrls,
         badge: product.badge as ProductBadge | null,
         type: product.type as ProductType,
+        category: product.category,
+        condition: product.condition as ProductCondition,
         stock: product.stock,
         status: product.status as ProductStatus,
       }}

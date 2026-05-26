@@ -27,6 +27,8 @@ interface ProductFormValues {
   imageUrls: string[];
   badge?: "HOT" | "NEW" | "SALE" | null;
   type: "PHYSICAL" | "DIGITAL";
+  category?: string | null;
+  condition?: "NEW" | "PRE_OWNED";
   stock?: number | null;
   status?: "ACTIVE" | "HIDDEN" | "SOLD_OUT";
 }
@@ -182,6 +184,12 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
   const [type, setType] = useState<"PHYSICAL" | "DIGITAL">(
     initialValues?.type ?? "PHYSICAL",
   );
+  const [condition, setCondition] = useState<"NEW" | "PRE_OWNED">(
+    initialValues?.condition ?? "NEW",
+  );
+  const [category, setCategory] = useState<string | null>(
+    initialValues?.category ?? null,
+  );
   const [badge, setBadge] = useState<"HOT" | "NEW" | "SALE" | "">(
     (initialValues?.badge as "HOT" | "NEW" | "SALE") ?? "",
   );
@@ -213,6 +221,8 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
         compareAtBaht: compareAtBaht ? Number(compareAtBaht) : undefined,
         imageUrls: images.slice(0, 10),
         type,
+        condition,
+        ...(category ? { category } : mode === "edit" ? { category: null } : {}),
         badge: badge || null,
         ...(stock ? { stock: Number(stock) } : mode === "edit" ? { stock: null } : {}),
         ...(mode === "edit" ? { status } : {}),
@@ -421,27 +431,73 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
             </div>
           </Field>
 
-          <Field label={t("badgeLabel")}>
-            <div className="flex flex-wrap gap-2">
-              {(["", "HOT", "NEW", "SALE"] as const).map((b) => (
-                <ToggleBtn
-                  key={b || "none"}
-                  active={badge === b}
-                  onClick={() => setBadge(b)}
-                  label={
-                    b === ""
-                      ? t("badgeNone")
-                      : b === "HOT"
-                        ? t("badgeHot")
-                        : b === "NEW"
-                          ? t("badgeNew")
-                          : t("badgeSale")
-                  }
-                />
-              ))}
+          {/* Condition: NEW vs PRE_OWNED (มือสอง). PRE_OWNED gets the amber
+              "♻️" treatment to mirror the marketplace badge — sellers see
+              what their card will look like. */}
+          <Field label="สภาพสินค้า">
+            <div className="grid grid-cols-2 gap-2">
+              <ToggleBtn
+                active={condition === "NEW"}
+                onClick={() => setCondition("NEW")}
+                label="✨ ของใหม่"
+              />
+              <ToggleBtn
+                active={condition === "PRE_OWNED"}
+                onClick={() => setCondition("PRE_OWNED")}
+                label="♻️ มือสอง"
+              />
             </div>
           </Field>
         </div>
+
+        {/* Category — optional. Falls back to shop.category on listing
+            surfaces when left blank. Chips are single-select with a "ไม่
+            ระบุ" reset chip on the left. */}
+        <Field label="หมวดหมู่ (ไม่จำเป็น)" hint="ใส่เผื่อร้านมีหลายหมวด — ระบบจะใช้หมวดของร้านเป็น default ถ้าไม่เลือก">
+          <div className="flex flex-wrap gap-2">
+            {([
+              { key: null, label: "ไม่ระบุ" },
+              { key: "fashion", label: "แฟชั่น" },
+              { key: "food", label: "อาหาร" },
+              { key: "tech", label: "ไอที" },
+              { key: "beauty", label: "ความงาม" },
+              { key: "health", label: "สุขภาพ" },
+              { key: "furniture", label: "เฟอร์นิเจอร์" },
+              { key: "pets", label: "สัตว์เลี้ยง" },
+              { key: "books", label: "หนังสือ" },
+              { key: "sport", label: "กีฬา" },
+              { key: "other", label: "อื่นๆ" },
+            ] as const).map((c) => (
+              <ToggleBtn
+                key={c.key ?? "none"}
+                active={category === c.key}
+                onClick={() => setCategory(c.key)}
+                label={c.label}
+              />
+            ))}
+          </div>
+        </Field>
+
+        <Field label={t("badgeLabel")}>
+          <div className="flex flex-wrap gap-2">
+            {(["", "HOT", "NEW", "SALE"] as const).map((b) => (
+              <ToggleBtn
+                key={b || "none"}
+                active={badge === b}
+                onClick={() => setBadge(b)}
+                label={
+                  b === ""
+                    ? t("badgeNone")
+                    : b === "HOT"
+                      ? t("badgeHot")
+                      : b === "NEW"
+                        ? t("badgeNew")
+                        : t("badgeSale")
+                }
+              />
+            ))}
+          </div>
+        </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("stockLabel")} hint={t("stockHint")}>
