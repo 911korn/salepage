@@ -40,6 +40,37 @@ export async function GET(request: Request) {
   if (user.lineUserId) {
     orMatchers.push({ customerLineUserId: user.lineUserId });
   }
+
+  // Soft third matcher: orders sharing a customerPhone the user has
+  // previously checked out with. Recovers orphans whose customerEmail +
+  // customerLineUserId both ended up null (e.g. orders placed before the
+  // cart attached a Bearer token, then auto-cancelled 15 minutes later
+  // by /api/v1/cron/expire-pending-orders). Phone is unique enough in
+  // practice — duplicate-buyer collisions are vanishingly rare on TH
+  // mobile numbers (911korn 2026-05-27 korn4564 case).
+  const knownPhoneRows = await db.order.findMany({
+    where: {
+      customerEmail: user.email,
+      customerPhone: { not: null },
+    },
+    select: { customerPhone: true },
+    distinct: ["customerPhone"],
+    take: 10,
+  });
+  const knownPhones = knownPhoneRows
+    .map((r) => r.customerPhone)
+    .filter((p): p is string => Boolean(p));
+  if (knownPhones.length > 0) {
+    orMatchers.push({
+      customerPhone: { in: knownPhones },
+      // Only claim orphans (rows with neither email nor lineUserId) so
+      // we don't accidentally hijack another logged-in buyer's row that
+      // happens to share a phone (e.g. shared household number).
+      customerEmail: null,
+      customerLineUserId: null,
+    });
+  }
+
   const where: Prisma.OrderWhereInput = {
     OR: orMatchers,
     ...(statusParam ? { status: statusParam } : {}),
