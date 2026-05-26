@@ -296,16 +296,18 @@ export const api = {
         body: { ...input, markShipping: true },
       }),
 
-    verifySlip: (token: string, file: { uri: string; name: string; type: string }) => {
-      const fd = new FormData();
-      // RN FormData accepts { uri, name, type } objects for files
-      fd.append("file", file as unknown as Blob);
-      return apiFetch<SlipVerifyResponse>(`/api/v1/orders/${token}/slip`, {
+    /**
+     * The server expects a JSON body `{ imageBase64 }` (NOT multipart) — the
+     * same payload shape the web side uses. Caller has already compressed the
+     * image with `compressForSlipUpload()` so we ship ~200 KB instead of the
+     * 5–10 MB the phone camera returns by default.
+     */
+    verifySlip: (token: string, imageBase64: string) =>
+      apiFetch<SlipVerifyResponse>(`/api/v1/orders/${token}/slip`, {
         method: "POST",
-        formData: fd,
+        body: { imageBase64 },
         anonymous: true,
-      });
-    },
+      }),
 
     verifyQrPayload: (token: string, qrPayload: string) =>
       apiFetch<SlipVerifyResponse>(`/api/v1/orders/${token}/slip`, {

@@ -129,9 +129,9 @@
 - [x] Camera screen for slip capture (`expo-camera`)
 - [x] QR scanner mode (`barcodeScanningResult`) 🔥
 - [x] Image picker fallback
-- [x] Upload to `POST /api/v1/orders/:token/slip`
+- [x] Upload to `POST /api/v1/orders/:token/slip` — switched from broken multipart to base64 JSON to match server contract
 - [x] Show verify result (success / mismatch / error)
-- [ ] Image compression before upload
+- [x] Image compression before upload — `compressForSlipUpload()` via `expo-image-manipulator`, longest-edge 1600px + JPEG q=0.82 (~5–10 MB → ~200 KB)
 - [ ] Auto-extract slip from iOS Photos
 - [ ] Android SmsRetriever — banking notification auto-pull (stretch)
 
@@ -259,7 +259,7 @@
 - [x] `/seller/chat` + `/seller/chat/[id]` (Business+ only)
 - [ ] Analytics screen (full charts — V1.6)
 - [ ] Camera → upload product flow on mobile (Vercel Blob + AI describe)
-- [ ] Push notification เมื่อ slip incoming — wire `notifyShopNewOrder` trigger
+- [x] Push notification เมื่อ slip incoming — `notifyShopNewOrder` fires in slip-verify route when PENDING→PAID, deep-links to seller dashboard
 
 ---
 
@@ -369,7 +369,7 @@
 - [x] Cron `/api/v1/cron/expire-group-buys` every 10 min — past-deadline ACTIVE → EXPIRED, member orders → CANCELLED + escrow refund + buyer push
 - [x] Mobile `<GroupBuyRail />` on shop page — live progress bar, countdown, current-tier price, self-hides when empty
 - [x] Mobile `/group-buy/[id]` buyer detail/join screen — tier table, countdown, qty selector, customer form, share-to-LINE CTA, navigates to `/checkout/[token]` after join
-- [ ] Seller-side mobile create screen (deferred — web `/dashboard` handles create for now)
+- [x] Seller-side mobile create screen — `/seller/group-buys` list (live progress + cancel) + `/seller/group-buys/new` 5-step form (product picker, title, min/max qty, duration presets 24h/48h/72h/7d, 1–3 tier ladder)
 - [ ] Final-tier rebate on FILL (currently join-time price-lock; refunding the diff is V2.1)
 
 #### Voice-to-Product (AI)

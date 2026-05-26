@@ -16,6 +16,7 @@ import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
 import { formatBaht, orderStatusLabel } from "@/lib/format";
+import { compressForSlipUpload } from "@/lib/image-compress";
 
 type Mode = "qr-display" | "scan-slip" | "shoot-slip";
 
@@ -48,16 +49,16 @@ export default function CheckoutPayScreen() {
   });
 
   const verifyMutation = useMutation({
-    mutationFn: (input:
+    mutationFn: async (input:
       | { kind: "image"; uri: string; fileName: string; mimeType: string }
       | { kind: "qr"; payload: string }
     ) => {
       if (input.kind === "image") {
-        return api.orders.verifySlip(token!, {
-          uri: input.uri,
-          name: input.fileName,
-          type: input.mimeType,
-        });
+        // Compress + base64 before POST. Compress runs on the JS thread but
+        // expo-image-manipulator hands off to native — it's fast enough that
+        // a fullscreen spinner is enough UX cover.
+        const { base64 } = await compressForSlipUpload(input.uri);
+        return api.orders.verifySlip(token!, base64);
       }
       return api.orders.verifyQrPayload(token!, input.payload);
     },

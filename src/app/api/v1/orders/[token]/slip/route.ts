@@ -8,7 +8,11 @@ import { applyPaidOrderInventory, buildOrderRef } from "@/lib/orders";
 import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
 import { tryConsumeSlip } from "@/lib/slip-credits";
 import { extractSlipQrPayloadFromBase64 } from "@/lib/slip-qr";
-import { notifyOrderPaid, resolveCustomerUserId } from "@/lib/push-notify";
+import {
+  notifyOrderPaid,
+  notifyShopNewOrder,
+  resolveCustomerUserId,
+} from "@/lib/push-notify";
 import { createEscrowHoldOnPaid } from "@/lib/escrow";
 
 interface Ctx {
@@ -209,6 +213,16 @@ export async function POST(request: Request, ctx: Ctx) {
       totalSatang: order.totalSatang,
     }),
   );
+
+  // Push the shop owner — they're probably in the mobile seller dashboard
+  // and the order needs to be fulfilled.
+  void notifyShopNewOrder({
+    shopOwnerUserId: order.shop.ownerId,
+    orderToken: order.publicToken,
+    totalSatang: order.totalSatang,
+    itemCount: Array.isArray(order.items) ? order.items.length : 1,
+    customerName: order.customerName,
+  }).catch(() => undefined);
 
   // Fire email notifications (non-blocking, errors swallowed)
   const ref = buildOrderRef(order.createdAt, order.id);

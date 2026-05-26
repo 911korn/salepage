@@ -249,6 +249,28 @@ export async function notifyEscrowReleasedToShop(input: {
   });
 }
 
+/// Fired by the slip verify route (and the manual confirm path on
+/// /orders/:token/status) when an order transitions PENDING → PAID. Shop
+/// owners using the mobile seller app should see this within a second so
+/// they can start fulfilling without refreshing.
+export async function notifyShopNewOrder(input: {
+  shopOwnerUserId: string;
+  orderToken: string;
+  totalSatang: number;
+  itemCount: number;
+  customerName: string;
+}): Promise<void> {
+  const baht = (input.totalSatang / 100).toLocaleString("th-TH");
+  await pushToUser(input.shopOwnerUserId, {
+    title: `🎉 ออเดอร์ใหม่ ${baht}฿`,
+    body: `${input.customerName} · ${input.itemCount} รายการ — รอจัดส่ง`,
+    data: {
+      kind: "shop.order.paid",
+      orderToken: input.orderToken,
+    },
+  });
+}
+
 /// V1.5 Protected Pay: fired when an escrow is REFUNDED back to the buyer
 /// (dispute decision, admin manual, or seller cancel).
 export async function notifyEscrowRefundedToBuyer(input: {
