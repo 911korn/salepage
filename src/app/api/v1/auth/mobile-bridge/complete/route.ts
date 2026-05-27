@@ -94,9 +94,20 @@ export async function GET(request: Request) {
 }
 
 function successPage() {
-  // No auto-redirect to salepage://... — the mobile app polls /poll and
-  // dismisses the browser as soon as the token row is populated, so this
-  // page is only ever visible for a beat.
+  // Redirect to the salepage:// deep link so WebBrowser.openAuthSessionAsync
+  // on the mobile side resolves with `type: "success"` and the system
+  // browser closes automatically (911korn 2026-05-27 "ในแอพ มีปัญหากับ
+  // Google Login มันค้างอยู่ใน modal ตอน Login success").
+  //
+  // Why the deep-link redirect is the right primitive:
+  //   - `WebBrowser.dismissBrowser()` only works for `openBrowserAsync`,
+  //     not `openAuthSessionAsync` — the latter only closes when the
+  //     in-flight URL matches the deep-link argument we passed in.
+  //   - Some iOS in-app browsers won't honour a `<meta refresh>` to a
+  //     `salepage://` scheme without a user gesture, so we also expose a
+  //     visible "Return to app" button as a fallback.
+  //   - We attempt `window.location.replace` first because it works on
+  //     Chrome/Safari mobile + Android browsers without confirmation.
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -111,11 +122,7 @@ function successPage() {
   .check svg { width: 30px; height: 30px; color: #fff; }
   h1 { font-size: 20px; margin: 0 0 8px; font-weight: 700; }
   p { color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
-  .spinner { display: inline-flex; align-items: center; gap: 8px; color: #6b7280; font-size: 13px; }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: #6b7280; animation: pulse 1.2s infinite ease-in-out; }
-  .dot:nth-child(2) { animation-delay: 0.2s; }
-  .dot:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes pulse { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+  .btn { display: inline-block; padding: 12px 24px; border-radius: 12px; background: #e11d48; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -123,8 +130,16 @@ function successPage() {
   <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
   <h1>You're signed in</h1>
   <p>Returning you to the SalePage app...</p>
-  <div class="spinner"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+  <a class="btn" href="salepage://auth/google?ok=1">กลับสู่แอป</a>
 </div>
+<script>
+  // Fire the deep-link redirect immediately. The system browser closes
+  // as soon as the URL matches the redirect scheme passed to
+  // WebBrowser.openAuthSessionAsync on the mobile side.
+  setTimeout(function () {
+    window.location.replace("salepage://auth/google?ok=1");
+  }, 50);
+</script>
 </body>
 </html>`;
   return new NextResponse(html, {

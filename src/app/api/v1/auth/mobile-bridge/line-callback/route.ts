@@ -140,6 +140,10 @@ export async function GET(request: Request) {
 }
 
 function successPage() {
+  // Redirect to salepage://auth/line so openAuthSessionAsync resolves
+  // and the in-app browser closes (mirrors the Google fix —
+  // dismissBrowser() doesn't work for openAuthSessionAsync, only the
+  // deep-link redirect does).
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -154,11 +158,7 @@ function successPage() {
   .check svg { width: 30px; height: 30px; color: #fff; }
   h1 { font-size: 20px; margin: 0 0 8px; font-weight: 700; }
   p { color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
-  .spinner { display: inline-flex; align-items: center; gap: 8px; color: #6b7280; font-size: 13px; }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: #6b7280; animation: pulse 1.2s infinite ease-in-out; }
-  .dot:nth-child(2) { animation-delay: 0.2s; }
-  .dot:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes pulse { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+  .btn { display: inline-block; padding: 12px 24px; border-radius: 12px; background: #06C755; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -166,8 +166,13 @@ function successPage() {
   <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
   <h1>You're signed in</h1>
   <p>Returning you to the SalePage app...</p>
-  <div class="spinner"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+  <a class="btn" href="salepage://auth/line?ok=1">กลับสู่แอป</a>
 </div>
+<script>
+  setTimeout(function () {
+    window.location.replace("salepage://auth/line?ok=1");
+  }, 50);
+</script>
 </body>
 </html>`;
   return new NextResponse(html, {
