@@ -6,6 +6,7 @@ import {
   Bell,
   ChartBar,
   ChevronDown,
+  Download,
   LayoutDashboard,
   LogOut,
   MessageCircle,
@@ -55,6 +56,7 @@ const MAIN_LINKS = [
   { href: "/dashboard", key: "overview", icon: LayoutDashboard },
   { href: "/dashboard/orders", key: "orders", icon: Package },
   { href: "/dashboard/products", key: "products", icon: ShoppingBag },
+  { href: "/dashboard/import", key: "import", icon: Download },
   { href: "/dashboard/settings", key: "settings", icon: Settings },
 ] as const;
 
