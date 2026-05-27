@@ -20,6 +20,8 @@ interface ShopProps {
   promptpayId: string | null;
   contact: { phone?: string; line?: string; facebook?: string } | null;
   policies: { returnPolicy?: string; shippingTime?: string } | null;
+  pickupAddress: string | null;
+  pickupPostcode: string | null;
 }
 
 const CATEGORIES = [
@@ -75,6 +77,12 @@ export function SettingsForm({ shop }: { shop: ShopProps }) {
   const [shippingTime, setShippingTime] = useState(
     shop.policies?.shippingTime ?? "",
   );
+  const [pickupAddress, setPickupAddress] = useState(shop.pickupAddress ?? "");
+  const [pickupPostcode, setPickupPostcode] = useState(
+    shop.pickupPostcode ?? "",
+  );
+  const pickupPostcodeInvalid =
+    pickupPostcode.length > 0 && !/^\d{5}$/.test(pickupPostcode);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,6 +108,8 @@ export function SettingsForm({ shop }: { shop: ShopProps }) {
               returnPolicy: returnPolicy.trim() || null,
               shippingTime: shippingTime.trim() || null,
             },
+            pickupAddress: pickupAddress.trim() || null,
+            pickupPostcode: pickupPostcode.trim() || null,
           }),
         });
         const json = await res.json();
@@ -313,6 +323,43 @@ export function SettingsForm({ shop }: { shop: ShopProps }) {
             onChange={(e) => setFacebook(e.target.value)}
             placeholder="https://facebook.com/yourpage"
             type="url"
+          />
+        </Field>
+      </Card>
+
+      {/* V2.1 ที่อยู่ผู้ส่ง — printed on every shipping label by default
+          (911korn 2026-05-27 "ต้องให้ร้านระบุที่อยู่ผู้ส่งไว้เป็นค่าเริ่มต้น"). */}
+      <Card title="ที่อยู่ผู้ส่ง · ใส่ในใบปะหน้า">
+        <p className="-mt-2 text-[12px] leading-relaxed text-zinc-500">
+          จะถูกพิมพ์ที่ใบปะหน้าทุก order ตอน drop ที่ courier ·
+          ลูกค้าไม่เห็น (เป็น sender แค่ courier ใช้)
+        </p>
+        <Field
+          label="ที่อยู่ (บ้านเลขที่ ซอย ถนน ตำบล อำเภอ จังหวัด)"
+        >
+          <textarea
+            value={pickupAddress}
+            onChange={(e) => setPickupAddress(e.target.value)}
+            rows={3}
+            maxLength={500}
+            placeholder="999 ซอย XX ถนน YY แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพฯ"
+            className="w-full resize-y rounded-xl border border-[color:var(--color-border)] bg-white p-3 text-[15px] outline-none focus:border-[color:var(--color-brand-400)] focus:ring-2 focus:ring-[color:var(--color-brand-100)]"
+          />
+        </Field>
+        <Field
+          label="รหัสไปรษณีย์ (5 หลัก)"
+          hint={pickupPostcodeInvalid ? "ต้องเป็น 5 หลัก" : undefined}
+        >
+          <Input
+            value={pickupPostcode}
+            onChange={(e) =>
+              setPickupPostcode(
+                e.target.value.replace(/[^\d]/g, "").slice(0, 5),
+              )
+            }
+            placeholder="10310"
+            inputMode="numeric"
+            maxLength={5}
           />
         </Field>
       </Card>

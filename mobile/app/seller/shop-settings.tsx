@@ -72,6 +72,9 @@ export default function ShopSettingsScreen() {
   const [announcement, setAnnouncement] = useState<string | null>(null);
   const [phone, setPhone] = useState<string | null>(null);
   const [lineContact, setLineContact] = useState<string | null>(null);
+  // V2.1 ที่อยู่ผู้ส่ง — printed on every shipping label by default.
+  const [pickupAddress, setPickupAddress] = useState<string | null>(null);
+  const [pickupPostcode, setPickupPostcode] = useState<string | null>(null);
   const [banners, setBanners] = useState<UploadSlot[] | null>(null);
   const [logo, setLogo] = useState<UploadSlot | null | "cleared">(null);
 
@@ -88,6 +91,8 @@ export default function ShopSettingsScreen() {
     const contact = shop.contact ?? {};
     setPhone(contact.phone ?? "");
     setLineContact(contact.line ?? "");
+    setPickupAddress(shop.pickupAddress ?? "");
+    setPickupPostcode(shop.pickupPostcode ?? "");
     setBanners(shop.bannerUrls.map((url) => ({ url, status: "done" })));
     setLogo(shop.logoUrl ? { url: shop.logoUrl, status: "done" } : null);
   }
@@ -118,6 +123,8 @@ export default function ShopSettingsScreen() {
           phone: phone?.trim() || null,
           line: lineContact?.trim() || null,
         },
+        pickupAddress: pickupAddress?.trim() || null,
+        pickupPostcode: pickupPostcode?.trim() || null,
       });
     },
     onSuccess: () => {
@@ -493,6 +500,50 @@ export default function ShopSettingsScreen() {
                 autoCorrect={false}
                 className="mt-1 rounded-2xl border border-border bg-white px-3 py-2.5 text-[15px] text-fg"
               />
+            </View>
+          </View>
+        </Section>
+
+        {/* V2.1 ที่อยู่ผู้ส่ง — printed on every shipping label by default
+            (911korn 2026-05-27 "ต้องให้ร้านระบุที่อยู่ผู้ส่งไว้"). */}
+        <Section title="ที่อยู่ผู้ส่ง · ใส่ในใบปะหน้า">
+          <Text className="text-[11px] leading-relaxed text-muted">
+            จะถูกพิมพ์ที่ใบปะหน้าทุก order ตอน drop ที่ courier · ลูกค้าไม่เห็น
+          </Text>
+          <View className="gap-3">
+            <View>
+              <Text className="text-[11px] text-muted">
+                ที่อยู่ (บ้านเลขที่ ซอย ถนน ตำบล อำเภอ จังหวัด)
+              </Text>
+              <TextInput
+                value={pickupAddress ?? ""}
+                onChangeText={setPickupAddress}
+                placeholder="999 ซอย XX ถนน YY แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพฯ"
+                multiline
+                maxLength={500}
+                className="mt-1 rounded-2xl border border-border bg-white px-3 py-2.5 text-[14px] text-fg"
+                style={{ minHeight: 80, textAlignVertical: "top" }}
+              />
+            </View>
+            <View>
+              <Text className="text-[11px] text-muted">
+                รหัสไปรษณีย์ (5 หลัก)
+              </Text>
+              <TextInput
+                value={pickupPostcode ?? ""}
+                onChangeText={(v) =>
+                  setPickupPostcode(v.replace(/[^\d]/g, "").slice(0, 5))
+                }
+                placeholder="10310"
+                keyboardType="number-pad"
+                maxLength={5}
+                className="mt-1 rounded-2xl border border-border bg-white px-3 py-2.5 text-[15px] text-fg"
+              />
+              {pickupPostcode && !/^\d{5}$/.test(pickupPostcode) ? (
+                <Text className="mt-1 text-[10px] text-rose-600">
+                  ต้องเป็น 5 หลัก
+                </Text>
+              ) : null}
             </View>
           </View>
         </Section>

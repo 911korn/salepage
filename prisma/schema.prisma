@@ -175,6 +175,15 @@ model Shop {
   policies Json? // { returnPolicy: string, shippingTime: string }
   contact  Json? // { phone?: string, line?: string, facebook?: string }
 
+  // V2.1 Drop-off shipping — default ที่อยู่ผู้ส่ง printed on every
+  // shipping label this shop generates. Stored as proper columns
+  // (NOT inside `contact` JSON) so we can index + validate postcode
+  // for cart-time shipping zone calculations later. Filled in
+  // create-shop wizard + editable from /dashboard/settings. 911korn
+  // 2026-05-27 "ต้องให้ร้านระบุที่อยู่ผู้ส่งไว้เป็นค่าเริ่มต้นของร้าน".
+  pickupAddress  String? @db.Text
+  pickupPostcode String?
+
   // Storefront announcement banner (markdown-lite single line).
   announcement String? @db.Text
 

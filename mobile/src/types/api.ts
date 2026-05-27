@@ -153,6 +153,14 @@ export interface ShopSummary {
    */
   followerCount?: number;
   isFollowing?: boolean;
+  /**
+   * V2.1 ที่อยู่ผู้ส่ง — printed on every shipping label by default. Owner-
+   * editable in /seller/shop-settings. Optional; null for shops created
+   * before this field landed. Surfaced by the per-shop GET so seller
+   * settings + label rendering can both read it.
+   */
+  pickupAddress?: string | null;
+  pickupPostcode?: string | null;
 }
 
 export interface ProductSummary {

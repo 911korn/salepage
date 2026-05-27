@@ -51,6 +51,8 @@ export async function POST(request: Request, ctx: Ctx) {
           name: true,
           slug: true,
           contact: true,
+          pickupAddress: true,
+          pickupPostcode: true,
         },
       },
       shipment: true,
@@ -93,17 +95,17 @@ export async function POST(request: Request, ctx: Ctx) {
     order.shop.contact &&
     typeof order.shop.contact === "object" &&
     !Array.isArray(order.shop.contact)
-      ? (order.shop.contact as {
-          phone?: string;
-          address?: string;
-          postcode?: string;
-        })
+      ? (order.shop.contact as { phone?: string })
       : null;
+  // V2.1 — prefer the dedicated pickup columns over any legacy address
+  // stuffed into contact JSON.
   const senderPostcode =
-    contact?.postcode ?? process.env.EASYPARCEL_SENDER_POSTCODE ?? "10110";
+    order.shop.pickupPostcode ??
+    process.env.EASYPARCEL_SENDER_POSTCODE ??
+    "10110";
   const senderName = order.shop.name ?? "SalePage Seller";
   const senderPhone = contact?.phone ?? "0800000000";
-  const senderAddress = contact?.address ?? "";
+  const senderAddress = order.shop.pickupAddress ?? "";
 
   const receiverPostcode = order.customerAddress
     ? extractThaiPostcode(order.customerAddress)

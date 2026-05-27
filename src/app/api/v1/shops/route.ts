@@ -44,6 +44,10 @@ const Body = z.object({
       shippingTime: z.string().optional(),
     })
     .optional(),
+  /// V2.1 ที่อยู่ผู้ส่ง — printed on every shipping label by default.
+  /// Optional at create time (some sellers set it later in /settings).
+  pickupAddress: z.string().max(500).optional(),
+  pickupPostcode: z.string().regex(/^\d{5}$/, "5-digit postcode").optional(),
 });
 
 export async function GET(request: Request) {
@@ -97,6 +101,8 @@ export async function POST(request: Request) {
       promptpayId: input.promptpayId,
       contact: input.contact ?? undefined,
       policies: input.policies ?? undefined,
+      pickupAddress: input.pickupAddress?.trim() || null,
+      pickupPostcode: input.pickupPostcode || null,
       status: ShopStatus.ACTIVE,
       ownerId: session.user.id,
     },

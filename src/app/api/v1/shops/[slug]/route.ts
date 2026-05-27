@@ -58,6 +58,14 @@ const PatchBody = z.object({
   lineChannelSecret: z.string().max(128).optional().nullable(),
   lineChannelAccessToken: z.string().max(500).optional().nullable(),
   lineWebhookEnabled: z.boolean().optional(),
+  // V2.1 ที่อยู่ผู้ส่ง — default sender on every shipping label this
+  // shop generates. Settings page exposes both fields together.
+  pickupAddress: z.string().max(500).optional().nullable(),
+  pickupPostcode: z
+    .string()
+    .regex(/^\d{5}$/, "5-digit Thai postcode")
+    .optional()
+    .nullable(),
 });
 
 /**
@@ -106,6 +114,8 @@ export async function GET(
       contact: true,
       announcement: true,
       status: true,
+      pickupAddress: true,
+      pickupPostcode: true,
       createdAt: true,
       // V1.5 Protected Pay opt-in — surfaced on storefront as a shield badge
       // and as the checkout toggle gate.
@@ -217,6 +227,8 @@ export async function GET(
         contact: shop.contact ?? null,
         announcement: shop.announcement,
         acceptsEscrow: shop.acceptsEscrow,
+        pickupAddress: shop.pickupAddress,
+        pickupPostcode: shop.pickupPostcode,
         // V1.6: public dispute stats over the last 90 days. UI shows the
         // pill only when `count > 0` so trustworthy shops aren't penalized
         // by having an empty "0% disputed" badge.
@@ -345,6 +357,12 @@ export async function PATCH(
         : {}),
       ...(input.contact !== undefined ? { contact: input.contact } : {}),
       ...(input.policies !== undefined ? { policies: input.policies } : {}),
+      ...(input.pickupAddress !== undefined
+        ? { pickupAddress: input.pickupAddress?.trim() || null }
+        : {}),
+      ...(input.pickupPostcode !== undefined
+        ? { pickupPostcode: input.pickupPostcode || null }
+        : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.announcement !== undefined
         ? { announcement: input.announcement }

@@ -90,13 +90,24 @@ export function CreateShopWizard() {
   const [phone, setPhone] = useState("");
   const [lineId, setLineId] = useState("");
   const [facebook, setFacebook] = useState("");
+  // V2.1 ที่อยู่ผู้ส่ง — default sender printed on every shipping label
+  // for this shop. 911korn 2026-05-27 "ต้องให้ร้านระบุที่อยู่ผู้ส่งไว้".
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [pickupPostcode, setPickupPostcode] = useState("");
+  const isValidPostcode = !pickupPostcode || /^\d{5}$/.test(pickupPostcode);
 
   const canNext = useMemo(() => {
     if (step === 1) return name.trim().length >= 2 && effectiveSlug.length >= 3;
     if (step === 2) return Boolean(category);
-    if (step === 3) return Boolean(promptpayId.trim() || phone.trim());
+    if (step === 3) {
+      const paymentOrPhone = Boolean(promptpayId.trim() || phone.trim());
+      // Pickup address optional at create time — seller can fill in
+      // /dashboard/settings later. If they DO type something, postcode
+      // must match 5-digit format.
+      return paymentOrPhone && isValidPostcode;
+    }
     return false;
-  }, [step, name, effectiveSlug, category, promptpayId, phone]);
+  }, [step, name, effectiveSlug, category, promptpayId, phone, isValidPostcode]);
 
   function next() {
     if (!canNext) return;
@@ -124,6 +135,8 @@ export function CreateShopWizard() {
               line: lineId.trim() || undefined,
               facebook: facebook.trim() || undefined,
             },
+            pickupAddress: pickupAddress.trim() || undefined,
+            pickupPostcode: pickupPostcode.trim() || undefined,
           }),
         });
         const json = await res.json();
@@ -210,6 +223,10 @@ export function CreateShopWizard() {
             onLineId={setLineId}
             facebook={facebook}
             onFacebook={setFacebook}
+            pickupAddress={pickupAddress}
+            onPickupAddress={setPickupAddress}
+            pickupPostcode={pickupPostcode}
+            onPickupPostcode={setPickupPostcode}
           />
         ) : null}
       </div>
@@ -400,6 +417,10 @@ function Step3({
   onLineId,
   facebook,
   onFacebook,
+  pickupAddress,
+  onPickupAddress,
+  pickupPostcode,
+  onPickupPostcode,
 }: {
   t: ReturnType<typeof useTranslations<"dashboard.createShop">>;
   promptpayId: string;
@@ -410,6 +431,10 @@ function Step3({
   onLineId: (v: string) => void;
   facebook: string;
   onFacebook: (v: string) => void;
+  pickupAddress: string;
+  onPickupAddress: (v: string) => void;
+  pickupPostcode: string;
+  onPickupPostcode: (v: string) => void;
 }) {
   return (
     <>
@@ -465,6 +490,49 @@ function Step3({
             placeholder="https://facebook.com/yourpage"
             className="h-12"
           />
+        </div>
+        {/* V2.1 ที่อยู่ผู้ส่ง — printed on every shipping label by
+            default. Optional here; editable later in /dashboard/settings. */}
+        <div className="mt-5 rounded-2xl border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-soft)] p-4">
+          <h3 className="text-[13px] font-bold">ที่อยู่ผู้ส่ง · ใส่ในใบปะหน้า</h3>
+          <p className="mt-0.5 text-[12px] leading-relaxed text-zinc-500">
+            จะถูกพิมพ์ที่ใบปะหน้าทุก order ตอน drop ที่ courier · ใส่ทีหลังในตั้งค่าได้
+          </p>
+          <div className="mt-3 space-y-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium">
+                ที่อยู่ (บ้านเลขที่ ซอย ถนน ตำบล อำเภอ จังหวัด)
+              </label>
+              <textarea
+                value={pickupAddress}
+                onChange={(e) => onPickupAddress(e.target.value)}
+                placeholder="999 ซอย XX ถนน YY แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพฯ"
+                rows={3}
+                maxLength={500}
+                className="w-full rounded-xl border border-[color:var(--color-border)] bg-white p-3 text-[14px] outline-none focus:border-[color:var(--color-brand-400)]"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium">
+                รหัสไปรษณีย์
+              </label>
+              <Input
+                value={pickupPostcode}
+                onChange={(e) =>
+                  onPickupPostcode(e.target.value.replace(/[^\d]/g, "").slice(0, 5))
+                }
+                placeholder="10310"
+                inputMode="numeric"
+                maxLength={5}
+                className="h-11"
+              />
+              {pickupPostcode && !/^\d{5}$/.test(pickupPostcode) ? (
+                <p className="mt-1 text-[11px] text-rose-600">
+                  ต้องเป็น 5 หลัก
+                </p>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
     </>

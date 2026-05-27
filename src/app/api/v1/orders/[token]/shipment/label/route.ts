@@ -28,7 +28,14 @@ export async function GET(
     where: { publicToken: token },
     include: {
       shop: {
-        select: { id: true, name: true, ownerId: true, contact: true },
+        select: {
+          id: true,
+          name: true,
+          ownerId: true,
+          contact: true,
+          pickupAddress: true,
+          pickupPostcode: true,
+        },
       },
     },
   });
@@ -59,11 +66,18 @@ export async function GET(
     order.shop.contact &&
     typeof order.shop.contact === "object" &&
     !Array.isArray(order.shop.contact)
-      ? (order.shop.contact as {
-          phone?: string;
-          address?: string;
-        })
+      ? (order.shop.contact as { phone?: string })
       : null;
+
+  // V2.1 sender address — prefer the new dedicated columns
+  // (pickupAddress/pickupPostcode) over any legacy address stuffed
+  // into contact JSON. Both surfaces fall through to env-default for
+  // very old shops that haven't set their pickup yet.
+  const senderAddressLine = order.shop.pickupAddress
+    ? order.shop.pickupPostcode
+      ? `${order.shop.pickupAddress} ${order.shop.pickupPostcode}`
+      : order.shop.pickupAddress
+    : (process.env.EASYPARCEL_SENDER_ADDRESS ?? null);
 
   const items = order.items as Array<{
     productName: string;
@@ -82,7 +96,7 @@ export async function GET(
       name: order.shop.name,
       senderName: order.shop.name,
       senderPhone: contact?.phone ?? null,
-      senderAddress: contact?.address ?? null,
+      senderAddress: senderAddressLine,
     },
     receiver: {
       name: order.customerName,

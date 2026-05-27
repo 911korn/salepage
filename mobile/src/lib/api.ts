@@ -1334,6 +1334,10 @@ export const api = {
           line?: string | null;
           facebook?: string | null;
         };
+        /** V2.1 ที่อยู่ผู้ส่ง — printed on every shipping label by default. */
+        pickupAddress?: string | null;
+        /** V2.1 รหัสไปรษณีย์ผู้ส่ง (5 หลัก). */
+        pickupPostcode?: string | null;
       },
     ) =>
       apiFetch<{ shop: { id: string; slug: string } }>(

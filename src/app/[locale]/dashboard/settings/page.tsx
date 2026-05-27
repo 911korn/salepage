@@ -56,6 +56,8 @@ export default async function SettingsPage({
           promptpayId: shop.promptpayId,
           contact: shop.contact as { phone?: string; line?: string; facebook?: string } | null,
           policies: shop.policies as { returnPolicy?: string; shippingTime?: string } | null,
+          pickupAddress: shop.pickupAddress,
+          pickupPostcode: shop.pickupPostcode,
         }}
       />
     </div>
