@@ -4,7 +4,17 @@ import { View, Text, ScrollView, ActivityIndicator, Pressable, Dimensions } from
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, ShoppingBag, Share2 } from "lucide-react-native";
+import {
+  X,
+  ShoppingBag,
+  Share2,
+  ShieldCheck,
+  Star,
+  Truck,
+  Store,
+  ChevronRight,
+  Package,
+} from "lucide-react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -206,6 +216,7 @@ function FlyingProduct({
 
 export default function ProductScreen() {
   const { t } = useTranslation(["shop", "common"]);
+  const insets = useSafeAreaInsets();
   const { slug, productSlug } = useLocalSearchParams<{
     slug: string;
     productSlug: string;
@@ -305,10 +316,35 @@ export default function ProductScreen() {
         <ProductImageGallery images={product.imageUrls} />
 
         <View className="px-5 pt-5">
-          <View className="flex-row items-start justify-between gap-3">
-            <Text className="flex-1 text-[22px] font-bold text-fg">
-              {product.name}
-            </Text>
+          {/* Price + sale% — leading slot is the most-eye-catching info.
+              Sale badge is rose-tinted so it pops on the page. */}
+          <View className="flex-row items-end justify-between gap-3">
+            <View className="flex-1">
+              <View className="flex-row items-baseline gap-2">
+                <Text className="text-[28px] font-bold text-brand-700">
+                  {formatBaht(product.priceSatang)}
+                </Text>
+                {product.compareAtSatang &&
+                product.compareAtSatang > product.priceSatang ? (
+                  <>
+                    <Text className="text-[14px] text-muted line-through">
+                      {formatBaht(product.compareAtSatang)}
+                    </Text>
+                    <View className="rounded-md bg-rose-100 px-2 py-0.5">
+                      <Text className="text-[11px] font-bold text-rose-700">
+                        -
+                        {Math.round(
+                          ((product.compareAtSatang - product.priceSatang) /
+                            product.compareAtSatang) *
+                            100,
+                        )}
+                        %
+                      </Text>
+                    </View>
+                  </>
+                ) : null}
+              </View>
+            </View>
             <Pressable
               onPress={() =>
                 shareProduct({
@@ -325,23 +361,14 @@ export default function ProductScreen() {
             </Pressable>
           </View>
 
-          <View className="mt-3 flex-row items-baseline gap-2">
-            <Text className="text-[26px] font-bold text-brand-700">
-              {formatBaht(product.priceSatang)}
-            </Text>
-            {product.compareAtSatang &&
-            product.compareAtSatang > product.priceSatang ? (
-              <Text className="text-[14px] text-muted line-through">
-                {formatBaht(product.compareAtSatang)}
-              </Text>
-            ) : null}
-          </View>
+          {/* Product title — moved below price so the price is the
+              first thing buyers see when scrolling past the gallery. */}
+          <Text className="mt-3 text-[18px] font-semibold leading-snug text-fg">
+            {product.name}
+          </Text>
 
-          <View className="mt-3 flex-row items-center gap-2">
-            {/* Type + condition tag — same component the storefront
-                cards use so the buyer instantly recognises "ดิจิทัล"
-                / "มือสอง" / "ของใหม่" coloring (911korn 2026-05-27
-                "หน้าสินค้าให้แสดง Tag ด้วย"). */}
+          {/* Tag row — type, condition, sold count, stock indicator */}
+          <View className="mt-2.5 flex-row flex-wrap items-center gap-x-2 gap-y-1">
             <ProductTypeTag
               type={product.type}
               condition={product.condition}
@@ -349,23 +376,159 @@ export default function ProductScreen() {
             <Text className="text-[12px] text-muted">
               {t("soldCount", { count: product.sold.toLocaleString() })}
             </Text>
+            {typeof product.stock === "number" ? (
+              <Text
+                className={`text-[12px] ${
+                  product.stock === 0
+                    ? "text-rose-600"
+                    : product.stock < 5
+                      ? "text-amber-700"
+                      : "text-emerald-700"
+                }`}
+              >
+                · {product.stock === 0
+                  ? "หมดสต็อก"
+                  : product.stock < 5
+                    ? `เหลือ ${product.stock} ชิ้น`
+                    : "พร้อมส่ง"}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* Shop card — tappable. Logo + name + verified + rating +
+              "เข้าชมร้าน" arrow. Lets buyers jump to the full storefront
+              without having to back out (911korn 2026-05-28 01:25
+              "ลูกค้าจะได้กดเข้าไปดู Shop นั้นได้ง่ายๆ"). */}
+          <Pressable
+            onPress={() => router.push(`/s/${data.shop.slug}`)}
+            className="mt-5 flex-row items-center gap-3 rounded-2xl border border-border bg-white p-3"
+          >
+            <View
+              className="size-12 items-center justify-center overflow-hidden rounded-xl"
+              style={{ backgroundColor: data.shop.themeColor || "#e11d48" }}
+            >
+              {data.shop.logoUrl ? (
+                <Image
+                  source={{ uri: data.shop.logoUrl }}
+                  style={{ width: "100%", height: "100%" }}
+                  contentFit="cover"
+                />
+              ) : (
+                <Text className="text-[18px] font-bold text-white">
+                  {data.shop.logoText ?? data.shop.name.slice(0, 1)}
+                </Text>
+              )}
+            </View>
+            <View className="flex-1">
+              <View className="flex-row items-center gap-1">
+                <Text
+                  className="text-[15px] font-semibold text-fg"
+                  numberOfLines={1}
+                >
+                  {data.shop.name}
+                </Text>
+                {data.shop.kycStatus === "VERIFIED" ? (
+                  <ShieldCheck size={14} color="#e11d48" strokeWidth={2.5} />
+                ) : null}
+              </View>
+              <View className="mt-0.5 flex-row items-center gap-2">
+                {data.shop.rating > 0 ? (
+                  <View className="flex-row items-center gap-0.5">
+                    <Star size={11} color="#f59e0b" fill="#f59e0b" />
+                    <Text className="text-[11px] text-muted">
+                      {data.shop.rating.toFixed(1)}
+                    </Text>
+                  </View>
+                ) : null}
+                <Text className="text-[11px] text-muted">
+                  ขายแล้ว {data.shop.totalSold.toLocaleString()} ชิ้น
+                </Text>
+              </View>
+            </View>
+            <View className="flex-row items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5">
+              <Store size={13} color="#be123c" strokeWidth={2.4} />
+              <Text className="text-[12px] font-semibold text-brand-700">
+                เข้าชมร้าน
+              </Text>
+              <ChevronRight size={13} color="#be123c" strokeWidth={2.4} />
+            </View>
+          </Pressable>
+
+          {/* Shipping + delivery card */}
+          <View className="mt-3 rounded-2xl border border-border bg-white p-4">
+            <View className="flex-row items-start gap-3">
+              <View className="size-9 items-center justify-center rounded-xl bg-emerald-50">
+                <Truck size={18} color="#059669" strokeWidth={2.2} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[14px] font-semibold text-fg">
+                  {product.shippingFeeSatang === 0
+                    ? "ส่งฟรีทั่วประเทศ"
+                    : `ค่าส่ง ${formatBaht(product.shippingFeeSatang)}`}
+                </Text>
+                <Text className="mt-0.5 text-[12px] leading-relaxed text-muted">
+                  ส่งโดยขนส่งทุกเจ้า · ระบบกรอกเลขพัสดุให้อัตโนมัติด้วย AI หลังร้านส่ง
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Trust signals card */}
+          <View className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+            <View className="flex-row items-start gap-3">
+              <View className="size-9 items-center justify-center rounded-xl bg-white">
+                <ShieldCheck size={18} color="#059669" strokeWidth={2.2} />
+              </View>
+              <View className="flex-1 gap-1">
+                <Text className="text-[14px] font-semibold text-emerald-900">
+                  ปลอดภัย — เงินถึงร้านโดยตรง
+                </Text>
+                <Text className="text-[12px] leading-relaxed text-emerald-900/80">
+                  ✓ PromptPay เข้าบัญชีร้านตรง · ไม่ผ่านคนกลาง{"\n"}
+                  ✓ AI ตรวจสลิปอัตโนมัติใน 3 วินาที{"\n"}
+                  {data.shop.kycStatus === "VERIFIED"
+                    ? "✓ ร้านนี้ผ่าน KYC verified\n"
+                    : ""}
+                  ✓ ติดตามสถานะออเดอร์ได้ทุกขั้นตอน
+                </Text>
+              </View>
+            </View>
           </View>
 
           {product.description ? (
-            <View className="mt-5 rounded-2xl border border-border bg-white p-4">
-              <Text className="text-[13px] font-semibold uppercase tracking-wider text-muted">
-                {t("description")}
-              </Text>
+            <View className="mt-3 rounded-2xl border border-border bg-white p-4">
+              <View className="flex-row items-center gap-2">
+                <Package size={14} color="#0a0a0a" strokeWidth={2.2} />
+                <Text className="text-[13px] font-semibold uppercase tracking-wider text-muted">
+                  {t("description")}
+                </Text>
+              </View>
               <Text className="mt-2 text-[14px] leading-relaxed text-fg">
                 {product.description}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Shop announcement (if any) */}
+          {data.shop.announcement ? (
+            <View className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <Text className="text-[12px] font-semibold uppercase tracking-wider text-amber-900">
+                ประกาศจากร้าน
+              </Text>
+              <Text className="mt-1 text-[13px] leading-relaxed text-amber-900">
+                {data.shop.announcement}
               </Text>
             </View>
           ) : null}
         </View>
       </ScrollView>
 
-      {/* Sticky Add-to-Cart bar */}
-      <View className="absolute bottom-0 left-0 right-0 flex-row items-center gap-2 border-t border-border bg-white px-4 py-3 pb-6">
+      {/* Sticky Add-to-Cart bar — lifted above iOS home indicator
+          (same pattern as cart confirmation CTA). */}
+      <View
+        className="absolute bottom-0 left-0 right-0 flex-row items-center gap-2 border-t border-border bg-white px-4 pt-3"
+        style={{ paddingBottom: Math.max(insets.bottom + 8, 16) }}
+      >
         <Button
           variant="outline"
           className="flex-1"
