@@ -27,12 +27,22 @@ export interface SlipPack {
 
 export type SlipPackKey = "p50" | "p150" | "p500" | "p1500" | "p5000";
 
+/// AI slip credit pricing — 911korn 2026-05-28 03:30 "เราขายถูกไปมาก
+/// เพิ่มเป็น เริ่มต้นที่ 2.5 บาทต่อรายการ และ ถูกสุดที่ 1.5 บาท".
+///
+/// These prices are what the SELLER pays per slip after SalePage's
+/// 50% subsidy ("ออกกันคนละครึ่ง"). The underlying SlipOK cost to
+/// SalePage is ~5 ฿/slip via the log:false multi-tenant flow; we
+/// cover half so sellers see 2.5 ฿ (smallest pack) down to 1.5 ฿
+/// (largest pack). Per-slip and pack-price are kept consistent
+/// across tiers — bigger packs = bigger discount on the per-slip
+/// rate, same shape as before.
 export const SLIP_PACKS: Record<SlipPackKey, SlipPack> = {
-  p50: { key: "p50", slips: 50, priceBaht: 49, perSlipBaht: 0.98 },
-  p150: { key: "p150", slips: 150, priceBaht: 129, perSlipBaht: 0.86 },
-  p500: { key: "p500", slips: 500, priceBaht: 399, perSlipBaht: 0.8 },
-  p1500: { key: "p1500", slips: 1500, priceBaht: 990, perSlipBaht: 0.66 },
-  p5000: { key: "p5000", slips: 5000, priceBaht: 2900, perSlipBaht: 0.58 },
+  p50:   { key: "p50",   slips: 50,   priceBaht: 125,  perSlipBaht: 2.50 },
+  p150:  { key: "p150",  slips: 150,  priceBaht: 330,  perSlipBaht: 2.20 },
+  p500:  { key: "p500",  slips: 500,  priceBaht: 950,  perSlipBaht: 1.90 },
+  p1500: { key: "p1500", slips: 1500, priceBaht: 2550, perSlipBaht: 1.70 },
+  p5000: { key: "p5000", slips: 5000, priceBaht: 7500, perSlipBaht: 1.50 },
 };
 
 export const SLIP_PACK_KEYS = Object.keys(SLIP_PACKS) as SlipPackKey[];

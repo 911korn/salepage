@@ -29,13 +29,15 @@ const PLANS: PlanConfig[] = [
   { id: "agency", monthlyPrice: 2990, highlight: false },
 ];
 
-// Keep keys + slips + price-baht in sync with src/lib/slip-credits.ts SLIP_PACKS.
+// Keep keys + slips + price-baht in sync with src/lib/slip-credits-shared.ts
+// SLIP_PACKS. 911korn 2026-05-28: priced after the 50% SalePage subsidy —
+// 2.50 ฿/slip on the smallest pack down to 1.50 ฿/slip on the largest.
 const CREDIT_PACKS = [
-  { key: "p50", slips: 50, priceBaht: 49 },
-  { key: "p150", slips: 150, priceBaht: 129 },
-  { key: "p500", slips: 500, priceBaht: 399 },
-  { key: "p1500", slips: 1500, priceBaht: 990 },
-  { key: "p5000", slips: 5000, priceBaht: 2900 },
+  { key: "p50",   slips: 50,   priceBaht: 125 },
+  { key: "p150",  slips: 150,  priceBaht: 330 },
+  { key: "p500",  slips: 500,  priceBaht: 950 },
+  { key: "p1500", slips: 1500, priceBaht: 2550 },
+  { key: "p5000", slips: 5000, priceBaht: 7500 },
 ] as const;
 type CreditPackKey = (typeof CREDIT_PACKS)[number]["key"];
 
