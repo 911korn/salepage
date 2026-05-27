@@ -9,8 +9,11 @@ import {
   Alert,
   RefreshControl,
   FlatList,
+  Clipboard,
+  Linking,
   type ListRenderItem,
 } from "react-native";
+import { Copy, Receipt } from "lucide-react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
@@ -329,6 +332,53 @@ const OrderCard = memo(function OrderCard({
             contentFit="cover"
           />
         </Pressable>
+      ) : null}
+
+      {/* V2.1 Tracking + courier receipt — surfaced inline once the
+          AI scan has run so the seller can copy/paste the tracking
+          number or pull up the receipt photo without diving into the
+          ship screen. Persists into DELIVERED for after-the-fact
+          review. 911korn 2026-05-27 "พร้อมโชว์ เลข Tracking แบบ
+          มีปุ่ม copy / ใบเสร็จ มันควรคาอยู่ใน order นั้น แบบกดดูได้". */}
+      {order.trackingNumber &&
+      (order.status === "SHIPPING" || order.status === "DELIVERED") ? (
+        <View className="border-t border-border bg-zinc-900 px-4 py-3">
+          <Text className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            เลขพัสดุ
+          </Text>
+          <View className="mt-1 flex-row items-center gap-2">
+            <Text className="flex-1 font-mono text-[16px] font-bold text-white">
+              {order.trackingNumber}
+            </Text>
+            <Pressable
+              onPress={() => {
+                Clipboard.setString(order.trackingNumber!);
+                Alert.alert("คัดลอกแล้ว", order.trackingNumber!);
+              }}
+              className="flex-row items-center gap-1 rounded-lg bg-white px-2.5 py-1.5"
+              hitSlop={6}
+            >
+              <Copy size={12} color="#18181b" strokeWidth={2.2} />
+              <Text className="text-[11px] font-semibold text-fg">คัดลอก</Text>
+            </Pressable>
+          </View>
+          {order.shippingReceiptUrl ? (
+            <Pressable
+              onPress={() => {
+                if (order.shippingReceiptUrl) {
+                  void Linking.openURL(order.shippingReceiptUrl);
+                }
+              }}
+              className="mt-2 flex-row items-center gap-1.5 self-start"
+              hitSlop={6}
+            >
+              <Receipt size={12} color="#a1a1aa" strokeWidth={2} />
+              <Text className="text-[11px] text-zinc-400 underline">
+                ดูใบเสร็จขนส่งที่ AI scan
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
 
       {/* Action bar — content depends on status */}

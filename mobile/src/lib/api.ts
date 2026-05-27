@@ -1535,6 +1535,11 @@ export const api = {
           slipImageUrl: string | null;
           slipVerifiedAt: string | null;
           trackingNumber: string | null;
+          /** V2.1 — URL of the courier receipt photo the seller uploaded
+           *  for AI scan. Surfaced inline on the order card so the seller
+           *  can pull it up without diving into the ship screen. */
+          shippingReceiptUrl: string | null;
+          shippingReceiptScannedAt: string | null;
           createdAt: string;
           items: Array<{
             productId?: string;

@@ -71,6 +71,8 @@ export async function GET(request: Request, ctx: Ctx) {
       slipImageUrl: true,
       slipVerifiedAt: true,
       trackingNumber: true,
+      shippingReceiptUrl: true,
+      shippingReceiptScannedAt: true,
       createdAt: true,
       // Order.items is a Json snapshot at purchase time:
       // `Array<{ productId, productSlug, name, qty, priceSatang, image? }>`.
