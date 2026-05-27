@@ -13,7 +13,8 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
-import { Printer, Camera, CheckCircle2, Copy, Receipt } from "lucide-react-native";
+import { Printer, Camera, CheckCircle2, Copy, Receipt, ExternalLink } from "lucide-react-native";
+import { detectCourier } from "@/lib/courier-detect";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
@@ -182,31 +183,56 @@ export default function SellerShipScreen() {
             </Text>
           </View>
 
-          {/* Tracking number + copy button (911korn 2026-05-27 "พร้อม
-              โชว์ เลข Tracking แบบ มีปุ่ม copy"). */}
-          <View className="mt-6 rounded-3xl bg-zinc-900 p-5">
-            <Text className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-              เลขพัสดุ
-            </Text>
-            <View className="mt-1 flex-row items-center gap-2">
-              <Text className="flex-1 font-mono text-[20px] font-bold text-white">
-                {trackingNumber}
-              </Text>
-              <Pressable
-                onPress={() => {
-                  Clipboard.setString(trackingNumber!);
-                  Alert.alert("คัดลอกแล้ว", trackingNumber!);
-                }}
-                className="flex-row items-center gap-1.5 rounded-xl bg-white px-3 py-2"
-                hitSlop={6}
-              >
-                <Copy size={14} color="#18181b" strokeWidth={2.2} />
-                <Text className="text-[12px] font-semibold text-fg">
-                  คัดลอก
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+          {/* Tracking number + copy + check status (911korn 2026-05-27
+              "พร้อมโชว์ เลข Tracking แบบ มีปุ่ม copy + Check Status
+              auto-fill ค่ายนั้นๆ ไปเลย"). Courier resolved from the
+              tracking-number regex so the link always lands on the
+              right courier's tracking page. */}
+          {(() => {
+            const courier = detectCourier(trackingNumber!);
+            return (
+              <View className="mt-6 rounded-3xl bg-zinc-900 p-5">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                    เลขพัสดุ
+                  </Text>
+                  <Text className="text-[11px] font-semibold text-zinc-300">
+                    {courier.name}
+                  </Text>
+                </View>
+                <View className="mt-1 flex-row items-center gap-2">
+                  <Text
+                    className="flex-1 font-mono text-[20px] font-bold text-white"
+                    numberOfLines={1}
+                  >
+                    {trackingNumber}
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      Clipboard.setString(trackingNumber!);
+                      Alert.alert("คัดลอกแล้ว", trackingNumber!);
+                    }}
+                    className="flex-row items-center gap-1.5 rounded-xl bg-white px-3 py-2"
+                    hitSlop={6}
+                  >
+                    <Copy size={14} color="#18181b" strokeWidth={2.2} />
+                    <Text className="text-[12px] font-semibold text-fg">
+                      คัดลอก
+                    </Text>
+                  </Pressable>
+                </View>
+                <Pressable
+                  onPress={() => void Linking.openURL(courier.url)}
+                  className="mt-3 flex-row items-center justify-center gap-1.5 rounded-xl bg-white py-2.5"
+                >
+                  <ExternalLink size={14} color="#18181b" strokeWidth={2.2} />
+                  <Text className="text-[13px] font-semibold text-fg">
+                    เช็คสถานะที่ {courier.name} →
+                  </Text>
+                </Pressable>
+              </View>
+            );
+          })()}
 
           {/* Receipt thumbnail — stays with the order forever for review
               (911korn 2026-05-27 "มันควรคาอยู่ใน order นั้น แบบกดดูได้"). */}

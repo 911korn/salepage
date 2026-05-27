@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Receipt } from "lucide-react";
+import { Check, Copy, ExternalLink, Receipt } from "lucide-react";
 import { toast } from "sonner";
+import { detectCourier } from "@/lib/courier-detect";
 
 /**
  * Persistent card on the order detail page showing the courier
@@ -49,33 +50,52 @@ export function ShippingReceiptCard({
       </div>
 
       {trackingNumber ? (
-        <div className="mt-3 rounded-2xl bg-zinc-900 p-4 text-white">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-            เลขพัสดุ
-          </p>
-          <div className="mt-1 flex items-center gap-2">
-            <span className="flex-1 truncate font-mono text-lg font-bold">
-              {trackingNumber}
-            </span>
-            <button
-              type="button"
-              onClick={copyTracking}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-[12px] font-semibold text-zinc-900 hover:bg-zinc-100 active:scale-95"
-            >
-              {copied ? (
-                <>
-                  <Check className="size-3.5" />
-                  คัดลอกแล้ว
-                </>
-              ) : (
-                <>
-                  <Copy className="size-3.5" />
-                  คัดลอก
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+        (() => {
+          const courier = detectCourier(trackingNumber);
+          return (
+            <div className="mt-3 rounded-2xl bg-zinc-900 p-4 text-white">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                  เลขพัสดุ
+                </p>
+                <p className="text-[11px] font-semibold text-zinc-300">
+                  {courier.name}
+                </p>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="flex-1 truncate font-mono text-lg font-bold">
+                  {trackingNumber}
+                </span>
+                <button
+                  type="button"
+                  onClick={copyTracking}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-[12px] font-semibold text-zinc-900 hover:bg-zinc-100 active:scale-95"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="size-3.5" />
+                      คัดลอกแล้ว
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="size-3.5" />
+                      คัดลอก
+                    </>
+                  )}
+                </button>
+              </div>
+              <a
+                href={courier.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-[13px] font-semibold text-zinc-900 hover:bg-zinc-100"
+              >
+                <ExternalLink className="size-3.5" />
+                เช็คสถานะที่ {courier.name} →
+              </a>
+            </div>
+          );
+        })()
       ) : null}
 
       <a
