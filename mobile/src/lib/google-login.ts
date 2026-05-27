@@ -1,4 +1,4 @@
-import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import { getEnv } from "@/lib/env";
 
 /**
@@ -162,80 +162,29 @@ export async function loginWithGoogle(): Promise<GoogleBridgeResult> {
   // type=success / cancel / dismiss. We race it against the poll so
   // the FIRST resolution wins: if the user closes the browser without
   // signing in, we throw GoogleLoginCancelledError right away.
-  const browserPromise = WebBrowser.openAuthSessionAsync(
-    openUrl,
-    "salepage://auth/google",
-    {
-      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-      dismissButtonStyle: "close",
-      // Do NOT set preferEphemeralSession — it nukes Google's own
-      // account-picker cookies (911korn 2026-05-28 01:01: "มันให้พิมพ
-      // าสแทน แบบนี้ผิด ที่ถูกต้องให้เลือก"), forcing the buyer to
-      // re-type email + password every time. We rely on the server
-      // route /api/v1/auth/mobile-bridge/google to expire the
-      // salepage.in.th NextAuth cookies on each entry instead — that
-      // breaks the stale-session re-binding without touching Google's
-      // own account memory.
-    },
-  ).then(async (result) => {
-    // If the poll already wrote finalResult, leave it alone.
-    if (finalResult || finalError) {
-      cancelled = true;
-      return;
-    }
-    // 911korn 2026-05-27: the server-side complete endpoint writes the
-    // token to the bridge BEFORE returning the HTML that redirects to
-    // salepage://auth/google. So when this resolves with type "success"
-    // the token is already persisted — the poll just hasn't caught up
-    // yet (1.5s tick interval). Fetch immediately instead of treating
-    // browser-close as cancellation.
-    if (result.type === "success") {
-      try {
-        const res = await fetch(
-          `${apiBase}/api/v1/auth/mobile-bridge/poll?bridge=${encodeURIComponent(bridgeId)}`,
-        );
-        const json = (await res.json()) as ApiResp<
-          | { pending: true }
-          | { pending: false; token: string; expiresAt: string; user: GoogleBridgeResult["user"] }
-        >;
-        if (json.ok && json.data.pending === false) {
-          finalResult = {
-            token: json.data.token,
-            expiresAt: json.data.expiresAt,
-            user: json.data.user,
-          };
-        } else {
-          // Bridge wasn't ready — give the poll loop one last 1.5s shot
-          // before giving up. Most cases the next regular tick catches it.
-          await new Promise((r) => setTimeout(r, 1700));
-        }
-      } catch {
-        // Network blip — let the regular poll loop handle it.
-      }
-    }
-    if (!finalResult && !finalError) {
-      finalError = new GoogleLoginCancelledError();
-    }
-    cancelled = true;
-  });
+  // 911korn 2026-05-28 01:05 "ยังขึ้นให้พิมพาส": WebBrowser.openAuthSession
+  // Async runs inside an ASWebAuthenticationSession sandbox whose cookies
+  // are isolated from Safari, so the user's existing Google login at
+  // accounts.google.com is invisible to it — Google shows the email +
+  // password form every time. Same fix LINE login uses: open the real
+  // Safari via Linking.openURL. Safari's cookie jar has the buyer's
+  // Google account memory → picker shows → after picking, the bridge's
+  // success page deep-links back to salepage://auth/google.
+  //
+  // Trade-off: the buyer leaves the SalePage app for a moment. The
+  // /auth/google deep-link receiver navigates them back to /me once
+  // the JWT lands; the poll loop here keeps running and adopts the
+  // token in the background too.
+  void Linking.openURL(openUrl);
 
-  await Promise.race([pollPromise, browserPromise]);
-  // Wait for the final 1.7s grace period in the browserPromise handler
-  // above to complete if it kicked one off. The race already resolved,
-  // but the .then() that adopted the token may still be running.
-  await browserPromise;
+  await pollPromise;
 
   cancelled = true;
   if (pollHandle) clearTimeout(pollHandle);
-
-  // Always try to dismiss the browser — if the user is still on the
-  // success page when poll completes, this brings them back to the app.
-  try {
-    await WebBrowser.dismissBrowser();
-  } catch {
-    // No browser open or already dismissed — safe to ignore.
-  }
-
+  // No WebBrowser to dismiss — the bridge's success page deep-links
+  // back to salepage://auth/google, which the /auth/google receiver
+  // handles. If the user dismissed Safari without finishing, the poll
+  // times out at 5 min (server bridge TTL) and throws timeout.
   if (finalResult) return finalResult;
   if (finalError) throw finalError;
   throw new GoogleLoginCancelledError();
