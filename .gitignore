@@ -64,3 +64,4 @@ mobile/.eas/
 
 # Claude Code runtime state
 .claude/
+/app.json
