@@ -273,4 +273,12 @@ export interface SlipVerifyResponse {
   amount?: number;
   errorCode?: "provider_rejected" | "provider_error" | "receiver_unreadable";
   errorMessage?: string;
+  /** When the shop hasn't bought an auto-verify plan we still ACCEPT the
+   *  slip — the order sits at PENDING with `slipImageUrl` saved, the
+   *  seller approves manually. UI should show a friendly "waiting for
+   *  shop to review" message instead of a hard fail. */
+  manualReview?: boolean;
+  reason?: string;
+  message?: string;
+  slipImageUrl?: string | null;
 }

@@ -95,12 +95,30 @@ export default function CheckoutPayScreen() {
         Alert.alert(t("verifySuccessTitle"), t("verifySuccessBody"), [
           { text: t("verifyShowStatus"), onPress: () => router.replace(`/o/${token}`) },
         ]);
-      } else {
-        Alert.alert(
-          t("verifyFailTitle"),
-          res.errorMessage ?? t("verifyFailBody"),
-        );
+        return;
       }
+      // Free-tier shops don't have auto-verify — server stored the slip
+      // and flipped the order into manual-review. Tell the buyer that
+      // it's been received (not failed) so they don't keep retrying
+      // (911korn 2026-05-27 "ร้านที่ไม่ได้ซื้อตรวจสลิป ควรผ่าน แต่
+      // ขึ้นแจ้งลูกค้าทราบว่าร้านนี้ไม่ได้ใช้ระบบตรวจ Slip Auto").
+      if (res.manualReview) {
+        Alert.alert(
+          "รับสลิปแล้ว · รอร้านตรวจสอบ",
+          "ร้านนี้ไม่ได้ใช้ระบบตรวจสลิปอัตโนมัติ ระบบรับสลิปของคุณไว้แล้ว · กรุณาแจ้งเจ้าของร้านให้ตรวจสอบและยืนยันคำสั่งซื้อ อาจใช้เวลานานกว่าปกติ",
+          [
+            {
+              text: "ดูสถานะออเดอร์",
+              onPress: () => router.replace(`/o/${token}`),
+            },
+          ],
+        );
+        return;
+      }
+      Alert.alert(
+        t("verifyFailTitle"),
+        res.errorMessage ?? t("verifyFailBody"),
+      );
     },
     onError: (err) => {
       const msg =
