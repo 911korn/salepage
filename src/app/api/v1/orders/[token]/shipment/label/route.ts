@@ -33,7 +33,14 @@ export async function GET(
     },
   });
   if (!order) return fail("not_found", "ไม่พบออเดอร์นี้", 404);
-  if (order.status !== "PAID" && order.status !== "SHIPPING") {
+  // Allow PAID + SHIPPING + DELIVERED so sellers can re-print a damaged
+  // label or pull up a record for a completed shipment. Pending orders
+  // can't print yet — money hasn't landed.
+  if (
+    order.status !== "PAID" &&
+    order.status !== "SHIPPING" &&
+    order.status !== "DELIVERED"
+  ) {
     return fail(
       "wrong_status",
       "พิมพ์ใบปะหน้าได้เฉพาะออเดอร์ที่ลูกค้าชำระเงินแล้ว",
