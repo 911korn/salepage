@@ -144,11 +144,13 @@ function successPage() {
   // and the in-app browser closes (mirrors the Google fix —
   // dismissBrowser() doesn't work for openAuthSessionAsync, only the
   // deep-link redirect does).
+  const deepLink = "salepage://auth/line?ok=1";
   const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="refresh" content="0; url=${deepLink}" />
 <title>Signed in - SalePage</title>
 <style>
   html, body { margin: 0; height: 100%; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; color: #111827; }
@@ -160,18 +162,21 @@ function successPage() {
   p { color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
   .btn { display: inline-block; padding: 12px 24px; border-radius: 12px; background: #06C755; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 14px; }
 </style>
+<script>
+  try { window.location.href = "${deepLink}"; } catch (e) { /* ignore */ }
+</script>
 </head>
 <body>
 <div class="card">
   <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
   <h1>You're signed in</h1>
   <p>Returning you to the SalePage app...</p>
-  <a class="btn" href="salepage://auth/line?ok=1">กลับสู่แอป</a>
+  <a class="btn" href="${deepLink}" id="back">กลับสู่แอป</a>
 </div>
 <script>
   setTimeout(function () {
-    window.location.replace("salepage://auth/line?ok=1");
-  }, 50);
+    try { var a = document.getElementById('back'); if (a) a.click(); } catch (e) { /* ignore */ }
+  }, 200);
 </script>
 </body>
 </html>`;

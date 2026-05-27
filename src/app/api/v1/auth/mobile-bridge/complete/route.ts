@@ -108,11 +108,19 @@ function successPage() {
   //     visible "Return to app" button as a fallback.
   //   - We attempt `window.location.replace` first because it works on
   //     Chrome/Safari mobile + Android browsers without confirmation.
+  const deepLink = "salepage://auth/google?ok=1";
+  // iOS SFAuthenticationSession sometimes blocks `window.location.replace`
+  // to a custom URL scheme when fired from a setTimeout (it interprets
+  // delayed navigation as not-user-initiated). The combination of HTTP
+  // refresh-style meta tag + immediate inline script + visible <a>
+  // covers every iOS / Android / SFSafariViewController variant we've
+  // seen in the wild.
   const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="refresh" content="0; url=${deepLink}" />
 <title>Signed in - SalePage</title>
 <style>
   html, body { margin: 0; height: 100%; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; color: #111827; }
@@ -124,21 +132,30 @@ function successPage() {
   p { color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
   .btn { display: inline-block; padding: 12px 24px; border-radius: 12px; background: #e11d48; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 14px; }
 </style>
+<script>
+  // Fire immediately during HTML parse — iOS allows custom-scheme
+  // navigation during the initial document load, but blocks it from
+  // scripts that run after onload when there was no user gesture.
+  try { window.location.href = "${deepLink}"; } catch (e) { /* ignore */ }
+</script>
 </head>
 <body>
 <div class="card">
   <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
   <h1>You're signed in</h1>
   <p>Returning you to the SalePage app...</p>
-  <a class="btn" href="salepage://auth/google?ok=1">กลับสู่แอป</a>
+  <a class="btn" href="${deepLink}" id="back">กลับสู่แอป</a>
 </div>
 <script>
-  // Fire the deep-link redirect immediately. The system browser closes
-  // as soon as the URL matches the redirect scheme passed to
-  // WebBrowser.openAuthSessionAsync on the mobile side.
+  // Auto-click the button after 200ms as a third fallback — Safari
+  // treats programmatic anchor clicks slightly differently from
+  // location.replace and one of them usually goes through.
   setTimeout(function () {
-    window.location.replace("salepage://auth/google?ok=1");
-  }, 50);
+    try {
+      var a = document.getElementById('back');
+      if (a) a.click();
+    } catch (e) { /* ignore */ }
+  }, 200);
 </script>
 </body>
 </html>`;
