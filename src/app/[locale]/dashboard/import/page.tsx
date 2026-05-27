@@ -46,7 +46,7 @@ export default async function ImportPage({
             นำเข้าสินค้า
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            ขายอยู่ที่ Shopee / Lazada / TikTok Shop หรือเว็บอื่น? นำเข้าสินค้าเดิมเข้า {activeShop.name} ในคลิกเดียว
+            วางลิงก์ร้านของคุณจาก <strong>Shopify / Lazada / TikTok Shop / Instagram</strong> หรือเว็บอื่น — AI จะดึงสินค้าทุกชิ้นมาให้ในคลิกเดียว
           </p>
         </div>
       </header>

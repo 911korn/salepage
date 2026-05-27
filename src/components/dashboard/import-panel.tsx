@@ -9,6 +9,8 @@ import {
   ImageIcon,
   Link2,
   Loader2,
+  Sparkles,
+  Store,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -54,24 +56,32 @@ interface Props {
   shopName: string;
 }
 
-type Tab = "csv" | "url";
+type Tab = "shop" | "csv" | "url";
 
 export function ImportPanel({ shopSlug, shopName }: Props) {
-  const [tab, setTab] = useState<Tab>("csv");
+  // Default to the "shop URL + AI" tab — it's the marketing hook
+  // (911korn 2026-05-27 "เอา Link ร้านมาใส่ แล้ว Ai เราทำให้หมดแบบจบๆ ·
+  // จะได้โปรโมทง่ายเวลาจะให้คนย้ายมาสร้างร้าน").
+  const [tab, setTab] = useState<Tab>("shop");
 
   return (
     <div className="mt-8 rounded-3xl border border-[color:var(--color-border)] bg-white p-6 shadow-sm sm:p-8">
-      <div className="flex gap-2 rounded-xl bg-[color:var(--color-soft)] p-1">
+      <div className="flex flex-wrap gap-2 rounded-xl bg-[color:var(--color-soft)] p-1">
+        <TabButton active={tab === "shop"} onClick={() => setTab("shop")}>
+          <Sparkles className="size-4" /> วางลิงก์ร้าน · AI ทำให้
+        </TabButton>
         <TabButton active={tab === "csv"} onClick={() => setTab("csv")}>
-          <FileSpreadsheet className="size-4" /> ไฟล์ Shopee/Lazada (CSV/XLSX)
+          <FileSpreadsheet className="size-4" /> ไฟล์ Shopee/Lazada
         </TabButton>
         <TabButton active={tab === "url"} onClick={() => setTab("url")}>
-          <Link2 className="size-4" /> วางลิงก์สินค้า
+          <Link2 className="size-4" /> ลิงก์สินค้าทีละชิ้น
         </TabButton>
       </div>
 
       <div className="mt-6">
-        {tab === "csv" ? (
+        {tab === "shop" ? (
+          <ShopUrlImporter shopSlug={shopSlug} shopName={shopName} />
+        ) : tab === "csv" ? (
           <CsvImporter shopSlug={shopSlug} shopName={shopName} />
         ) : (
           <UrlImporter shopSlug={shopSlug} shopName={shopName} />
@@ -271,6 +281,204 @@ function CsvImporter({ shopSlug, shopName }: Props) {
       ) : null}
     </div>
   );
+}
+
+// ─── Shop-URL importer (paste shop link, AI extracts everything) ───────
+
+function ShopUrlImporter({ shopSlug, shopName }: Props) {
+  const router = useRouter();
+  const [shopUrl, setShopUrl] = useState("");
+  const [fetching, setFetching] = useState(false);
+  const [committing, startCommit] = useTransition();
+  const [previews, setPreviews] = useState<ImportedProduct[]>([]);
+  const [failures, setFailures] = useState<{ url: string; reason: string }[]>([]);
+  const [platform, setPlatform] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  async function fetchShopProducts() {
+    if (!/^https?:\/\//i.test(shopUrl.trim())) {
+      toast.error("ลิงก์ต้องขึ้นต้นด้วย http:// หรือ https://");
+      return;
+    }
+    setFetching(true);
+    setPreviews([]);
+    setFailures([]);
+    setPlatform(null);
+    try {
+      const res = await fetch(`/api/v1/shops/${shopSlug}/import/shop-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: shopUrl.trim() }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        toast.error(json.error?.message ?? "ดึงข้อมูลร้านไม่สำเร็จ");
+        return;
+      }
+      setPlatform(json.data.platform);
+      setPreviews(json.data.successes);
+      setFailures(json.data.failures);
+      setSelected(
+        new Set((json.data.successes as ImportedProduct[]).map((p) => p.tempId)),
+      );
+      if (json.data.successes.length === 0) {
+        toast.error("ไม่พบสินค้าในหน้านี้ — ลองวางลิงก์หน้ารวมสินค้า (All products)");
+      } else {
+        toast.success(
+          `เจอ ${json.data.successes.length} สินค้า (${labelForPlatform(json.data.platform)})`,
+        );
+      }
+    } finally {
+      setFetching(false);
+    }
+  }
+
+  function commit() {
+    const toCommit = previews.filter((p) => selected.has(p.tempId));
+    if (toCommit.length === 0) {
+      toast.error("เลือกอย่างน้อย 1 สินค้า");
+      return;
+    }
+    startCommit(async () => {
+      const res = await fetch(`/api/v1/shops/${shopSlug}/import/url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "commit", products: toCommit }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        toast.error(json.error?.message ?? "นำเข้าไม่สำเร็จ");
+        return;
+      }
+      toast.success(`นำเข้า ${json.data.createdCount} สินค้าสำเร็จ`);
+      router.push(`/dashboard/products?shop=${shopSlug}`);
+      router.refresh();
+    });
+  }
+
+  function updatePreview(tempId: string, patch: Partial<ImportedProduct>) {
+    setPreviews((arr) => arr.map((p) => (p.tempId === tempId ? { ...p, ...patch } : p)));
+  }
+
+  return (
+    <div>
+      <div className="rounded-2xl border border-[color:var(--color-brand-200)] bg-gradient-to-br from-rose-50 to-white p-5">
+        <div className="flex items-start gap-3">
+          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-[color:var(--color-brand-600)] text-white">
+            <Sparkles className="size-5" />
+          </div>
+          <div>
+            <h3 className="font-display text-base font-bold text-zinc-900">
+              วางลิงก์ร้านของคุณ — AI ดึงสินค้าทุกชิ้นให้
+            </h3>
+            <p className="mt-1 text-[13px] leading-relaxed text-zinc-600">
+              รองรับ <strong>Shopify</strong>, <strong>Lazada</strong>, <strong>TikTok Shop</strong>, <strong>Instagram Shopping</strong>, WooCommerce, Squarespace, BigCommerce และเว็บร้านอื่น ๆ
+              <br />
+              ระบบ AI จะอ่านหน้าร้านและดึง ชื่อ-ราคา-รูป-รายละเอียด ทุกสินค้าออกมาให้พรีวิวทันที (สูงสุด 100 ชิ้นต่อรอบ)
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <label className="text-[12px] font-semibold text-zinc-700">ลิงก์ร้านของคุณ</label>
+        <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-1 items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-white px-3 py-2 focus-within:border-[color:var(--color-brand-400)]">
+            <Store className="size-4 shrink-0 text-zinc-400" />
+            <input
+              value={shopUrl}
+              onChange={(e) => setShopUrl(e.target.value)}
+              placeholder="https://your-shop.myshopify.com  หรือ  https://www.lazada.co.th/shop/..."
+              className="flex-1 bg-transparent text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") fetchShopProducts();
+              }}
+            />
+          </div>
+          <Button onClick={fetchShopProducts} loading={fetching}>
+            {fetching ? "AI กำลังอ่าน…" : "ดึงสินค้าทั้งร้าน"}
+          </Button>
+        </div>
+        <p className="mt-2 text-[11px] text-zinc-500">
+          ตัวอย่าง: <code>https://shop.tiktok.com/@yourshop</code> · <code>https://www.lazada.co.th/shop/your-shop</code> · <code>https://www.example.com</code>
+        </p>
+      </div>
+
+      <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-900">
+        <p className="font-semibold">หมายเหตุสำหรับ Shopee</p>
+        <p className="mt-0.5 leading-relaxed">
+          Shopee ป้องกัน import แบบลิงก์ — กรุณาใช้แท็บ <strong>"ไฟล์ Shopee/Lazada"</strong>
+          แล้วส่งออกไฟล์ Excel จาก <a
+            href="https://seller.shopee.co.th/portal/product/list/all"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >Shopee Seller Center → คลังสินค้าของฉัน → ส่งออก</a> มาอัปโหลด
+        </p>
+      </div>
+
+      {platform ? (
+        <p className="mt-4 text-[12px] text-zinc-500">
+          ตรวจพบแพลตฟอร์ม: <strong className="text-zinc-700">{labelForPlatform(platform)}</strong>
+        </p>
+      ) : null}
+
+      {failures.length > 0 ? (
+        <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">
+          <p className="mb-1 font-semibold">
+            <AlertTriangle className="mr-1 inline size-3.5" />
+            มี {failures.length} สินค้าที่ดึงไม่ได้
+          </p>
+          {failures.slice(0, 3).map((f, i) => (
+            <p key={i} className="truncate">· {f.reason}</p>
+          ))}
+        </div>
+      ) : null}
+
+      {previews.length > 0 ? (
+        <div className="mt-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-sm text-zinc-600">
+              พรีวิว {previews.length} สินค้า · เลือก {selected.size} ชิ้น
+            </p>
+            <Button onClick={commit} loading={committing} disabled={selected.size === 0}>
+              นำเข้า {selected.size} สินค้าเข้า {shopName}
+            </Button>
+          </div>
+
+          <PreviewList
+            products={previews}
+            selected={selected}
+            onToggle={(id) =>
+              setSelected((s) => {
+                const next = new Set(s);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              })
+            }
+            editable
+            onEdit={updatePreview}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function labelForPlatform(p: string): string {
+  switch (p) {
+    case "shopify":
+      return "Shopify";
+    case "lazada":
+      return "Lazada";
+    case "shopee":
+      return "Shopee";
+    case "ai-extracted":
+      return "AI extracted";
+    default:
+      return p;
+  }
 }
 
 // ─── URL importer ────────────────────────────────────────────────────────
