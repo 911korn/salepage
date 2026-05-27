@@ -43,17 +43,19 @@ export default function SignIn() {
   // Runtime detection of the expo-apple-authentication native module —
   // an older binary (OTA'd to a newer JS bundle) will lack the native
   // module and the button renders as <UnimplementedView> + a red error.
-  // 911korn 2026-05-27 first encountered this on Build 5 after the
-  // Build 10 JS shipped via OTA. We only render the Apple button when
-  // `isAvailableAsync()` confirms native code is present.
+  // We treat "did the call throw" as the module-presence signal — the
+  // boolean it returns just reflects whether iCloud is signed in, which
+  // we don't want to gate on (Apple's sheet will prompt them to sign in
+  // if needed). 911korn 2026-05-27 "Login With apple ยังไม่ขึ้นหน้าแอพ"
+  // turned out to be the iCloud-not-detected case on Build 10.
   const [appleAvailable, setAppleAvailable] = useState(false);
   useEffect(() => {
     if (Platform.OS !== "ios") return;
     let cancelled = false;
     (async () => {
       try {
-        const ok = await AppleAuthentication.isAvailableAsync();
-        if (!cancelled) setAppleAvailable(Boolean(ok));
+        await AppleAuthentication.isAvailableAsync();
+        if (!cancelled) setAppleAvailable(true);
       } catch {
         if (!cancelled) setAppleAvailable(false);
       }
