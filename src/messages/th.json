@@ -620,6 +620,7 @@
       "title": "เข้าสู่ระบบ SalePage",
       "subtitle": "เริ่มจัดการร้านของคุณภายใน 30 วินาที",
       "withGoogle": "เข้าสู่ระบบด้วย Google",
+      "withApple": "เข้าสู่ระบบด้วย Apple",
       "withEmail": "เข้าสู่ระบบด้วยอีเมล",
       "emailPlaceholder": "you@example.com",
       "sendMagicLink": "ส่งลิงก์เข้าสู่ระบบ",

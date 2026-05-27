@@ -620,6 +620,7 @@
       "title": "Sign in to SalePage",
       "subtitle": "Start managing your shop in 30 seconds",
       "withGoogle": "Continue with Google",
+      "withApple": "Continue with Apple",
       "withEmail": "Continue with email",
       "emailPlaceholder": "you@example.com",
       "sendMagicLink": "Send sign-in link",

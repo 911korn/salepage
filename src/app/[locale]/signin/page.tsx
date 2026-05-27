@@ -29,6 +29,13 @@ export default async function SignInPage({ params, searchParams }: PageProps) {
   const hasGoogle = Boolean(
     process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET,
   );
+  const hasApple = Boolean(
+    process.env.AUTH_APPLE_ID &&
+      (process.env.AUTH_APPLE_SECRET ||
+        (process.env.AUTH_APPLE_TEAM_ID &&
+          process.env.AUTH_APPLE_KEY_ID &&
+          process.env.AUTH_APPLE_PRIVATE_KEY)),
+  );
   const hasResend = Boolean(process.env.AUTH_RESEND_KEY);
 
   return (
@@ -53,6 +60,7 @@ export default async function SignInPage({ params, searchParams }: PageProps) {
               <SignInForm
                 callbackUrl={normalizedCallbackUrl}
                 hasGoogle={hasGoogle}
+                hasApple={hasApple}
                 hasEmail={hasResend}
               />
             </div>

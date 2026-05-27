@@ -1,8 +1,10 @@
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Google from "next-auth/providers/google";
+import Apple from "next-auth/providers/apple";
 import Resend from "next-auth/providers/resend";
 import { db } from "@/lib/db";
+import { getAppleClientSecret } from "@/lib/apple-client-secret";
 
 const providers: NextAuthConfig["providers"] = [];
 
@@ -23,6 +25,37 @@ if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
       },
     }),
   );
+}
+
+// Sign in with Apple — required parity with the iOS app per App Store
+// Guideline 4.8 (already met on mobile via expo-apple-authentication; the
+// 911korn 2026-05-27 directive "หน้าเว็บต้องมี Login With apple ด้วย"
+// extends parity to the web). The provider is gated on env so a partial
+// configuration (e.g. AUTH_APPLE_ID set but no private key yet) keeps the
+// existing Google + email flows working.
+const hasAppleConfig = Boolean(
+  process.env.AUTH_APPLE_ID &&
+    (process.env.AUTH_APPLE_SECRET ||
+      (process.env.AUTH_APPLE_TEAM_ID &&
+        process.env.AUTH_APPLE_KEY_ID &&
+        process.env.AUTH_APPLE_PRIVATE_KEY)),
+);
+if (hasAppleConfig) {
+  // Static secret takes precedence when set (operator may have run
+  // `npx auth add apple` to pre-generate a 6-month JWT). Otherwise mint
+  // a fresh ES256 JWT from the .p8 at module load and cache it.
+  // Top-level await is fine here — auth.ts is a server-only module.
+  const appleSecret =
+    process.env.AUTH_APPLE_SECRET ?? (await getAppleClientSecret()) ?? "";
+  if (appleSecret) {
+    providers.push(
+      Apple({
+        clientId: process.env.AUTH_APPLE_ID!,
+        clientSecret: appleSecret,
+        allowDangerousEmailAccountLinking: true,
+      }),
+    );
+  }
 }
 
 if (process.env.AUTH_RESEND_KEY) {

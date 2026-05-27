@@ -8,14 +8,21 @@ import { Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/ui/google-icon";
+import { AppleIcon } from "@/components/ui/apple-icon";
 
 interface Props {
   callbackUrl?: string | null;
   hasGoogle: boolean;
+  hasApple: boolean;
   hasEmail: boolean;
 }
 
-export function SignInForm({ callbackUrl: callbackUrlParam, hasGoogle, hasEmail }: Props) {
+export function SignInForm({
+  callbackUrl: callbackUrlParam,
+  hasGoogle,
+  hasApple,
+  hasEmail,
+}: Props) {
   const t = useTranslations("auth.signIn");
   const locale = useLocale();
   const callbackUrl = normalizeCallbackUrl(
@@ -80,7 +87,23 @@ export function SignInForm({ callbackUrl: callbackUrlParam, hasGoogle, hasEmail 
         </Button>
       )}
 
-      {hasGoogle && hasEmail ? (
+      {hasApple ? (
+        <Button
+          variant="outline"
+          size="lg"
+          className="w-full bg-black text-white hover:bg-black/90 hover:text-white"
+          onClick={() =>
+            signIn("apple", {
+              callbackUrl,
+            })
+          }
+        >
+          <AppleIcon className="size-5" />
+          {t("withApple")}
+        </Button>
+      ) : null}
+
+      {(hasGoogle || hasApple) && hasEmail ? (
         <div className="flex items-center gap-3">
           <span className="h-px flex-1 bg-[color:var(--color-border)]" />
           <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">
