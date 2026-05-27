@@ -140,21 +140,35 @@ export async function loginWithGoogle(): Promise<GoogleBridgeResult> {
     void tick();
   });
 
-  // openBrowserAsync's promise resolves IMMEDIATELY on iOS with
-  // `{ type: 'opened' }` — it doesn't wait for the browser to close.
-  // So we deliberately ignore the browser promise and just wait for
-  // the poll to win (or time out at MAX_WAIT_MS = 5 min).
+  // Switched from openBrowserAsync → openAuthSessionAsync (911korn
+  // 2026-05-27 "ระหว่างกำลังเลื่อนดูหน้า Shops มันขึ้น Google login
+  // timed out"). openBrowserAsync resolved immediately on iOS, so we
+  // had no signal when the user dismissed the browser — the poll
+  // kept hammering the bridge for 5 min before timing out, with the
+  // alert eventually firing on whatever screen the user had moved to.
   //
-  // Cancellation detection: bridge row TTL is 5 min server-side, so
-  // if the user dismisses the browser without finishing OAuth, the
-  // poll keeps running until the row expires → server returns
-  // `bridge_expired` → we throw GoogleLoginTimeoutError.
-  void WebBrowser.openBrowserAsync(openUrl, {
-    presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-    dismissButtonStyle: "close",
+  // openAuthSessionAsync waits for the browser to close + returns
+  // type=success / cancel / dismiss. We race it against the poll so
+  // the FIRST resolution wins: if the user closes the browser without
+  // signing in, we throw GoogleLoginCancelledError right away.
+  const browserPromise = WebBrowser.openAuthSessionAsync(
+    openUrl,
+    "salepage://auth/google",
+    {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      dismissButtonStyle: "close",
+    },
+  ).then((result) => {
+    // If the poll already wrote finalResult, leave it alone. Otherwise
+    // the user closed the browser (cancel / dismiss / type-success-but-
+    // no-token) — cancel the poll.
+    if (!finalResult && !finalError) {
+      finalError = new GoogleLoginCancelledError();
+    }
+    cancelled = true;
   });
 
-  await pollPromise;
+  await Promise.race([pollPromise, browserPromise]);
 
   cancelled = true;
   if (pollHandle) clearTimeout(pollHandle);

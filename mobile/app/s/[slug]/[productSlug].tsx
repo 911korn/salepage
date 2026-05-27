@@ -19,6 +19,7 @@ import { Image } from "expo-image";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { ProductImageGallery } from "@/components/product-image-gallery";
+import { ProductTypeTag } from "@/components/product-type-tag";
 import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 import { shareProduct } from "@/lib/share";
@@ -337,11 +338,14 @@ export default function ProductScreen() {
           </View>
 
           <View className="mt-3 flex-row items-center gap-2">
-            <View className="rounded-full border border-border bg-white px-2.5 py-0.5">
-              <Text className="text-[11px] text-fg">
-                {product.type === "DIGITAL" ? t("digital") : t("physical")}
-              </Text>
-            </View>
+            {/* Type + condition tag — same component the storefront
+                cards use so the buyer instantly recognises "ดิจิทัล"
+                / "มือสอง" / "ของใหม่" coloring (911korn 2026-05-27
+                "หน้าสินค้าให้แสดง Tag ด้วย"). */}
+            <ProductTypeTag
+              type={product.type}
+              condition={product.condition}
+            />
             <Text className="text-[12px] text-muted">
               {t("soldCount", { count: product.sold.toLocaleString() })}
             </Text>

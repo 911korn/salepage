@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { CheckoutPanel } from "@/components/storefront/checkout-panel";
 import { ProductImageGallery } from "@/components/storefront/product-image-gallery";
+import { ProductTypeTag } from "@/components/buyer/product-type-tag";
 import { ShareButton } from "@/components/storefront/share-button";
 import { getStorefrontProductView } from "@/lib/storefront-product-view";
 import {
@@ -174,9 +175,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Badge tone="neutral" className="text-[11px]">
-                  {product.type === "DIGITAL" ? "DIGITAL" : "PHYSICAL"}
-                </Badge>
+                {/* Branded Type + Condition tag — matches marketplace
+                    cards so the buyer instantly recognises ดิจิทัล /
+                    มือสอง / ของใหม่ (911korn 2026-05-27 "หน้าสินค้า
+                    ให้แสดง Tag ด้วย / เอาใส่หน้าแอพ และ หน้าเว็บ
+                    ก็ต้องมีด้วย"). */}
+                <ProductTypeTag type={product.type} condition={product.condition} />
                 <Badge tone="neutral" className="text-[11px]">
                   ขายแล้ว {product.sold.toLocaleString()}
                 </Badge>

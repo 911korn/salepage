@@ -14,6 +14,8 @@ export interface StorefrontProductView {
     imageUrls: string[];
     badge: "HOT" | "NEW" | "SALE" | null;
     type: "PHYSICAL" | "DIGITAL";
+    /** V2.1 condition tag — NEW vs PRE_OWNED (มือสอง). */
+    condition: "NEW" | "PRE_OWNED";
     stock: number | null;
     sold: number;
     /** V2.1 per-product shipping fee in baht. 0 = free shipping. */
@@ -67,6 +69,7 @@ export const getStorefrontProductView = cache(
             imageUrls: p.imageUrls,
             badge: p.badge,
             type: p.type as "PHYSICAL" | "DIGITAL",
+            condition: p.condition as "NEW" | "PRE_OWNED",
             stock: p.stock,
             sold: p.sold,
             shippingFeeBaht: Math.round((p.shippingFeeSatang ?? 0) / 100),
@@ -100,6 +103,7 @@ export const getStorefrontProductView = cache(
         imageUrls: [],
         badge: (demoProduct.badge ?? null) as "HOT" | "NEW" | "SALE" | null,
         type: demoProduct.type === "digital" ? "DIGITAL" : "PHYSICAL",
+        condition: "NEW",
         stock: demoProduct.stock ?? null,
         sold: demoProduct.sold,
         shippingFeeBaht: 0,
