@@ -134,6 +134,7 @@ export default async function OrderTrackingPage({ params }: PageProps) {
               refundedText={t("refundedStatusText")}
               slipProvider={order.slipProvider}
               slipRef={order.slipRef}
+              slipImageUrl={order.slipImageUrl}
             />
           )}
 
@@ -312,6 +313,7 @@ function OrderStateCard({
   refundedText,
   slipProvider,
   slipRef,
+  slipImageUrl,
 }: {
   status: OrderStatus;
   paidText: string;
@@ -320,6 +322,9 @@ function OrderStateCard({
   refundedText: string;
   slipProvider: string | null;
   slipRef: string | null;
+  /** V2.1 — show buyer their uploaded slip so they can pull it back up
+   *  for reference (911korn 2026-05-27 "รูปสลิปที่อัพโหลดไป ต้องย้อนดูได้"). */
+  slipImageUrl: string | null;
 }) {
   const cancelled =
     status === OrderStatus.CANCELLED || status === OrderStatus.REFUNDED;
@@ -369,6 +374,27 @@ function OrderStateCard({
           ) : null}
         </div>
       </div>
+      {/* Buyer's uploaded slip thumbnail — opens full image in a new tab.
+          Stays visible across PAID + DELIVERED + SHIPPING + REFUNDED so
+          the buyer can always pull up proof of their transfer.  */}
+      {slipImageUrl ? (
+        <a
+          href={slipImageUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 block overflow-hidden rounded-2xl border border-white/60 bg-white shadow-sm transition hover:shadow-md"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={slipImageUrl}
+            alt="สลิปที่อัปโหลด"
+            className="max-h-72 w-full object-contain"
+          />
+          <div className="px-3 py-2 text-[11px] font-medium text-zinc-500">
+            สลิปที่คุณอัปโหลด · กดเพื่อดูเต็มจอ
+          </div>
+        </a>
+      ) : null}
     </div>
   );
 }

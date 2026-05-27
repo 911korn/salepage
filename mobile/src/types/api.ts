@@ -214,6 +214,10 @@ export interface OrderDetail {
   shippingSatang: number;
   totalSatang: number;
   slipRef: string | null;
+  /** V2.1 — URL of the buyer's uploaded payment slip. Lets the buyer
+   *  pull up proof of their transfer at any point (911korn 2026-05-27). */
+  slipImageUrl: string | null;
+  slipProvider: string | null;
   slipVerifiedAt: string | null;
   trackingNumber: string | null;
   /** V2.1 Drop-off shipping — timestamp seller first printed our label. */

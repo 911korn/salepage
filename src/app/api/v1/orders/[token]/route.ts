@@ -65,6 +65,8 @@ export async function GET(_request: Request, ctx: Ctx) {
     shippingSatang: order.shippingSatang,
     totalSatang: order.totalSatang,
     slipRef: order.slipRef,
+    slipImageUrl: order.slipImageUrl,
+    slipProvider: order.slipProvider,
     slipVerifiedAt: order.slipVerifiedAt,
     trackingNumber: order.trackingNumber,
     // V2.1 Drop-off shipping. labelGeneratedAt = seller printed our

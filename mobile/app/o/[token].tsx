@@ -1,8 +1,9 @@
 import { useLocalSearchParams, router } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { View, Text, ScrollView, ActivityIndicator, Alert, Pressable, Clipboard } from "react-native";
+import { View, Text, ScrollView, ActivityIndicator, Alert, Pressable, Clipboard, Linking } from "react-native";
+import { Image } from "expo-image";
 import { useState } from "react";
-import { Copy, Sparkles } from "lucide-react-native";
+import { Copy, Sparkles, Receipt } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
@@ -224,6 +225,30 @@ export default function TrackingScreen() {
           <Text className="mt-1 text-[13px] text-muted">{data.customerAddress}</Text>
         ) : null}
       </View>
+
+      {/* V2.1 — buyer can pull up the slip they uploaded as proof of
+          transfer. Stays visible across PAID + SHIPPING + DELIVERED
+          (911korn 2026-05-27 "รูปสลิปที่อัพโหลดไป ต้องย้อนดูได้"). */}
+      {data.slipImageUrl ? (
+        <Pressable
+          onPress={() => {
+            if (data.slipImageUrl) void Linking.openURL(data.slipImageUrl);
+          }}
+          className="mx-5 mt-4 overflow-hidden rounded-3xl border border-border bg-white"
+        >
+          <Image
+            source={{ uri: data.slipImageUrl }}
+            style={{ width: "100%", height: 200 }}
+            contentFit="contain"
+          />
+          <View className="flex-row items-center gap-2 border-t border-border bg-soft px-4 py-3">
+            <Receipt size={14} color="#52525b" strokeWidth={2} />
+            <Text className="text-[12px] font-medium text-muted">
+              สลิปที่คุณอัปโหลด · กดเพื่อดูเต็มจอ
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
 
       <View className="mx-5 mt-4">
         {/* Contact-seller button — SalePage doesn't broker chat, so the
