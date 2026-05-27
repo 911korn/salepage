@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Modal, View, Text, Pressable, ScrollView } from "react-native";
+import { Modal, View, Text, Pressable } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Camera, Smartphone, Upload, Sparkles, Truck, X } from "lucide-react-native";
 import { Button } from "@/components/ui/button";
@@ -52,64 +52,65 @@ export function CheckoutTutorialModal() {
       animationType="fade"
       onRequestClose={dismiss}
     >
-      <View className="flex-1 bg-black/55 px-4 py-12">
-        <View className="mx-auto w-full max-w-md flex-1 overflow-hidden rounded-3xl bg-white shadow-2xl">
-          <View className="flex-row items-start justify-between bg-brand-50 px-5 pt-5 pb-4">
+      {/* Centered card that sizes to content — no flex-1 on the inner
+          view so the modal doesn't stretch to fill the screen (911korn
+          2026-05-28 02:17: "อันนี้ใหญ่ไปเอาแค่ครึ่งนึงพอ"). */}
+      <View className="flex-1 items-center justify-center bg-black/55 px-4">
+        <View className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
+          <View className="flex-row items-start justify-between bg-brand-50 px-4 pt-3 pb-3">
             <View className="flex-1 pr-2">
-              <Text className="text-[11px] font-semibold uppercase tracking-wider text-brand-700">
+              <Text className="text-[10px] font-semibold uppercase tracking-wider text-brand-700">
                 ครั้งแรกที่สั่ง?
               </Text>
-              <Text className="mt-1 text-[20px] font-bold text-fg">
+              <Text className="mt-0.5 text-[17px] font-bold text-fg">
                 3 ขั้นตอน เสร็จใน 1 นาที
               </Text>
             </View>
-            <Pressable onPress={dismiss} hitSlop={10} className="size-8 items-center justify-center rounded-full bg-white">
-              <X size={18} color="#525252" />
+            <Pressable onPress={dismiss} hitSlop={10} className="size-7 items-center justify-center rounded-full bg-white">
+              <X size={16} color="#525252" />
             </Pressable>
           </View>
 
-          <ScrollView contentContainerClassName="px-5 py-5 gap-4">
+          <View className="gap-3 px-4 py-4">
             <Step
               num={1}
               icon={Camera}
               title="แคปหน้าจอ QR code"
-              body="ใช้นิ้วแคปหน้าจอเก็บ QR PromptPay ไว้ก่อน (กดปุ่ม Power + Volume Up บน iPhone)"
+              body="กด Power + Volume Up บน iPhone เก็บ QR ไว้"
             />
             <Step
               num={2}
               icon={Smartphone}
               title="เปิดแอปธนาคาร · สแกน QR"
-              body="ไปแอปธนาคารของคุณ (K Plus / SCB Easy / Krungthai NEXT / ฯลฯ) — เลือก สแกน QR → เลือกรูปที่แคปไว้ → กดยืนยันโอน"
+              body="K Plus / SCB Easy / NEXT — สแกน QR → เลือกรูปที่แคป → ยืนยันโอน"
             />
             <Step
               num={3}
               icon={Upload}
               title="กลับมา Upload สลิปที่นี่"
-              body="แตะปุ่ม 'สแกน QR บนสลิป' หรือ 'เลือกจากคลังภาพ' ระบบจะอ่านสลิปให้เอง"
+              body="แตะ 'สแกน QR บนสลิป' หรือ 'เลือกจากคลังภาพ'"
             />
-            <View className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-              <View className="flex-row items-center gap-2">
-                <Sparkles size={18} color="#059669" />
-                <Text className="text-[14px] font-bold text-emerald-900">
-                  ทุกอย่างหลังจากนั้น — Auto
+            <View className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+              <View className="flex-row items-center gap-1.5">
+                <Sparkles size={14} color="#059669" />
+                <Text className="text-[12px] font-bold text-emerald-900">
+                  หลังจากนั้น Auto ทุกอย่าง
                 </Text>
               </View>
-              <Text className="mt-2 text-[12px] leading-relaxed text-emerald-900">
-                ✓ AI ตรวจสลิปใน 3 วินาที{"\n"}
-                ✓ ออเดอร์เปลี่ยนเป็น "ชำระแล้ว" ทันที{"\n"}
-                ✓ ร้านได้รับแจ้งเตือนเตรียมส่งของ
+              <Text className="mt-1 text-[11px] leading-snug text-emerald-900">
+                ✓ AI ตรวจสลิป 3 วิ · ออเดอร์ขึ้น "ชำระแล้ว" · ร้านเตรียมส่งของ
               </Text>
             </View>
 
-            <View className="flex-row items-center gap-2 rounded-2xl bg-soft p-3">
-              <Truck size={18} color="#737373" />
-              <Text className="flex-1 text-[12px] leading-relaxed text-muted">
-                เงินถึงร้านโดยตรงผ่าน PromptPay · ไม่ผ่านคนกลาง · ไม่หักค่าธรรมเนียม
+            <View className="flex-row items-center gap-2 rounded-xl bg-soft p-2.5">
+              <Truck size={14} color="#737373" />
+              <Text className="flex-1 text-[11px] leading-snug text-muted">
+                เงินถึงร้านตรงผ่าน PromptPay · ไม่ผ่านคนกลาง · ไม่หัก%
               </Text>
             </View>
-          </ScrollView>
+          </View>
 
-          <View className="border-t border-border px-5 py-4">
+          <View className="border-t border-border px-4 py-3">
             <Button onPress={dismiss}>เริ่มชำระเงิน</Button>
           </View>
         </View>
