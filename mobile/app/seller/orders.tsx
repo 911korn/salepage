@@ -362,6 +362,19 @@ const OrderCard = memo(function OrderCard({
           </View>
         ) : order.status === "PAID" ? (
           <View className="gap-2">
+            {/* V2.1 EasyParcel — Pro-gated auto label gen. The button
+                opens a sheet that fetches courier rates, lets seller
+                pick one, buys the label, opens the PDF (911korn
+                2026-05-27 "ทำให้เหมือน Shopee"). Free-tier sellers
+                still see the manual tracking input below. */}
+            <Pressable
+              onPress={() => router.push(`/seller/orders/${order.publicToken}/ship`)}
+              className="items-center justify-center rounded-xl bg-zinc-900 px-4 py-3"
+            >
+              <Text className="text-[13px] font-bold text-white">
+                ออกใบปะหน้าอัตโนมัติ (EasyParcel) →
+              </Text>
+            </Pressable>
             <View className="flex-row items-center gap-2 rounded-xl border border-border bg-white px-3 py-2">
               <Text className="text-[11px] text-muted">{t("orders.trackingLabel")}</Text>
               <TextInput
@@ -374,6 +387,7 @@ const OrderCard = memo(function OrderCard({
               />
             </View>
             <Button
+              variant="outline"
               onPress={() => shipMutation.mutate()}
               disabled={shipMutation.isPending}
             >

@@ -308,6 +308,69 @@ export const api = {
       }),
 
     /**
+     * V2.1 EasyParcel — get courier rate quotes for an order. Pro-gated
+     * server side. Returns the list of TH couriers + prices for the
+     * configured parcel size; UI shows it as a picker.
+     */
+    shipmentQuote: (
+      token: string,
+      input: {
+        weightGram?: number;
+        widthCm?: number;
+        lengthCm?: number;
+        heightCm?: number;
+        handoff?: "DROPOFF" | "PICKUP";
+      } = {},
+    ) =>
+      apiFetch<{
+        rates: Array<{
+          rateRef: string;
+          courierCode: string;
+          courierName: string;
+          serviceName: string;
+          priceSatang: number;
+          etaDays: string;
+          dropoffSupported: boolean;
+          pickupSupported: boolean;
+        }>;
+      }>(`/api/v1/orders/${token}/shipment/quote`, {
+        method: "POST",
+        body: input,
+      }),
+
+    /**
+     * V2.1 EasyParcel — confirm a rate, buy the label, get AWB + PDF
+     * URL back. Flips the order to SHIPPING + fires the buyer email.
+     * Pro-gated.
+     */
+    shipmentBuy: (
+      token: string,
+      input: {
+        rateRef: string;
+        courierCode: string;
+        courierName: string;
+        serviceName?: string;
+        weightGram: number;
+        widthCm?: number;
+        lengthCm?: number;
+        heightCm?: number;
+        shippingFeeSatang: number;
+        handoff?: "DROPOFF" | "PICKUP";
+        note?: string;
+      },
+    ) =>
+      apiFetch<{
+        awbNumber: string;
+        labelPdfUrl: string;
+        providerOrderNo: string | null;
+        courierName: string;
+        reusedExisting: boolean;
+      }>(`/api/v1/orders/${token}/shipment/buy`, {
+        method: "POST",
+        body: input,
+      }),
+
+    /**
      * The server expects a JSON body `{ imageBase64 }` (NOT multipart) — the
      * same payload shape the web side uses. Caller has already compressed the
      * image with `compressForSlipUpload()` so we ship ~200 KB instead of the
