@@ -459,6 +459,28 @@ export const api = {
   },
 
   auth: {
+    /**
+     * Sign in with Apple — verifies the identityToken from expo-apple-
+     * authentication on the server, finds-or-creates the user, returns
+     * a SalePage JWT. 911korn 2026-05-27 "มี google Login ต้องมี apple
+     * Login" (also Apple App Review Guideline 4.8).
+     */
+    appleMobile: (input: {
+      idToken: string;
+      fullName?: { givenName?: string | null; familyName?: string | null };
+      email?: string;
+    }) =>
+      apiFetch<{
+        token: string;
+        expiresAt: string;
+        userId: string;
+        user: { id: string; name: string | null; email: string; image: string | null };
+      }>("/api/v1/auth/apple-mobile", {
+        method: "POST",
+        body: input,
+        anonymous: true,
+      }),
+
     /// Exchange a LINE id_token (from native LINE Login SDK) for a SalePage JWT.
     lineMobile: (idToken: string) =>
       apiFetch<{

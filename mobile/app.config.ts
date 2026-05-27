@@ -55,6 +55,11 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: "in.th.salepage.mobile",
+    // App Store Review Guideline 4.8: any app offering 3rd-party social
+    // login (Google + LINE here) must also offer Sign in with Apple.
+    // This entitlement enables `expo-apple-authentication`'s native flow.
+    // 911korn 2026-05-27 "มี google Login ต้องมี apple Login เพราะเป็นกฏ".
+    usesAppleSignIn: true,
     associatedDomains: ["applinks:salepage.in.th"],
     infoPlist: {
       // Apple requires this declaration for every new app since 2024-02
@@ -113,6 +118,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    "expo-apple-authentication",
     [
       "expo-camera",
       {

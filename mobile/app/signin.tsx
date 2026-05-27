@@ -1,14 +1,16 @@
-import { View, Text, Linking, ScrollView, Pressable } from "react-native";
+import { View, Text, Linking, ScrollView, Pressable, Platform } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { Button } from "@/components/ui/button";
 import { AppLogo } from "@/components/brand/app-logo";
 import { GoogleGMark } from "@/components/brand/google-g";
 import { LineMark } from "@/components/brand/line-mark";
 import { useLineSignIn } from "@/hooks/use-line-signin";
 import { useGoogleSignIn } from "@/hooks/use-google-signin";
+import { useAppleSignIn } from "@/hooks/use-apple-signin";
 
 /**
  * Sign-in screen.
@@ -33,7 +35,8 @@ export default function SignIn() {
   const insets = useSafeAreaInsets();
   const lineSignIn = useLineSignIn();
   const googleSignIn = useGoogleSignIn();
-  const anyLoading = lineSignIn.loading || googleSignIn.loading;
+  const appleSignIn = useAppleSignIn();
+  const anyLoading = lineSignIn.loading || googleSignIn.loading || appleSignIn.loading;
 
   // Header chrome = status bar + 40px back button + 12px breathing
   const topGap = insets.top + 52;
@@ -88,6 +91,27 @@ export default function SignIn() {
             elevation: 2,
           }}
         >
+          {/* Apple Sign In — iOS only (mandatory per App Store Review
+              Guideline 4.8 when any other 3rd-party login is present).
+              Uses the OS-native sheet with biometric auth — no password
+              typing. Rendered FIRST on iOS so Apple is happy. */}
+          {Platform.OS === "ios" ? (
+            <>
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={
+                  AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+                }
+                buttonStyle={
+                  AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                }
+                cornerRadius={16}
+                style={{ width: "100%", height: 52 }}
+                onPress={() => appleSignIn.signIn({ redirectAfter: redirect })}
+              />
+              <View className="h-3" />
+            </>
+          ) : null}
+
           <Button
             variant="line"
             size="lg"
