@@ -4,6 +4,9 @@ import { Toaster } from "sonner";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { routing, type Locale } from "@/i18n/routing";
 import { PlatformBanner } from "@/components/platform-banner";
 import { LineLiffBootstrap } from "@/components/storefront/line-liff-bootstrap";
@@ -46,6 +49,14 @@ export async function generateMetadata({
     metadataBase: new URL("https://salepage.in.th"),
     title: t("title"),
     description: t("description"),
+    // Google Search Console verification tag — paste the value Google
+    // gives during property verification (e.g. "google-site-verification:
+    // XXXXXXX"). Set `GOOGLE_SITE_VERIFICATION` on Vercel for the prod
+    // environment; the tag falls back to undefined in dev so we don't
+    // ship the wrong token to preview deployments.
+    verification: process.env.GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+      : undefined,
     alternates: {
       canonical: canonicalUrl,
       languages: {
@@ -121,6 +132,14 @@ export default async function LocaleLayout({
             }}
           />
         </NextIntlClientProvider>
+        {/* Vercel Analytics + Speed Insights — auto-no-ops in dev. */}
+        <Analytics />
+        <SpeedInsights />
+        {/* GA4 — gated on env var so preview/dev don't pollute the
+            production stream. Set NEXT_PUBLIC_GA_ID on Vercel prod. */}
+        {process.env.NEXT_PUBLIC_GA_ID ? (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        ) : null}
       </body>
     </html>
   );
