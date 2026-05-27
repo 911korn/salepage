@@ -5,6 +5,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { TrackingPanel } from "@/components/storefront/tracking-panel";
+import { CancelOrderSection } from "@/components/storefront/cancel-order-section";
 import { ReviewForm } from "@/components/storefront/review-form";
 import { LineOrderLinker } from "@/components/storefront/line-order-linker";
 import { cn } from "@/lib/cn";
@@ -232,6 +233,14 @@ export default async function OrderTrackingPage({ params }: PageProps) {
               </>
             ) : null}
           </section>
+
+          {/* Cancel CTA moved to the very bottom (was a prominent red
+              card under the QR — too easy to mis-tap). 911korn 2026-05-27
+              "ย้ายปุ่มยกเลิก Order ไปไว้ล่างสุด ป้องกันกดผิด". Renders as
+              a small underline link only while PENDING. */}
+          {order.status === OrderStatus.PENDING ? (
+            <CancelOrderSection token={order.publicToken} />
+          ) : null}
 
           {/* Shop link */}
           <Link

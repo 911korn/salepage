@@ -9,7 +9,6 @@ import {
   Phone,
   Upload,
   Wallet,
-  XCircle,
 } from "lucide-react";
 import jsQR from "jsqr";
 import { useTranslations } from "next-intl";
@@ -67,7 +66,6 @@ export function TrackingPanel({
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [submitting, setSubmitting] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
   const [result, setResult] = useState<SlipResult | null>(null);
 
   const manualReview = Boolean(
@@ -121,27 +119,6 @@ export function TrackingPanel({
       });
     };
     reader.readAsDataURL(file);
-  }
-
-  async function cancelOrder() {
-    if (!confirm(t("cancelConfirm"))) return;
-    setCancelling(true);
-    try {
-      const res = await fetch(`/api/v1/orders/${token}/cancel`, {
-        method: "POST",
-      });
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        toast.error(json.error?.message ?? t("cancelFailed"));
-        return;
-      }
-      toast.success(t("cancelledToast"));
-      router.refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("cancelFailed"));
-    } finally {
-      setCancelling(false);
-    }
   }
 
   return (
@@ -281,32 +258,12 @@ export function TrackingPanel({
         ) : null}
       </section>
 
-      <section className="rounded-3xl border border-rose-100 bg-white p-5 sm:p-6">
-        <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-600">
-            <XCircle className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="font-display text-base font-semibold text-zinc-950">
-              {t("cancelTitle")}
-            </h2>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-600">
-              {t("cancelDesc")}
-            </p>
-            <button
-              type="button"
-              onClick={cancelOrder}
-              disabled={cancelling || submitting || pending}
-              className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-rose-600 px-4 text-sm font-bold text-white shadow-lg shadow-rose-100 transition active:scale-[0.99] disabled:opacity-60 sm:w-auto"
-            >
-              {cancelling ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : null}
-              {t("cancelAction")}
-            </button>
-          </div>
-        </div>
-      </section>
+      {/* Cancel-order CTA used to sit right here (big red card under
+          QR) — moved out to the very bottom of the page to prevent
+          mis-taps while buyers are dealing with the slip upload.
+          Mounted via <CancelOrderSection /> in app/[locale]/o/[token]
+          (911korn 2026-05-27 "ย้ายปุ่มยกเลิก Order ไปไว้ล่างสุด
+          ป้องกันกดผิด"). */}
     </div>
   );
 }
