@@ -60,17 +60,17 @@ export default function SellerProductsScreen() {
   );
 
   const Header = (
-    <View className="px-5 pt-6">
+    <View className="px-5 pt-2 pb-3">
       <Text className="text-[20px] font-bold text-fg">
         {t("products.header", { name: shopQuery.data?.shop.name ?? "" })}
       </Text>
-      <Text className="mt-1 text-[12px] text-muted">
-        {t("products.subtitle", { count: products.length })}
-      </Text>
-      <View className="mt-3 flex-row gap-2">
+      <View className="mt-1 flex-row items-center gap-2">
+        <Text className="text-[12px] text-muted">
+          {t("products.subtitle", { count: products.length })}
+        </Text>
         <Pressable
           onPress={() => router.push("/seller/products/new")}
-          className="flex-row items-center gap-2 rounded-full bg-brand-600 px-4 py-2"
+          className="ml-auto flex-row items-center gap-1 rounded-full bg-brand-600 px-3 py-1.5"
         >
           <Text className="text-[12px] font-semibold text-white">
             {t("products.addInApp")}
