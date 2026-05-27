@@ -1,4 +1,6 @@
-import { memo, useState, useDeferredValue, useEffect } from "react";
+import { memo, useState, useDeferredValue, useEffect, useCallback } from "react";
+import { useFocusEffect } from "expo-router";
+import { getAuthToken } from "@/lib/auth";
 import {
   View,
   Text,
@@ -103,6 +105,19 @@ export default function ShopsScreen() {
   const [browseTab, setBrowseTab] = useState<ShopsTab>("for-you");
   const [browseCategory, setBrowseCategory] = useState<string | null>(null);
   const [browseVerifiedOnly, setBrowseVerifiedOnly] = useState(false);
+
+  // Auth gate for the "Following" tab. We hide the chip + bounce the
+  // tab back to "for-you" when an anonymous viewer somehow ends up
+  // there (911korn 2026-05-27 "ถ้าแค่ดู shops เฉยๆ ไม่ต้องบังคับ login").
+  const [authed, setAuthed] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      void getAuthToken().then((tok) => setAuthed(Boolean(tok)));
+    }, []),
+  );
+  useEffect(() => {
+    if (!authed && browseTab === "following") setBrowseTab("for-you");
+  }, [authed, browseTab]);
 
   // Search query (search mode only)
   const searchQuery = useQuery({
@@ -260,6 +275,7 @@ export default function ShopsScreen() {
             }}
             browseTab={browseTab}
             setBrowseTab={setBrowseTab}
+            authed={authed}
             browseCategory={browseCategory}
             setBrowseCategory={setBrowseCategory}
             browseVerifiedOnly={browseVerifiedOnly}
@@ -286,6 +302,7 @@ interface BrowseProps {
   setBrowseCategory: (c: string | null) => void;
   browseVerifiedOnly: boolean;
   setBrowseVerifiedOnly: (v: boolean) => void;
+  authed: boolean;
   shops: ShopSummary[];
   isLoading: boolean;
   isFetchingNextPage: boolean;
@@ -305,6 +322,7 @@ function BrowseMode(props: BrowseProps) {
     setBrowseCategory,
     browseVerifiedOnly,
     setBrowseVerifiedOnly,
+    authed,
     shops,
     isLoading,
     isFetchingNextPage,
@@ -342,11 +360,11 @@ function BrowseMode(props: BrowseProps) {
       <View className="mt-1 flex-row items-center gap-2 px-5">
         {(
           [
-            { key: "for-you", labelKey: "filters.recommended" },
-            { key: "new", labelKey: "filters.newest" },
-            { key: "following", labelKey: "filters.following" },
+            { key: "for-you", labelKey: "filters.recommended", auth: false },
+            { key: "new", labelKey: "filters.newest", auth: false },
+            { key: "following", labelKey: "filters.following", auth: true },
           ] as const
-        ).map((tab) => (
+        ).filter((t) => !t.auth || authed).map((tab) => (
           <Pressable
             key={tab.key}
             onPress={() => setBrowseTab(tab.key as ShopsTab)}
