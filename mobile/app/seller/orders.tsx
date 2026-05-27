@@ -8,11 +8,10 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
-  FlatList,
   Clipboard,
   Linking,
-  type ListRenderItem,
 } from "react-native";
+import { FlashList, type ListRenderItem } from "@shopify/flash-list";
 import { Copy, Receipt, ExternalLink } from "lucide-react-native";
 import { detectCourier } from "@/lib/courier-detect";
 import { useLocalSearchParams, router } from "expo-router";
@@ -170,7 +169,7 @@ function SellerOrdersListImpl({
   );
 
   return (
-    <FlatList
+    <FlashList
       data={orders}
       keyExtractor={(o) => o.id}
       renderItem={renderItem}
@@ -194,10 +193,6 @@ function SellerOrdersListImpl({
           </View>
         )
       }
-      removeClippedSubviews
-      initialNumToRender={6}
-      maxToRenderPerBatch={6}
-      windowSize={9}
       showsVerticalScrollIndicator={false}
     />
   );

@@ -5,9 +5,8 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
-  FlatList,
-  type ListRenderItem,
 } from "react-native";
+import { FlashList, type ListRenderItem } from "@shopify/flash-list";
 import { useLocalSearchParams, router } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
@@ -80,7 +79,7 @@ export default function CategoryScreen() {
 
   return (
     <Screen>
-      <FlatList
+      <FlashList
         data={allShops}
         keyExtractor={(s) => s.id}
         renderItem={renderItem}
@@ -117,10 +116,6 @@ export default function CategoryScreen() {
           }
         }}
         onEndReachedThreshold={0.6}
-        removeClippedSubviews
-        initialNumToRender={6}
-        maxToRenderPerBatch={6}
-        windowSize={9}
         showsVerticalScrollIndicator={false}
       />
     </Screen>

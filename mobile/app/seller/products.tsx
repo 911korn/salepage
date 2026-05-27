@@ -5,9 +5,8 @@ import {
   ActivityIndicator,
   Pressable,
   RefreshControl,
-  FlatList,
-  type ListRenderItem,
 } from "react-native";
+import { FlashList, type ListRenderItem } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
@@ -83,7 +82,10 @@ export default function SellerProductsScreen() {
 
   return (
     <Screen>
-      <FlatList
+      {/* FlashList — Shopify's recycler-based replacement for FlatList.
+          Recycles view instances on scroll so the 60fps scroll holds
+          even at 100+ products (911korn 2026-05-27 "ลื่นหัวแตก"). */}
+      <FlashList
         data={products}
         numColumns={2}
         keyExtractor={(p) => p.slug}
@@ -106,8 +108,7 @@ export default function SellerProductsScreen() {
             </View>
           )
         }
-        columnWrapperStyle={{ paddingHorizontal: 12 }}
-        contentContainerStyle={{ paddingBottom: 64 }}
+        contentContainerStyle={{ paddingBottom: 64, paddingHorizontal: 12 }}
         refreshControl={
           <RefreshControl
             refreshing={shopQuery.isFetching}
@@ -115,10 +116,6 @@ export default function SellerProductsScreen() {
             tintColor="#e11d48"
           />
         }
-        removeClippedSubviews
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={9}
         showsVerticalScrollIndicator={false}
       />
     </Screen>

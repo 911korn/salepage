@@ -6,9 +6,8 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  FlatList,
-  type ListRenderItem,
 } from "react-native";
+import { FlashList, type ListRenderItem } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
@@ -222,12 +221,11 @@ export default function HomeScreen() {
 
   return (
     <Screen safeTop>
-      <FlatList
-        // Two-column product grid. numColumns is fixed (changing it
-        // requires re-mounting which is fine since we re-key the
-        // queryKey on filter change). We do NOT virtualise the rails
-        // above the grid — those are short (3-10 items each) and the
-        // ListHeader renders once.
+      {/* FlashList — Shopify's recycler-based list. Recycles view
+          instances instead of mounting/unmounting per scroll, so a
+          1000-item product feed holds 60fps even on iPhone SE
+          (911korn 2026-05-27 "ลื่นหัวแตก"). */}
+      <FlashList
         data={allProducts}
         numColumns={2}
         keyExtractor={keyExtractor}
@@ -245,8 +243,7 @@ export default function HomeScreen() {
             <EmptyState category={selectedCategory} />
           )
         }
-        columnWrapperStyle={{ paddingHorizontal: 12 }}
-        contentContainerStyle={{ paddingBottom: 128 }}
+        contentContainerStyle={{ paddingBottom: 128, paddingHorizontal: 12 }}
         refreshControl={
           <RefreshControl
             refreshing={feedQuery.isRefetching && !feedQuery.isFetchingNextPage}
@@ -260,16 +257,6 @@ export default function HomeScreen() {
           }
         }}
         onEndReachedThreshold={0.6}
-        // Virtualisation tuning — 60 FPS scroll on iPhone SE with 100+
-        // products. removeClippedSubviews drops off-screen cells from
-        // the native view tree. initialNumToRender = first batch (5
-        // rows = 10 cards). maxToRenderPerBatch controls how many cells
-        // can render per frame after that.
-        removeClippedSubviews
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={11}
-        updateCellsBatchingPeriod={50}
         showsVerticalScrollIndicator={false}
       />
     </Screen>
