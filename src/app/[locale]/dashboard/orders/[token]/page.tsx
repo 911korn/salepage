@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { OrderActions } from "@/components/dashboard/order-actions";
 import { ShippingWorkflow } from "@/components/dashboard/shipping-workflow";
 import { DropOffShippingPanel } from "@/components/dashboard/drop-off-shipping-panel";
+import { ShippingReceiptCard } from "@/components/dashboard/shipping-receipt-card";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
@@ -223,6 +224,22 @@ export default async function OrderDetailPage({
                   : null
               }
               shopSlug={order.shop.slug}
+            />
+          ) : null}
+
+          {/* Persistent receipt-review card — outlives the DropOffShipping
+              panel so the seller can tap to view the courier receipt even
+              after the order ships to DELIVERED. 911korn 2026-05-27 "มัน
+              ควรคาอยู่ใน order นั้น แบบกดดูได้". */}
+          {order.shippingReceiptUrl ? (
+            <ShippingReceiptCard
+              receiptUrl={order.shippingReceiptUrl}
+              trackingNumber={order.trackingNumber}
+              scannedAt={
+                order.shippingReceiptScannedAt
+                  ? order.shippingReceiptScannedAt.toISOString()
+                  : null
+              }
             />
           ) : null}
 

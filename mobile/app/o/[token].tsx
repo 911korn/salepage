@@ -141,16 +141,32 @@ export default function TrackingScreen() {
         </View>
       ) : null}
 
-      {/* Tracking number */}
+      {/* Tracking number — with copy button (911korn 2026-05-27 "พร้อม
+          โชว์ เลข Tracking แบบ มีปุ่ม copy"). */}
       {data.trackingNumber ? (
-        <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
-          <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+        <View className="mx-5 mt-4 rounded-3xl bg-zinc-900 p-5">
+          <Text className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
             {t("tracking.trackingNumber")}
           </Text>
-          <Text className="mt-1 font-mono text-[15px] text-fg">
-            {data.trackingNumber}
-          </Text>
-          <Text className="mt-1 text-[12px] text-muted">
+          <View className="mt-1 flex-row items-center gap-2">
+            <Text className="flex-1 font-mono text-[18px] font-bold text-white">
+              {data.trackingNumber}
+            </Text>
+            <Pressable
+              onPress={() => {
+                Clipboard.setString(data.trackingNumber!);
+                Alert.alert("คัดลอกแล้ว", data.trackingNumber!);
+              }}
+              className="flex-row items-center gap-1.5 rounded-xl bg-white px-3 py-1.5"
+              hitSlop={6}
+            >
+              <Copy size={14} color="#18181b" strokeWidth={2.2} />
+              <Text className="text-[12px] font-semibold text-fg">
+                คัดลอก
+              </Text>
+            </Pressable>
+          </View>
+          <Text className="mt-1 text-[12px] text-zinc-400">
             {detectCourier(data.trackingNumber).name}
           </Text>
           <Button

@@ -7,11 +7,13 @@ import {
   Alert,
   Linking,
   Pressable,
+  Clipboard,
 } from "react-native";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
-import { Printer, Camera, CheckCircle2 } from "lucide-react-native";
+import { Printer, Camera, CheckCircle2, Copy, Receipt } from "lucide-react-native";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
@@ -164,6 +166,7 @@ export default function SellerShipScreen() {
   }
 
   if (isShipped) {
+    const receiptUrl = order?.shippingReceiptUrl ?? null;
     return (
       <Screen>
         <ScrollView contentContainerClassName="px-5 pt-10 pb-32">
@@ -178,14 +181,54 @@ export default function SellerShipScreen() {
               ลูกค้าได้รับ email + LINE แจ้งเลขพัสดุแล้ว
             </Text>
           </View>
-          <View className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
-            <Text className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
+
+          {/* Tracking number + copy button (911korn 2026-05-27 "พร้อม
+              โชว์ เลข Tracking แบบ มีปุ่ม copy"). */}
+          <View className="mt-6 rounded-3xl bg-zinc-900 p-5">
+            <Text className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
               เลขพัสดุ
             </Text>
-            <Text className="mt-1 font-mono text-[20px] font-bold text-emerald-900">
-              {trackingNumber}
-            </Text>
+            <View className="mt-1 flex-row items-center gap-2">
+              <Text className="flex-1 font-mono text-[20px] font-bold text-white">
+                {trackingNumber}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  Clipboard.setString(trackingNumber!);
+                  Alert.alert("คัดลอกแล้ว", trackingNumber!);
+                }}
+                className="flex-row items-center gap-1.5 rounded-xl bg-white px-3 py-2"
+                hitSlop={6}
+              >
+                <Copy size={14} color="#18181b" strokeWidth={2.2} />
+                <Text className="text-[12px] font-semibold text-fg">
+                  คัดลอก
+                </Text>
+              </Pressable>
+            </View>
           </View>
+
+          {/* Receipt thumbnail — stays with the order forever for review
+              (911korn 2026-05-27 "มันควรคาอยู่ใน order นั้น แบบกดดูได้"). */}
+          {receiptUrl ? (
+            <Pressable
+              onPress={() => void Linking.openURL(receiptUrl)}
+              className="mt-4 overflow-hidden rounded-3xl border border-border bg-white"
+            >
+              <Image
+                source={{ uri: receiptUrl }}
+                style={{ width: "100%", height: 200 }}
+                contentFit="contain"
+              />
+              <View className="flex-row items-center gap-2 border-t border-border bg-soft px-4 py-3">
+                <Receipt size={14} color="#52525b" strokeWidth={2} />
+                <Text className="text-[12px] font-medium text-muted">
+                  ใบเสร็จขนส่งที่ AI scan · กดเพื่อดูเต็มจอ
+                </Text>
+              </View>
+            </Pressable>
+          ) : null}
+
           <Button
             className="mt-6"
             onPress={() => router.replace("/seller/orders")}
