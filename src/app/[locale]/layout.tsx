@@ -41,7 +41,7 @@ export async function generateMetadata({
     locale === routing.defaultLocale
       ? "https://salepage.in.th"
       : `https://salepage.in.th/${locale}`;
-  const ogImageUrl = `https://salepage.in.th/api/v1/og/home?locale=${locale === "en" ? "en" : "th"}&v=20260525`;
+  const ogImageUrl = `https://salepage.in.th/api/v1/og/home?locale=${locale === "en" ? "en" : "th"}&v=20260527b`;
   const ogTitle = t("ogTitle");
   const ogDescription = t("ogDescription");
 
