@@ -370,7 +370,7 @@ function ProductCard({ product }: ProductCardProps) {
         {product.status === "SOLD_OUT" ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <span className="-rotate-6 rounded-md bg-black/85 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white">
-              หมดของ
+              Sold Out
             </span>
           </div>
         ) : null}

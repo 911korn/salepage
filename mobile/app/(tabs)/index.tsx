@@ -387,7 +387,7 @@ const ProductCard = memo(function ProductCard({
               style={{ transform: [{ rotate: "-6deg" }] }}
             >
               <Text className="text-[12px] font-bold uppercase tracking-widest text-white">
-                หมดของ
+                Sold Out
               </Text>
             </View>
           </View>
