@@ -43,6 +43,11 @@
         "ascApiKeyPath": "./credentials/AuthKey_6R5FJ3YKJ5.p8",
         "ascApiKeyId": "6R5FJ3YKJ5",
         "ascApiKeyIssuerId": "69a6de96-ecf7-47e3-e053-5b8c7c11a4d1"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./credentials/play-store-service-account.json",
+        "track": "production",
+        "releaseStatus": "draft"
       }
     }
   }

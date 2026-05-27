@@ -93,6 +93,17 @@ const config: ExpoConfig = {
       "android.permission.READ_EXTERNAL_STORAGE",
       "android.permission.POST_NOTIFICATIONS",
     ],
+    // expo-camera auto-injects RECORD_AUDIO for video capture, but we
+    // only use still-image capture (slip + product photos). Strip it
+    // so the Play listing doesn't surface a "may access microphone"
+    // requirement to buyers (audit 2026-05-28).
+    blockedPermissions: [
+      "android.permission.RECORD_AUDIO",
+    ],
+    // Don't back up auth tokens / cart / seller state to Google Drive
+    // — a stolen / shared device shouldn't restore a previous user's
+    // session. SecureStore data is already excluded via keystore.
+    allowBackup: false,
     intentFilters: [
       {
         action: "VIEW",

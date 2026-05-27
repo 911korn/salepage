@@ -802,5 +802,26 @@
     "books": "Books",
     "sport": "Sports",
     "other": "Other"
+  },
+  "accountDelete": {
+    "title": "Delete SalePage account",
+    "intro": "You can request deletion of your SalePage account and all associated data at any time — either through the app or by email.",
+    "inAppTitle": "Option 1 — Delete from inside the app",
+    "inAppBody": "Fastest path. Takes a few seconds.",
+    "step1": "Open the SalePage app and sign in.",
+    "step2": "Tap the \"Me\" tab (rightmost in the bottom bar).",
+    "step3": "Scroll to the bottom and tap \"Delete account\".",
+    "step4": "Confirm — your data is removed immediately and you're signed out.",
+    "emailTitle": "Option 2 — Email request",
+    "emailBody": "Use this if you can no longer sign in. We'll verify and delete within 30 days.",
+    "scopeTitle": "What gets deleted",
+    "scope1": "Name, email, profile picture, and phone number",
+    "scope2": "Shipping address book",
+    "scope3": "Order history, reviews, and saved recipient details",
+    "scope4": "Linked LINE / Google / Apple accounts (unlinked from us)",
+    "scope5": "Shops you own (suspended and hidden from search)",
+    "retention": "Note — orders that are still in transit will remain until they're delivered so both buyer and seller can view their history. Your personal data is replaced with \"Deleted user\" immediately on deletion.",
+    "privacyLink": "Privacy Policy",
+    "contactLink": "Contact support"
   }
 }
