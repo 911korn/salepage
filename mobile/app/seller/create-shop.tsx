@@ -60,13 +60,25 @@ export default function CreateShopScreen() {
   const setActiveShop = useSellerMode((s) => s.setActiveShop);
 
   const [name, setName] = useState("");
+  const [slugInput, setSlugInput] = useState("");
+  const [slugDirty, setSlugDirty] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
   const [promptpayId, setPromptpayId] = useState("");
   const [phone, setPhone] = useState("");
   const [pickupAddress, setPickupAddress] = useState("");
   const [pickupPostcode, setPickupPostcode] = useState("");
 
-  const slug = useMemo(() => (name.trim() ? slugify(name) : ""), [name]);
+  // Live-derive slug from name unless the seller manually edits it
+  // (911korn 2026-05-27 "ตอนสร้างร้านใน App ลืมใส่ให้ตั้ง Slug หรือเปล่า").
+  // Same lenient-input pattern as the web wizard: store the raw input
+  // so Thai keystrokes echo, then slugify on read.
+  const slug = useMemo(
+    () => slugify(slugDirty ? slugInput : name),
+    [name, slugInput, slugDirty],
+  );
+  const slugDisplay = slugDirty ? slugInput : slugify(name);
+  const slugNeedsNormalisation =
+    slugDisplay.length > 0 && slugDisplay !== slug;
   const postcodeOk =
     !pickupPostcode || /^\d{5}$/.test(pickupPostcode);
   const canSubmit =
@@ -136,16 +148,41 @@ export default function CreateShopScreen() {
           <Section title="ชื่อร้าน *">
             <TextInput
               value={name}
-              onChangeText={setName}
+              onChangeText={(v) => {
+                setName(v);
+                if (!slugDirty) setSlugInput("");
+              }}
               placeholder="เช่น ของกินเมืองเหนือ"
               maxLength={60}
               className="rounded-2xl border border-border bg-white px-3 py-3 text-[15px] text-fg"
             />
-            {slug ? (
-              <Text className="text-[11px] text-muted">
-                URL: salepage.in.th/{slug}
-              </Text>
-            ) : null}
+          </Section>
+
+          {/* Slug — editable. Live-mirrors slugify(name) until seller
+              taps in to override. Same lenient-keystroke pattern as web. */}
+          <Section
+            title="ลิงก์ร้าน *"
+            hint={
+              slugNeedsNormalisation
+                ? `→ จะกลายเป็น salepage.in.th/${slug} (a-z, 0-9, ขีดกลางเท่านั้น)`
+                : "เปลี่ยนภายหลังได้ในตั้งค่า · ตัวอักษรอังกฤษ/ตัวเลข/ขีดกลาง"
+            }
+          >
+            <View className="flex-row items-center rounded-2xl border border-border bg-white px-3">
+              <Text className="text-[13px] text-muted">salepage.in.th/</Text>
+              <TextInput
+                value={slugDisplay}
+                onChangeText={(v) => {
+                  setSlugInput(v);
+                  setSlugDirty(true);
+                }}
+                placeholder="my-shop"
+                autoCapitalize="none"
+                autoCorrect={false}
+                maxLength={40}
+                className="flex-1 py-3 text-[15px] text-fg"
+              />
+            </View>
           </Section>
 
           {/* Category */}
