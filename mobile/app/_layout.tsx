@@ -283,6 +283,12 @@ function RootLayout() {
                 headerTitle: "",
                 headerBackButtonDisplayMode: "minimal",
                 headerLeft: () => <BrandBackButton tone="dark" />,
+                // The screen container's default bg was white, which
+                // leaked above the View's own pink bg (the LinearGradient
+                // can't render outside its parent). Pin the container
+                // bg to the brand pink so the gradient flows seamlessly
+                // edge-to-edge.
+                contentStyle: { backgroundColor: "#ffe4e6" },
               }}
             />
             <Stack.Screen
