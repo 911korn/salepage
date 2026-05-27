@@ -540,6 +540,18 @@ export const api = {
         orderCount: number;
       }>("/api/v1/me"),
 
+    /**
+     * Update name + avatar URL. 911korn 2026-05-27 "รูปโปร์ไฟล์
+     * กับชื่อ เปลี่ยนไม่ได้". Pass only the fields you want to change.
+     */
+    updateProfile: (input: { name?: string | null; image?: string | null }) =>
+      apiFetch<{
+        user: { id: string; name: string | null; email: string; image: string | null };
+      }>("/api/v1/me", {
+        method: "PATCH",
+        body: input,
+      }),
+
     orders: (opts?: { status?: string; cursor?: string }) =>
       apiFetch<{
         orders: Array<{
@@ -1197,6 +1209,26 @@ export const api = {
     }>("/api/v1/thai-address", { query: { postcode }, anonymous: true }),
 
   shops: {
+    /**
+     * Create a new shop for the signed-in user. Mirrors the web
+     * create-shop wizard but takes a flat payload (no multi-step) for
+     * the simpler mobile flow. 911korn 2026-05-27 first TestFlight —
+     * "ในแอพมันไม่มีปุ่มเปิดร้าน".
+     */
+    create: (input: {
+      name: string;
+      slug?: string;
+      category?: string;
+      themeColor?: string;
+      promptpayId?: string;
+      contact?: { phone?: string; line?: string; facebook?: string };
+      pickupAddress?: string;
+      pickupPostcode?: string;
+    }) =>
+      apiFetch<{
+        shop: { id: string; slug: string; name: string };
+      }>("/api/v1/shops", { method: "POST", body: input }),
+
     follow: (slug: string) =>
       apiFetch<{ following: true }>(`/api/v1/shops/${slug}/follow`, { method: "POST" }),
     unfollow: (slug: string) =>

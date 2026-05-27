@@ -121,8 +121,12 @@ export default function MeScreen() {
           </View>
         ) : profileQuery.data ? (
           <>
-            {/* Profile card */}
-            <View className="mx-5 flex-row items-center gap-3 rounded-3xl border border-border bg-white p-5">
+            {/* Profile card — tap to edit name + avatar (911korn 2026-05-27
+                first TestFlight feedback: "รูปโปร์ไฟล์กับชื่อ เปลี่ยนไม่ได้"). */}
+            <Pressable
+              onPress={() => router.push("/me/edit")}
+              className="mx-5 flex-row items-center gap-3 rounded-3xl border border-border bg-white p-5"
+            >
               <View className="size-14 overflow-hidden rounded-full bg-brand-100">
                 {profileQuery.data.image ? (
                   <Image
@@ -150,7 +154,8 @@ export default function MeScreen() {
                   {profileQuery.data.email}
                 </Text>
               </View>
-            </View>
+              <Text className="text-[12px] text-brand-700">แก้ไข ›</Text>
+            </Pressable>
 
             {/* Stats */}
             <View className="mx-5 mt-3 flex-row gap-2">
@@ -192,6 +197,28 @@ export default function MeScreen() {
                   </Text>
                 </View>
                 <Text className="text-[18px] text-amber-700">›</Text>
+              </Pressable>
+            ) : ownedShopsQuery.data ? (
+              /* "Open your shop" CTA — only when the shops query has resolved
+                  and returned zero results (avoid flashing the CTA during
+                  load). 911korn 2026-05-27 first TestFlight feedback "ในแอพ
+                  มันไม่มีปุ่มเปิดร้าน". */
+              <Pressable
+                onPress={() => router.push("/seller/create-shop")}
+                className="mx-5 mt-4 flex-row items-center gap-3 rounded-3xl bg-zinc-900 p-4"
+              >
+                <View className="size-10 items-center justify-center rounded-full bg-white">
+                  <Text className="text-[18px]">🏪</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[14px] font-bold text-white">
+                    เปิดร้านของคุณ
+                  </Text>
+                  <Text className="mt-0.5 text-[11px] text-zinc-400">
+                    สร้างร้านใน 30 วินาที · ขายฟรี ไม่หักค่าธรรมเนียม
+                  </Text>
+                </View>
+                <Text className="text-[18px] text-white">›</Text>
               </Pressable>
             ) : null}
 
