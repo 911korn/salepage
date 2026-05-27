@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { REAL_CHROME_HEADERS } from "./headers";
+import { layeredFetch } from "./headers";
 import type { ImportedProduct } from "./types";
 import { tempIdFor } from "./util";
 
@@ -47,12 +47,8 @@ function isProductSchema(node: JsonLdProduct): boolean {
 }
 
 export async function fetchJsonLdProduct(url: string): Promise<ImportedProduct> {
-  const res = await fetch(url, {
-    headers: REAL_CHROME_HEADERS,
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`เว็บเป้าหมายตอบกลับ ${res.status}`);
-  const html = await res.text();
+  const { html, status } = await layeredFetch(url);
+  if (status >= 400) throw new Error(`เว็บเป้าหมายตอบกลับ ${status}`);
   const $ = cheerio.load(html);
 
   // Walk every JSON-LD block, follow @graph arrays, pick the first Product.

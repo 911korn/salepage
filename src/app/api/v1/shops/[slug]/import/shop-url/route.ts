@@ -39,6 +39,13 @@ export async function POST(request: Request, ctx: Ctx) {
   if (shop.ownerId !== session.user.id)
     return fail("forbidden", "ไม่มีสิทธิ์", 403);
 
+  // Open to every tier (911korn 2026-05-28 "ปล่อยใช้ฟรีทุก Tier ไปก่อน
+  // แล้วกัน คนจะได้ใช้เยอะๆ"). The shop-URL crawler now uses
+  // Facebook-crawler UA + rule-based extractors (Shopify products.json,
+  // Lazada HTML, JSON-LD) — same per-request cost as the CSV path,
+  // no Claude tokens burned unless ANTHROPIC_API_KEY is set AND the
+  // rule-based paths all fail.
+
   const parsed = await parseJson(request, Body);
   if (!parsed.ok) return parsed.response;
 

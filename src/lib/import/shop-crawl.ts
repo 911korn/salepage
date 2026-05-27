@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import Anthropic from "@anthropic-ai/sdk";
-import { REAL_CHROME_HEADERS } from "./headers";
+import { layeredFetch, REAL_CHROME_HEADERS } from "./headers";
 import { fetchLazadaProduct, isLazadaUrl } from "./lazada";
 import { fetchJsonLdProduct } from "./jsonld";
 import { isShopeeUrl } from "./shopee";
@@ -143,12 +143,8 @@ async function crawlLazadaShop(shopUrl: string): Promise<ShopCrawlResult> {
   for (let page = 1; page <= MAX_PAGES; page++) {
     const u = new URL(shopUrl);
     u.searchParams.set("page", String(page));
-    const res = await fetch(u.toString(), {
-      headers: REAL_CHROME_HEADERS,
-      cache: "no-store",
-    });
-    if (!res.ok) break;
-    const html = await res.text();
+    const { html, status } = await layeredFetch(u.toString());
+    if (status >= 400) break;
     // Lazada listing pages embed product links as `/products/{slug}-i{id}-s{sku}.html`.
     const matches = html.matchAll(/\/products\/[^"'<>?]+-i\d+-s\d+\.html/g);
     let foundOnPage = 0;
@@ -188,9 +184,17 @@ function compactHtmlForAi(html: string): string {
 }
 
 async function crawlGenericWithAi(shopUrl: string): Promise<ShopCrawlResult> {
+  // First try a rule-based pass on the HTML — find every `<a href>` that
+  // looks like a product page (contains "/product" or matches our known
+  // platform URL patterns) and run each through the JSON-LD extractor.
+  // This catches Shopify-clones, TikTok Shop product pages, generic
+  // CMS storefronts — all for $0 (no AI tokens).
+  const ruleBased = await crawlRuleBasedGeneric(shopUrl);
+  if (ruleBased.products.length > 0) return ruleBased;
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error("ระบบ AI ยังไม่ได้ตั้งค่า — กรุณาวางลิงก์สินค้าแต่ละชิ้นที่แท็บก่อนหน้าแทน");
+    throw new Error("ไม่พบสินค้าในหน้าร้านนี้ — ลองวางลิงก์หน้ารวมสินค้า (All products) หรือใช้แท็บ \"ไฟล์ Shopee/Lazada\"");
   }
 
   const res = await fetch(shopUrl, {
@@ -286,6 +290,72 @@ async function crawlGenericWithAi(shopUrl: string): Promise<ShopCrawlResult> {
     platform: "ai-extracted",
     totalDetected: extracted.length,
   };
+}
+
+// ─── Rule-based generic crawl (free — no AI tokens) ───────────────────
+
+/**
+ * Lifted from LinkAF's playbook (2026-05-28): fetch the shop landing
+ * page with the Facebook crawler User-Agent (whitelisted by most
+ * marketplaces for link previews), then sniff out every product page
+ * link from the HTML — anchors, JSON-LD `Product` blobs, and Shopify-
+ * shape collection JSON. Each link gets enriched via fetchJsonLdProduct.
+ *
+ * Pure DOM rules, $0 per crawl. Only when this returns 0 products do
+ * we fall back to Claude (and only if ANTHROPIC_API_KEY is set).
+ */
+async function crawlRuleBasedGeneric(shopUrl: string): Promise<ShopCrawlResult> {
+  let res: { html: string; status: number };
+  try {
+    res = await layeredFetch(shopUrl);
+  } catch {
+    return { products: [], failures: [], platform: "ai-extracted", totalDetected: 0 };
+  }
+  if (res.status >= 400 || !res.html) {
+    return { products: [], failures: [], platform: "ai-extracted", totalDetected: 0 };
+  }
+
+  const $ = cheerio.load(res.html);
+  const base = new URL(shopUrl);
+  const productUrls = new Set<string>();
+
+  // 1. Anchors that look like product pages. Common Shopify shape =
+  //    `/products/{handle}`. WooCommerce / generic = `/product/{slug}`.
+  //    TikTok Shop and a few others use `/product/{numeric-id}`. We
+  //    also accept "/items/" and "/shop/" prefixes which Squarespace
+  //    + BigCommerce use.
+  $("a[href]").each((_, el) => {
+    if (productUrls.size >= MAX_PRODUCTS) return false;
+    const href = $(el).attr("href");
+    if (!href) return;
+    try {
+      const u = new URL(href, base);
+      // Same-origin only — kills nav links to other domains.
+      if (u.hostname !== base.hostname) return;
+      const path = u.pathname.toLowerCase();
+      if (
+        /\/products\/[^/]+$/.test(path) ||
+        /\/product\/[^/]+$/.test(path) ||
+        /\/items\/[^/]+$/.test(path) ||
+        /\/p\/[^/]+$/.test(path) ||
+        /-p-[a-z0-9]{6,}\.html$/.test(path)
+      ) {
+        // Drop query strings + hash — they're tracking params.
+        u.search = "";
+        u.hash = "";
+        productUrls.add(u.toString());
+      }
+    } catch {
+      /* malformed href — skip */
+    }
+    return;
+  });
+
+  if (productUrls.size === 0) {
+    return { products: [], failures: [], platform: "ai-extracted", totalDetected: 0 };
+  }
+
+  return fetchEachProduct([...productUrls], fetchJsonLdProduct, "ai-extracted");
 }
 
 // ─── Shared sliding-window product fetcher ──────────────────────────────

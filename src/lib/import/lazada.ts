@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { REAL_CHROME_HEADERS } from "./headers";
+import { layeredFetch } from "./headers";
 import type { ImportedProduct } from "./types";
 import { tempIdFor } from "./util";
 
@@ -105,14 +105,10 @@ function flatten(node: unknown, depth = 0, acc: unknown[] = []): unknown[] {
 }
 
 export async function fetchLazadaProduct(url: string): Promise<ImportedProduct> {
-  const res = await fetch(url, {
-    headers: REAL_CHROME_HEADERS,
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    throw new Error(`Lazada ตอบกลับ ${res.status} — อาจถูก anti-bot บล็อก`);
+  const { html, status } = await layeredFetch(url);
+  if (status >= 400) {
+    throw new Error(`Lazada ตอบกลับ ${status} — อาจถูก anti-bot บล็อก`);
   }
-  const html = await res.text();
   const $ = cheerio.load(html);
   const ld = findJsonLdProduct($);
 
