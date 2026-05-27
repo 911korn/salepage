@@ -1,11 +1,14 @@
 import { View, Text } from "react-native";
-import { Download, Recycle, Sparkles } from "lucide-react-native";
+import { Download, Recycle } from "lucide-react-native";
 
 /**
  * Type/condition tag at the top-right of every product card. Matches
- * the web version in `src/components/buyer/product-type-tag.tsx` (911korn
- * 2026-05-27 parity rule). Single tag, priority Digital > PRE_OWNED >
- * NEW. Lucide icons only — no emoji per the CET no-emoji rule.
+ * the web version in `src/components/buyer/product-type-tag.tsx`
+ * (911korn 2026-05-27 parity rule). Renders ONLY for the two non-
+ * default cases — Digital and PRE_OWNED. Regular new physical
+ * products show nothing, because labelling every common card "ใหม่"
+ * is visual noise that competes with the HOT/NEW badge ("UI มันเพี้ยน
+ * ไง" 2026-05-27). Lucide icons only — no emoji per the CET rule.
  */
 export function ProductTypeTag({
   type,
@@ -20,7 +23,7 @@ export function ProductTypeTag({
   if (condition === "PRE_OWNED") {
     return <Pill bg="#f59e0b" label="มือสอง" Icon={Recycle} />;
   }
-  return <Pill bg="#059669" label="ใหม่" Icon={Sparkles} />;
+  return null;
 }
 
 function Pill({

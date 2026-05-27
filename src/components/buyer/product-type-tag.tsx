@@ -1,15 +1,16 @@
-import { Download, Recycle, Sparkles } from "lucide-react";
+import { Download, Recycle } from "lucide-react";
 
 /**
  * Type/condition tag rendered at the top-right of every product card in
- * the marketplace + storefront grids. Single tag, picked by priority so
- * a card never gets cluttered with two competing chrome elements
- * (911korn 2026-05-27 "ทำ Tag ตาม Type Product ให้หน่อย ของใหม่ มือสอง
- * Digi · ลอง design เท่ๆ ดู"):
+ * the marketplace + storefront grids. Renders ONLY for the two non-
+ * default cases — Digital and PRE_OWNED. Regular new physical
+ * products get nothing, because every common product was getting a
+ * loud "ใหม่" pill that competed with the HOT/NEW badge on the same
+ * card. 911korn 2026-05-27 "UI มันเพี้ยน".
  *
  *   1. type === "DIGITAL"           → violet pill, "ดิจิทัล"
  *   2. condition === "PRE_OWNED"    → amber pill, "มือสอง"
- *   3. condition === "NEW"          → emerald pill, "ของใหม่"
+ *   3. else                         → null (the card stays clean)
  *
  * Pills use Lucide icons (NOT emoji per the CET no-emoji rule),
  * solid colored fill at 95% opacity so they pop over photos without
@@ -44,12 +45,5 @@ export function ProductTypeTag({
       </span>
     );
   }
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full bg-emerald-600/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm backdrop-blur-sm ${className}`}
-    >
-      <Sparkles size={10} strokeWidth={2.5} />
-      ใหม่
-    </span>
-  );
+  return null;
 }
