@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { Image } from "expo-image";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ import { getActiveReferrer } from "@/lib/affiliate";
 
 export default function CartScreen() {
   const { t } = useTranslation(["cart", "common"]);
+  const insets = useSafeAreaInsets();
   // Subscribe to the raw shops map (reference-stable until the store
   // actually mutates). Compute the derived shopList via useMemo so the
   // array reference is stable across re-renders. Using selectShopList
@@ -598,7 +600,16 @@ export default function CartScreen() {
       </ScrollView>
       </KeyboardAvoidingView>
 
-      <View className="absolute bottom-0 left-0 right-0 border-t border-border bg-white px-4 py-3 pb-6">
+      <View
+        className="absolute bottom-0 left-0 right-0 border-t border-border bg-white px-4 pt-3"
+        style={{
+          // Lift the Confirm Order CTA above the iOS home indicator
+          // (911korn 2026-05-28 01:23 IMG arrow: "ปุ่ม confirm order
+          // เอาขึ้นมาหน่อยมันจมไปนิด"). Min 16px so Android (insets.bottom
+          // === 0) still gets breathing room.
+          paddingBottom: Math.max(insets.bottom + 8, 16),
+        }}
+      >
         <Button
           loading={createOrders.isPending}
           disabled={!canCheckout || createOrders.isPending}
