@@ -272,22 +272,15 @@ function RootLayout() {
             <Stack.Screen
               name="signin"
               options={{
-                // Full-screen modal — 911korn 2026-05-27 "Patch กราฟฟิก
-                // ตรงนี้ให้มันเต็มๆ ที / มันสูงขึ้นแทน". The card-style
-                // modal exposed the previous screen's white background
-                // above the sheet, leaving an unbranded strip under the
-                // status bar. fullScreenModal covers the entire viewport
-                // so the pink gradient bleeds all the way to the top.
+                // Full-screen modal, NO native header — we render our
+                // own back button in signin.tsx so we control the bg
+                // edge-to-edge. The transparent header still left a
+                // white safe-area strip under the status bar regardless
+                // of contentStyle (911korn 2026-05-27 "ยังไม่เต็ม"
+                // through three iterations). Killing the native header
+                // and painting it ourselves is the clean fix.
                 presentation: "fullScreenModal",
-                headerTransparent: true,
-                headerTitle: "",
-                headerBackButtonDisplayMode: "minimal",
-                headerLeft: () => <BrandBackButton tone="dark" />,
-                // The screen container's default bg was white, which
-                // leaked above the View's own pink bg (the LinearGradient
-                // can't render outside its parent). Pin the container
-                // bg to the brand pink so the gradient flows seamlessly
-                // edge-to-edge.
+                headerShown: false,
                 contentStyle: { backgroundColor: "#ffe4e6" },
               }}
             />

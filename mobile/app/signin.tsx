@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as AppleAuthentication from "expo-apple-authentication";
+import { ChevronLeft } from "lucide-react-native";
 import { Button } from "@/components/ui/button";
 import { AppLogo } from "@/components/brand/app-logo";
 import { GoogleGMark } from "@/components/brand/google-g";
@@ -72,10 +73,9 @@ export default function SignIn() {
     // is still warm-pink, not jarring white (911korn 2026-05-27 "Patch
     // กราฟฟิกตรงนี้ให้มันเต็มๆ ที").
     <View className="flex-1" style={{ backgroundColor: "#ffe4e6" }}>
-      {/* Full-bleed gradient — extends under the status bar so the back
-          button (and the iOS time) sit on warm pink, not on white. We
-          push it up by `insets.top` to be sure it covers the area iOS
-          reserves for the status bar. */}
+      {/* Full-bleed gradient. Now that the native header is hidden the
+          gradient really does start at top 0 of the screen container,
+          covering all the way up to where iOS draws the status bar. */}
       <LinearGradient
         pointerEvents="none"
         colors={["#fecdd3", "#ffe4e6", "#fff1f2", "#ffffff"]}
@@ -84,10 +84,36 @@ export default function SignIn() {
           position: "absolute",
           left: 0,
           right: 0,
-          top: -insets.top,
+          top: 0,
           height: gradientHeight + insets.top,
         }}
       />
+
+      {/* Manual back button — replaces the Stack header we just turned
+          off. Floats top-left on the gradient. */}
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={8}
+        style={{
+          position: "absolute",
+          top: insets.top + 8,
+          left: 16,
+          zIndex: 10,
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: "#ffffff",
+          alignItems: "center",
+          justifyContent: "center",
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowOffset: { width: 0, height: 2 },
+          shadowRadius: 6,
+          elevation: 3,
+        }}
+      >
+        <ChevronLeft size={22} color="#e11d48" strokeWidth={2.5} />
+      </Pressable>
 
       <ScrollView
         className="flex-1"
