@@ -80,6 +80,24 @@ export async function applyPaidOrderInventory(order: InventoryOrder) {
       });
     }
 
+    // V2.1 sold-out stamp — any product whose stock just hit 0 gets the
+    // SOLD_OUT badge + 4h feed-decay timer started. We do this as a
+    // single sweep AFTER the decrement loop above so we don't have to
+    // race per-line. Products already SOLD_OUT keep their original
+    // soldOutAt (we don't extend the decay window on repeat sells).
+    await tx.product.updateMany({
+      where: {
+        shopId: order.shopId,
+        slug: { in: items.map((i) => i.productSlug) },
+        stock: 0,
+        OR: [{ status: "ACTIVE" }, { soldOutAt: null }],
+      },
+      data: {
+        status: "SOLD_OUT",
+        soldOutAt: new Date(),
+      },
+    });
+
     if (totalQty > 0) {
       await tx.shop.update({
         where: { id: order.shopId },

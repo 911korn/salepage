@@ -310,6 +310,7 @@ interface ProductCardProps {
     category: string | null;
     condition: "NEW" | "PRE_OWNED";
     type: "PHYSICAL" | "DIGITAL";
+    status: "ACTIVE" | "SOLD_OUT";
   };
 }
 
@@ -349,7 +350,11 @@ function ProductCard({ product }: ProductCardProps) {
             : "border-[color:var(--color-border)]"
       }`}
     >
-      <div className="relative aspect-square w-full overflow-hidden bg-[color:var(--color-soft)]">
+      <div
+        className={`relative aspect-square w-full overflow-hidden bg-[color:var(--color-soft)] ${
+          product.status === "SOLD_OUT" ? "opacity-60" : ""
+        }`}
+      >
         {product.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -358,6 +363,16 @@ function ProductCard({ product }: ProductCardProps) {
             loading="lazy"
             className="h-full w-full object-cover transition group-hover:scale-105"
           />
+        ) : null}
+        {/* SOLD OUT ribbon — angled centered overlay (911korn 2026-05-27
+            "เราทำ คาด Sold Out ได้มั้ย ดูน่าสนใจดี"). Stays in the feed
+            for 4h, then server-side hides it until restock. */}
+        {product.status === "SOLD_OUT" ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span className="-rotate-6 rounded-md bg-black/85 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white">
+              หมดของ
+            </span>
+          </div>
         ) : null}
         {/* Left stack — discount + product badge (HOT/NEW/SALE). */}
         <div className="absolute left-2 top-2 flex flex-col items-start gap-1">

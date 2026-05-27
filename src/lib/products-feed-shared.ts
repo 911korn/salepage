@@ -56,6 +56,8 @@ export interface FeedProductRow {
   condition: ProductCondition;
   /** "PHYSICAL" | "DIGITAL". Drives the violet "ดิจิทัล" tag. */
   type: ProductType;
+  /** "ACTIVE" | "SOLD_OUT" — only these two ever flow through the feed. */
+  status: "ACTIVE" | "SOLD_OUT";
 }
 
 export interface ProductsFeedResult {
@@ -101,12 +103,23 @@ export async function getProductsFeed(
               // applied via shop filter ordering when catalog is small.
               [{ sold: "desc" }, { createdAt: "desc" }];
 
+  // SOLD_OUT listings stay in the feed for 4h after the last unit
+  // sold — gives the marketplace a "fresh activity" signal (911korn
+  // 2026-05-27 "มันจะได้ดูรู้สึกว่ามีการเคลื่อนไหว"). After 4h, the
+  // listing drops off until the seller tops up stock. ACTIVE always shows.
+  const FOUR_HOURS_AGO = new Date(Date.now() - 4 * 60 * 60 * 1000);
   const products = await db.product.findMany({
     where: {
-      status: ProductStatus.ACTIVE,
       shop: shopFilter,
       ...(categoryFilter ?? {}),
       ...(q.condition ? { condition: q.condition } : {}),
+      OR: [
+        { status: ProductStatus.ACTIVE },
+        {
+          status: ProductStatus.SOLD_OUT,
+          soldOutAt: { gte: FOUR_HOURS_AGO },
+        },
+      ],
     },
     orderBy,
     take: pageSize + 1,
@@ -123,6 +136,7 @@ export async function getProductsFeed(
       category: true,
       condition: true,
       type: true,
+      status: true,
       shop: {
         select: {
           slug: true,
@@ -164,6 +178,7 @@ export async function getProductsFeed(
       category: p.category ?? p.shop.category ?? null,
       condition: p.condition,
       type: p.type,
+      status: p.status as "ACTIVE" | "SOLD_OUT",
     })),
     nextCursor: hasMore ? slice[slice.length - 1]!.id : null,
   };

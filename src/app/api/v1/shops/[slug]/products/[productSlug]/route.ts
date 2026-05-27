@@ -99,7 +99,24 @@ export async function PATCH(request: Request, context: RouteCtx) {
       ? null
       : input.digitalContent.trim() || null;
   }
-  if (input.stock !== undefined) data.stock = input.stock;
+  if (input.stock !== undefined) {
+    data.stock = input.stock;
+    // V2.1 — topping up restocks puts the listing back on the feed +
+    // clears the SOLD_OUT timer. Only kicks in when seller raises stock
+    // above 0; setting stock to 0 explicitly leaves it sold out.
+    if (input.stock !== null && input.stock > 0) {
+      data.soldOutAt = null;
+      // Only auto-flip status if the product was SOLD_OUT — don't
+      // override an explicit HIDDEN that the seller toggled separately.
+      const existing = await db.product.findUnique({
+        where: { shopId_slug: { shopId: own.shopId, slug: productSlug } },
+        select: { status: true },
+      });
+      if (existing?.status === "SOLD_OUT") {
+        data.status = "ACTIVE";
+      }
+    }
+  }
   if (input.status !== undefined) data.status = input.status as ProductStatus;
 
   const product = await db.product.update({

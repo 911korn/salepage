@@ -1006,6 +1006,8 @@ export const api = {
           category: string | null;
           condition: "NEW" | "PRE_OWNED";
           type: "PHYSICAL" | "DIGITAL";
+          /** V2.1 lifecycle — SOLD_OUT shows a "หมดของ" overlay. */
+          status: "ACTIVE" | "SOLD_OUT";
         }>;
         nextCursor: string | null;
       }>("/api/v1/products-feed", { query: params, anonymous: true }),

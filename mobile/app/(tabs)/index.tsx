@@ -316,7 +316,11 @@ const ProductCard = memo(function ProductCard({
       onPress={() => router.push(`/s/${product.shopSlug}/${product.slug}`)}
       className="m-1 w-[48%] overflow-hidden rounded-2xl border border-border bg-white"
     >
-      <View className="aspect-square w-full bg-brand-50">
+      <View
+        className={`aspect-square w-full bg-brand-50 ${
+          product.status === "SOLD_OUT" ? "opacity-60" : ""
+        }`}
+      >
         {product.imageUrl ? (
           <Image
             source={{ uri: product.imageUrl }}
@@ -369,6 +373,25 @@ const ProductCard = memo(function ProductCard({
         <View style={{ position: "absolute", top: 6, right: 6 }}>
           <ProductTypeTag type={product.type} condition={product.condition} />
         </View>
+        {/* SOLD OUT overlay — shows for 4h after the last unit sold (server
+            enforces the feed cutoff). Centered ribbon to make it obvious
+            so a buyer doesn't tap into a dead listing (911korn
+            2026-05-27 "เราทำ คาด Sold Out ได้มั้ย ดูน่าสนใจดี"). */}
+        {product.status === "SOLD_OUT" ? (
+          <View
+            pointerEvents="none"
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 items-center"
+          >
+            <View
+              className="rounded-md bg-black/80 px-3 py-1"
+              style={{ transform: [{ rotate: "-6deg" }] }}
+            >
+              <Text className="text-[12px] font-bold uppercase tracking-widest text-white">
+                หมดของ
+              </Text>
+            </View>
+          </View>
+        ) : null}
       </View>
       <View className="p-2.5">
         <Text className="text-[13px] font-medium text-fg" numberOfLines={2}>

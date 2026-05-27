@@ -292,6 +292,13 @@ model Product {
   stock     Int?
   sold      Int           @default(0)
   status    ProductStatus @default(ACTIVE)
+  // V2.1 sold-out timestamp. Set the moment stock decrements to 0 on a
+  // PAID order. The discovery feed shows the product for 4h afterwards
+  // (with a SOLD OUT overlay so buyers see fresh activity), then auto-
+  // hides it. Clearing this column on stock top-up flips the listing
+  // back to ACTIVE + visible (911korn 2026-05-27 "ขึ้น 4 ชั่วโมง item
+  // นี้จะถูกถอกจาก Feed อัติโนมัติ").
+  soldOutAt DateTime?
 
   shopId String
   shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
