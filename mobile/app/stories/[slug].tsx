@@ -11,6 +11,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { VideoView, useVideoPlayer } from "expo-video";
+import { safeBack } from "@/lib/safe-back";
 import { api } from "@/lib/api";
 
 /**
@@ -54,7 +55,7 @@ export default function StoryViewerScreen() {
   function advance() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (index < stories.length - 1) setIndex(index + 1);
-    else router.back();
+    else safeBack();
   }
 
   // Image slides: simple wall-clock progress. Video slides skip this loop —
@@ -101,7 +102,7 @@ export default function StoryViewerScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-black">
         <Text className="text-white">ไม่มีสตอรี่ในเวลานี้</Text>
-        <Pressable onPress={() => router.back()} className="mt-4">
+        <Pressable onPress={() => safeBack()} className="mt-4">
           <Text className="text-rose-400">ปิด</Text>
         </Pressable>
       </View>
@@ -152,7 +153,7 @@ export default function StoryViewerScreen() {
           </Text>
         </Pressable>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => safeBack()}
           className="ml-auto size-8 items-center justify-center"
         >
           <Text className="text-[18px] text-white">×</Text>
@@ -170,7 +171,7 @@ export default function StoryViewerScreen() {
       <Pressable
         onPress={() => {
           if (index < stories.length - 1) setIndex(index + 1);
-          else router.back();
+          else safeBack();
         }}
         className="absolute right-0 top-0 h-full"
         style={{ width: "67%" }}

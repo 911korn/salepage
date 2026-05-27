@@ -91,6 +91,17 @@ export default function SellerHomeScreen() {
             variant="outline"
             className="mt-6"
             onPress={() => {
+              // Nuke the seller stack so we don't carry edit-product
+              // screens / dashboards under the next buyer-mode screen
+              // (911korn 2026-05-28 01:35 "Edit Product กดออกมา Buyer
+              // mode มาหน้าสินค้าแล้วค้างกดอะไรไม่ได้"). dismissAll
+              // pops every modal we may have opened; router.replace then
+              // mounts /me fresh.
+              try {
+                if (router.canDismiss()) router.dismissAll();
+              } catch {
+                /* older expo-router — ignore */
+              }
               setMode("buyer");
               router.replace("/me");
             }}
@@ -130,6 +141,11 @@ export default function SellerHomeScreen() {
             </View>
             <Pressable
               onPress={() => {
+                try {
+                  if (router.canDismiss()) router.dismissAll();
+                } catch {
+                  /* older expo-router — ignore */
+                }
                 setMode("buyer");
                 router.replace("/me");
               }}

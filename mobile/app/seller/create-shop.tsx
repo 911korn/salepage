@@ -13,6 +13,7 @@ import {
 import { router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react-native";
+import { safeBack } from "@/lib/safe-back";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
@@ -284,7 +285,7 @@ export default function CreateShopScreen() {
           <Button
             className="mt-2"
             variant="outline"
-            onPress={() => router.back()}
+            onPress={() => safeBack()}
           >
             ยกเลิก
           </Button>

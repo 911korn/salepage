@@ -26,6 +26,7 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import { Image } from "expo-image";
+import { safeBack } from "@/lib/safe-back";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { ProductImageGallery } from "@/components/product-image-gallery";
@@ -47,7 +48,7 @@ function ProductCloseButton() {
   const insets = useSafeAreaInsets();
   return (
     <Pressable
-      onPress={() => router.back()}
+      onPress={() => safeBack()}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel="Close"
@@ -293,7 +294,7 @@ export default function ProductScreen() {
         <ProductCartButton scale={cartScale} />
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-fg">{t("productNotFound")}</Text>
-          <Button className="mt-4" variant="outline" onPress={() => router.back()}>
+          <Button className="mt-4" variant="outline" onPress={() => safeBack()}>
             {t("common:actions.back")}
           </Button>
         </View>

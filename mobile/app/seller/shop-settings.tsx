@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { safeBack } from "@/lib/safe-back";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
@@ -131,7 +132,7 @@ export default function ShopSettingsScreen() {
       void queryClient.invalidateQueries({ queryKey: ["shop", activeSlug] });
       void queryClient.invalidateQueries({ queryKey: ["feed"] });
       Alert.alert("บันทึกแล้ว", "ข้อมูลร้านอัปเดตเรียบร้อย", [
-        { text: "ตกลง", onPress: () => router.back() },
+        { text: "ตกลง", onPress: () => safeBack() },
       ]);
     },
     onError: (err) => {

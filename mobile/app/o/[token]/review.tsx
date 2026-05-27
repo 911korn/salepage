@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { safeBack } from "@/lib/safe-back";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
@@ -90,7 +91,7 @@ export default function ReviewScreen() {
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-center text-fg">ไม่พบคำสั่งซื้อ</Text>
-          <Button className="mt-4" variant="outline" onPress={() => router.back()}>
+          <Button className="mt-4" variant="outline" onPress={() => safeBack()}>
             ย้อนกลับ
           </Button>
         </View>
@@ -110,7 +111,7 @@ export default function ReviewScreen() {
           <Text className="text-center text-fg">
             รีวิวได้หลังจากออเดอร์ถูกจัดส่งและสลิปได้รับการยืนยันแล้ว
           </Text>
-          <Button className="mt-4" variant="outline" onPress={() => router.back()}>
+          <Button className="mt-4" variant="outline" onPress={() => safeBack()}>
             ย้อนกลับ
           </Button>
         </View>

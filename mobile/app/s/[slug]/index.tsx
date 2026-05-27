@@ -4,6 +4,7 @@ import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from "rea
 import { Image } from "expo-image";
 import { memo, useMemo } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { safeBack } from "@/lib/safe-back";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { BrandBackButton } from "@/components/ui/back-button";
@@ -70,7 +71,7 @@ export default function ShopScreen() {
           <Text className="text-center text-fg">
             {t("shopNotFound")} <Text className="font-semibold">{slug}</Text>
           </Text>
-          <Button className="mt-4" variant="outline" onPress={() => router.back()}>
+          <Button className="mt-4" variant="outline" onPress={() => safeBack()}>
             {t("common:actions.back")}
           </Button>
         </View>

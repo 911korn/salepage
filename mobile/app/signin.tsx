@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { ChevronLeft } from "lucide-react-native";
+import { safeBack } from "@/lib/safe-back";
 import { Button } from "@/components/ui/button";
 import { AppLogo } from "@/components/brand/app-logo";
 import { GoogleGMark } from "@/components/brand/google-g";
@@ -94,7 +95,7 @@ export default function SignIn() {
       {/* Manual back button — replaces the Stack header we just turned
           off. Floats top-left on the gradient. */}
       <Pressable
-        onPress={() => router.back()}
+        onPress={() => safeBack()}
         hitSlop={8}
         style={{
           position: "absolute",

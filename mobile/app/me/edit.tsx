@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Camera } from "lucide-react-native";
+import { safeBack } from "@/lib/safe-back";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
@@ -105,7 +106,7 @@ export default function EditProfileScreen() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["me"] });
       Alert.alert("บันทึกแล้ว", "อัปเดตโปรไฟล์เรียบร้อย", [
-        { text: "ตกลง", onPress: () => router.back() },
+        { text: "ตกลง", onPress: () => safeBack() },
       ]);
     },
     onError: (err) => {
@@ -212,7 +213,7 @@ export default function EditProfileScreen() {
         <Button
           className="mt-2"
           variant="outline"
-          onPress={() => router.back()}
+          onPress={() => safeBack()}
         >
           ยกเลิก
         </Button>

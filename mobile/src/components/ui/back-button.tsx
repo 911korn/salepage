@@ -1,6 +1,6 @@
 import { Pressable, View } from "react-native";
-import { router } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
+import { safeBack } from "@/lib/safe-back";
 
 /**
  * Brand back button — a soft-shadowed pill that floats over headers.
@@ -27,7 +27,7 @@ export function BrandBackButton({
 
   return (
     <Pressable
-      onPress={onPress ?? (() => router.back())}
+      onPress={onPress ?? (() => safeBack())}
       hitSlop={8}
       style={({ pressed }) => ({
         width: 40,

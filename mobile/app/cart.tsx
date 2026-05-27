@@ -14,6 +14,7 @@ import { Image } from "expo-image";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { safeBack } from "@/lib/safe-back";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import {
@@ -263,7 +264,7 @@ export default function CartScreen() {
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-fg">{t("empty")}</Text>
-          <Button className="mt-4" variant="outline" onPress={() => router.back()}>
+          <Button className="mt-4" variant="outline" onPress={() => safeBack()}>
             {t("continueShopping")}
           </Button>
         </View>

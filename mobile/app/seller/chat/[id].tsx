@@ -13,6 +13,7 @@ import {
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { safeBack } from "@/lib/safe-back";
 import { Screen } from "@/components/ui/screen";
 import { api, ApiClientError } from "@/lib/api";
 import { useSellerMode } from "@/store/seller-mode";
@@ -67,7 +68,7 @@ export default function ChatThreadScreen() {
       <Screen>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-fg">เกิดข้อผิดพลาด</Text>
-          <Pressable onPress={() => router.back()} className="mt-4">
+          <Pressable onPress={() => safeBack()} className="mt-4">
             <Text className="text-brand-700">กลับ</Text>
           </Pressable>
         </View>

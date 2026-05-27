@@ -14,6 +14,7 @@ import {
 import { useLocalSearchParams, router } from "expo-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { safeBack } from "@/lib/safe-back";
 import { Screen } from "@/components/ui/screen";
 import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
@@ -140,7 +141,7 @@ export default function LiveWatchScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-black">
         <Text className="text-white">ไม่พบไลฟ์นี้</Text>
-        <Pressable onPress={() => router.back()} className="mt-4">
+        <Pressable onPress={() => safeBack()} className="mt-4">
           <Text className="text-rose-400">ปิด</Text>
         </Pressable>
       </View>
@@ -192,7 +193,7 @@ export default function LiveWatchScreen() {
             </Text>
           </View>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => safeBack()}
             className="ml-auto size-9 items-center justify-center rounded-full bg-black/40"
           >
             <Text className="text-[18px] text-white">×</Text>
