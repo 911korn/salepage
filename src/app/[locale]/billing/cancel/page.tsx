@@ -5,6 +5,11 @@ import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import type { Locale } from "@/i18n/routing";
 
+export const metadata = {
+  title: "ยกเลิกการชำระเงิน · SalePage",
+  robots: { index: false, follow: false },
+};
+
 interface PageProps {
   params: Promise<{ locale: Locale }>;
 }

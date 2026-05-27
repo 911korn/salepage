@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "ตะกร้าสินค้า · SalePage",
+  robots: { index: false, follow: false },
 };
 
 export default async function CartPage({

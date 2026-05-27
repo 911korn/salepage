@@ -7,6 +7,11 @@ import { cn } from "@/lib/cn";
 import { getStripe } from "@/lib/stripe";
 import type { Locale } from "@/i18n/routing";
 
+export const metadata = {
+  title: "ชำระเงินสำเร็จ · SalePage",
+  robots: { index: false, follow: false },
+};
+
 interface PageProps {
   params: Promise<{ locale: Locale }>;
   searchParams: Promise<{ session_id?: string }>;

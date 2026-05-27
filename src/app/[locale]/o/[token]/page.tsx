@@ -16,6 +16,13 @@ import { buildOrderRef } from "@/lib/orders";
 import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
 import type { Locale } from "@/i18n/routing";
 
+export const metadata = {
+  title: "ติดตามคำสั่งซื้อ · SalePage",
+  // Order tracking pages are token-gated; indexing leaks order data. Also
+  // blocked at robots.ts level — this is the in-page belt-and-suspenders.
+  robots: { index: false, follow: false },
+};
+
 interface PageProps {
   params: Promise<{ locale: Locale; token: string }>;
 }

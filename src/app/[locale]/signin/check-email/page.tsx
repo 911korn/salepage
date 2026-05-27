@@ -4,6 +4,11 @@ import { Link } from "@/i18n/navigation";
 import { LogoLockup } from "@/components/ui/logo";
 import type { Locale } from "@/i18n/routing";
 
+export const metadata = {
+  title: "เช็คอีเมล · SalePage",
+  robots: { index: false, follow: false },
+};
+
 interface PageProps {
   params: Promise<{ locale: Locale }>;
 }

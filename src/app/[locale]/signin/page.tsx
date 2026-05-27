@@ -8,6 +8,11 @@ import { auth } from "@/lib/auth";
 import { normalizeDashboardCallbackUrl } from "@/lib/signin-callback";
 import type { Locale } from "@/i18n/routing";
 
+export const metadata = {
+  title: "เข้าสู่ระบบ · SalePage",
+  robots: { index: false, follow: false },
+};
+
 interface PageProps {
   params: Promise<{ locale: Locale }>;
   searchParams: Promise<{ callbackUrl?: string | string[] }>;

@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "คำสั่งซื้อของฉัน · SalePage",
+  robots: { index: false, follow: false },
 };
 
 const TAB_LABELS: Record<string, string> = {

@@ -4,6 +4,11 @@ import { requireDashboardSession } from "@/lib/dashboard";
 import { viewerIsAdmin } from "@/lib/admin";
 import type { Locale } from "@/i18n/routing";
 
+export const metadata = {
+  title: "Dashboard · SalePage",
+  robots: { index: false, follow: false },
+};
+
 interface Props {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;

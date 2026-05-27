@@ -49,6 +49,17 @@ export async function generateMetadata({
     metadataBase: new URL("https://salepage.in.th"),
     title: t("title"),
     description: t("description"),
+    icons: {
+      // Browser favicon — uses Next.js's auto-discovery from app/icon.svg if
+      // present, but we explicitly list the apple-touch-icon so iOS Safari's
+      // "Add to Home Screen" picks up the brand-correct 180x180 PNG.
+      apple: "/apple-touch-icon.png",
+      icon: [
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+    },
+    manifest: "/manifest.webmanifest",
     // Google Search Console verification tag — paste the value Google
     // gives during property verification (e.g. "google-site-verification:
     // XXXXXXX"). Set `GOOGLE_SITE_VERIFICATION` on Vercel for the prod

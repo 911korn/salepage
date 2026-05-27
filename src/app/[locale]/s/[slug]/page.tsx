@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Bell, MessageCircle, Phone, ShieldCheck, Star, Store } from "lucide-react";
 import { CartIconLink } from "@/components/buyer/cart-icon-link";
@@ -15,11 +16,90 @@ import { viewerCanBypassMaintenance, viewerIsAdmin } from "@/lib/admin";
 import { getPlatformSetting } from "@/lib/platform-settings";
 import { auth } from "@/lib/auth";
 import { dashboardHref } from "@/lib/dashboard-routing";
-import { storefrontLabel, storefrontPath } from "@/lib/storefront-url";
+import {
+  absoluteStorefrontUrl,
+  storefrontLabel,
+  storefrontPath,
+} from "@/lib/storefront-url";
+import { itemListSchema, storeSchema } from "@/lib/jsonld-shared";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
   params: Promise<{ slug: string; locale: Locale }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug, locale } = await params;
+  // generateMetadata runs separately from the page render, so we re-fetch
+  // the minimum fields needed for title/description/og. Both branches
+  // (db + demo) share the same shape so the metadata builder doesn't care.
+  const dbShop = await db.shop.findUnique({
+    where: { slug },
+    select: {
+      name: true,
+      description: true,
+      category: true,
+      status: true,
+      suspended: true,
+      updatedAt: true,
+    },
+  });
+  let name: string;
+  let description: string | null;
+  let category: string | null;
+  let updatedAtMs = Date.now();
+
+  if (dbShop && dbShop.status === "ACTIVE" && !dbShop.suspended) {
+    name = dbShop.name;
+    description = dbShop.description ?? null;
+    category = dbShop.category ?? null;
+    updatedAtMs = dbShop.updatedAt.getTime();
+  } else {
+    const demo = getDemoShop(slug);
+    if (!demo) return {};
+    name = demo.name;
+    description = demo.description ?? null;
+    category = demo.category ?? null;
+  }
+
+  const shopUrl = absoluteStorefrontUrl(slug);
+  const title = `${name} — ขายตรง ไม่หัก % บน SalePage`;
+  const cleanDesc = description?.replace(/\s+/g, " ").trim();
+  const metaDesc = cleanDesc
+    ? `${cleanDesc.slice(0, 150)}${cleanDesc.length > 150 ? "…" : ""}`
+    : `เลือกซื้อสินค้าจากร้าน ${name}${category ? ` หมวด${category}` : ""} บน SalePage · จ่ายตรง PromptPay · AI ตรวจสลิปอัตโนมัติ`;
+  const ogImageUrl = `https://salepage.in.th/api/v1/og/shop/${encodeURIComponent(slug)}?v=${updatedAtMs}`;
+
+  return {
+    title,
+    description: metaDesc,
+    alternates: {
+      canonical: shopUrl,
+    },
+    openGraph: {
+      title,
+      description: metaDesc,
+      url: shopUrl,
+      siteName: "SalePage",
+      type: "website",
+      locale: locale === "th" ? "th_TH" : "en_US",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${name} บน SalePage`,
+          type: "image/png",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: metaDesc,
+      images: [ogImageUrl],
+    },
+  };
 }
 
 interface ProductView {
@@ -208,8 +288,38 @@ export default async function StorefrontPage({ params }: PageProps) {
       ? dashboardHref("/dashboard", dbShop.slug)
       : null;
 
+  // JSON-LD for the Store + its product catalogue. Google's rich-results
+  // parser reads these for sitelinks + the "products in this store" panel.
+  const ldStore = storeSchema({
+    slug: shop.slug,
+    name: shop.name,
+    description: shop.description,
+    logoUrl: shop.logoUrl,
+    themeColor: shop.themeColor,
+    rating: shop.rating,
+    totalSold: shop.totalSold,
+    category: shop.category,
+  });
+  const ldItemList = itemListSchema({
+    shopSlug: shop.slug,
+    products: shop.products.map((p) => ({
+      slug: p.slug,
+      name: p.name,
+      priceBaht: p.priceBaht,
+      imageUrl: p.imageUrl,
+    })),
+  });
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-[color:var(--color-soft)]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ldStore) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ldItemList) }}
+      />
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
         <div className="container-page flex h-14 min-w-0 items-center gap-2">
           <Link

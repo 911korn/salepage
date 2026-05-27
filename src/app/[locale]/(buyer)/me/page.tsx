@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "บัญชีของฉัน · SalePage",
+  robots: { index: false, follow: false },
 };
 
 interface PageProps {

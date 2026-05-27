@@ -15,6 +15,7 @@ import {
   storefrontLabel,
   storefrontPath,
 } from "@/lib/storefront-url";
+import { productSchema } from "@/lib/jsonld-shared";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
@@ -105,8 +106,26 @@ export default async function ProductDetailPage({ params }: PageProps) {
         )
       : 0;
 
+  const ldProduct = productSchema({
+    slug: shopView.slug,
+    productSlug: product.slug,
+    name: product.name,
+    description: product.description,
+    imageUrls: product.imageUrls,
+    priceBaht: product.priceBaht,
+    compareAtBaht: product.compareAtBaht,
+    inStock: product.stock !== 0,
+    sold: product.sold,
+    shopName: shopView.name,
+    shopSlug: shopView.slug,
+  });
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-[color:var(--color-soft)]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ldProduct) }}
+      />
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
         <div className="container-page flex h-14 min-w-0 items-center gap-3">
           <Link
