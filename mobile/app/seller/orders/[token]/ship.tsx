@@ -53,6 +53,11 @@ export default function SellerShipScreen() {
     trackingNumber: string;
     receiptUrl: string;
     message: string;
+    /** Base64 of the receipt photo we already sent. We re-use it for
+     *  the seller's "ยืนยัน" tap so the camera never reopens after
+     *  the first capture (911korn 2026-05-27 "กดยืนยันแล้วมันให้ถ่าย
+     *  รูปซ้ำ"). */
+    dataBase64: string;
   } | null>(null);
   const [scannedNow, setScannedNow] = useState<{
     trackingNumber: string;
@@ -63,25 +68,18 @@ export default function SellerShipScreen() {
     ? `${apiBaseUrl.replace(/\/$/, "")}/api/v1/orders/${token}/shipment/label`
     : null;
 
+  // Last captured base64 — kept so a "ยืนยัน" tap can resend without
+  // re-opening the camera (the original bug). Cleared once we shift to
+  // the success view.
+  const [lastBase64, setLastBase64] = useState<string | null>(null);
+
   const scanMutation = useMutation({
-    mutationFn: async (override: boolean) => {
+    mutationFn: async (input: { dataBase64: string; override: boolean }) => {
       if (!token) throw new Error("missing token");
-      const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert("ต้องการสิทธิ์ใช้กล้อง", "เปิดในการตั้งค่า > SalePage");
-        throw new Error("camera_perm_denied");
-      }
-      const shot = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.9,
-      });
-      if (shot.canceled || !shot.assets[0]) throw new Error("cancelled");
-      const { base64 } = await compressForSlipUpload(shot.assets[0].uri);
       return api.orders.scanShippingReceipt(token, {
-        dataBase64: base64,
+        dataBase64: input.dataBase64,
         contentType: "image/jpeg",
-        confirmOverride: override,
+        confirmOverride: input.override,
       });
     },
     onSuccess: (res) => {
@@ -91,11 +89,13 @@ export default function SellerShipScreen() {
           courier: res.courier,
         });
         setPendingScan(null);
+        setLastBase64(null);
         void orderQuery.refetch();
-        // Auto-navigate back to the orders list after the seller has a
-        // beat to read the success card — same UX win as web (911korn
-        // 2026-05-27 "ระบบมัน ไม่ Redirect ไปไหน อยู่หน้าเดิมทำให้งง").
-        setTimeout(() => router.replace("/seller/orders"), 1800);
+        // Linger long enough on the success card for the seller to read
+        // the tracking + courier name before we drop them back on the
+        // orders list to pick the next ship-out (911korn 2026-05-27
+        // "ต้องไป Success page และ จบ ไปทำงานต่อไป").
+        setTimeout(() => router.replace("/seller/orders"), 2500);
         return;
       }
       if (res.reason === "name_mismatch" && res.scan.trackingNumber) {
@@ -104,14 +104,13 @@ export default function SellerShipScreen() {
           trackingNumber: res.scan.trackingNumber,
           receiptUrl: res.receiptUrl,
           message: res.message,
+          dataBase64: lastBase64 ?? "",
         });
         return;
       }
       Alert.alert("AI อ่านใบเสร็จไม่สำเร็จ", res.message);
     },
     onError: (err) => {
-      if (err instanceof Error && err.message === "cancelled") return;
-      if (err instanceof Error && err.message === "camera_perm_denied") return;
       Sentry.captureException(err);
       Alert.alert(
         "เกิดข้อผิดพลาด",
@@ -119,6 +118,36 @@ export default function SellerShipScreen() {
       );
     },
   });
+
+  /**
+   * Capture a fresh receipt photo and run the first scan. Separate from
+   * scanMutation so the "ยืนยัน" tap can resubmit the cached image
+   * without ever reopening the camera.
+   */
+  async function takePhotoAndScan() {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("ต้องการสิทธิ์ใช้กล้อง", "เปิดในการตั้งค่า > SalePage");
+      return;
+    }
+    const shot = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.9,
+    });
+    if (shot.canceled || !shot.assets[0]) return;
+    try {
+      const { base64 } = await compressForSlipUpload(shot.assets[0].uri);
+      setLastBase64(base64);
+      scanMutation.mutate({ dataBase64: base64, override: false });
+    } catch (err) {
+      Sentry.captureException(err);
+      Alert.alert(
+        "เกิดข้อผิดพลาด",
+        err instanceof ApiClientError ? err.message : "ประมวลผลรูปไม่สำเร็จ",
+      );
+    }
+  }
 
   const order = orderQuery.data;
   const trackingNumber = scannedNow?.trackingNumber ?? order?.trackingNumber;
@@ -137,29 +166,35 @@ export default function SellerShipScreen() {
   if (isShipped) {
     return (
       <Screen>
-        <ScrollView contentContainerClassName="px-5 pt-6 pb-32">
-          <View className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
-            <View className="flex-row items-center gap-2">
-              <CheckCircle2 size={22} color="#047857" strokeWidth={2.2} />
-              <Text className="text-[16px] font-bold text-emerald-900">
-                ส่งของแล้ว · AI ดึงเลข tracking ให้แล้ว
-              </Text>
+        <ScrollView contentContainerClassName="px-5 pt-10 pb-32">
+          <View className="items-center">
+            <View className="size-20 items-center justify-center rounded-full bg-emerald-100">
+              <CheckCircle2 size={48} color="#047857" strokeWidth={2.2} />
             </View>
-            <Text className="mt-3 font-mono text-[18px] font-bold text-emerald-900">
-              {trackingNumber}
+            <Text className="mt-4 text-[20px] font-bold text-emerald-900">
+              เสร็จเรียบร้อย!
             </Text>
-            <Text className="mt-2 text-[11px] leading-relaxed text-emerald-700">
-              ลูกค้าได้รับอีเมล + LINE แจ้งเลขพัสดุแล้ว · พวกเขาเอา
-              tracking ไปเช็คที่หน้า courier ได้เลย
+            <Text className="mt-1 text-center text-[13px] leading-relaxed text-muted">
+              ลูกค้าได้รับ email + LINE แจ้งเลขพัสดุแล้ว
+            </Text>
+          </View>
+          <View className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
+            <Text className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
+              เลขพัสดุ
+            </Text>
+            <Text className="mt-1 font-mono text-[20px] font-bold text-emerald-900">
+              {trackingNumber}
             </Text>
           </View>
           <Button
-            variant="outline"
-            className="mt-4"
+            className="mt-6"
             onPress={() => router.replace("/seller/orders")}
           >
-            กลับไปหน้าออเดอร์
+            ทำออเดอร์ถัดไป →
           </Button>
+          <Text className="mt-3 text-center text-[10px] text-muted">
+            หรือรอ — ระบบจะพากลับหน้ารายการให้อัตโนมัติ
+          </Text>
         </ScrollView>
       </Screen>
     );
@@ -214,7 +249,7 @@ export default function SellerShipScreen() {
           </Text>
           <Button
             className="mt-3"
-            onPress={() => scanMutation.mutate(false)}
+            onPress={() => void takePhotoAndScan()}
             disabled={scanMutation.isPending}
           >
             {scanMutation.isPending ? (
@@ -256,8 +291,13 @@ export default function SellerShipScreen() {
               <Button
                 size="sm"
                 className="flex-1"
-                onPress={() => scanMutation.mutate(true)}
-                disabled={scanMutation.isPending}
+                onPress={() =>
+                  scanMutation.mutate({
+                    dataBase64: pendingScan.dataBase64,
+                    override: true,
+                  })
+                }
+                disabled={scanMutation.isPending || !pendingScan.dataBase64}
               >
                 ยืนยัน
               </Button>
