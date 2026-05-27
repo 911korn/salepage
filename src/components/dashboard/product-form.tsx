@@ -29,6 +29,8 @@ interface ProductFormValues {
   type: "PHYSICAL" | "DIGITAL";
   category?: string | null;
   condition?: "NEW" | "PRE_OWNED";
+  /** V2.1 digital fulfillment template. */
+  digitalContent?: string | null;
   stock?: number | null;
   status?: "ACTIVE" | "HIDDEN" | "SOLD_OUT";
 }
@@ -190,6 +192,9 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
   const [category, setCategory] = useState<string | null>(
     initialValues?.category ?? null,
   );
+  const [digitalContent, setDigitalContent] = useState<string>(
+    initialValues?.digitalContent ?? "",
+  );
   const [badge, setBadge] = useState<"HOT" | "NEW" | "SALE" | "">(
     (initialValues?.badge as "HOT" | "NEW" | "SALE") ?? "",
   );
@@ -213,6 +218,12 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
       toast.error(t("errors.priceRequired"));
       return;
     }
+    if (type === "DIGITAL" && digitalContent.trim().length < 2) {
+      toast.error(
+        "สินค้าดิจิทัลต้องใส่เนื้อหาที่ลูกค้าจะได้รับ (ID/PW, ลิงก์, ฯลฯ)",
+      );
+      return;
+    }
     startTransition(async () => {
       const body: Record<string, unknown> = {
         name: name.trim(),
@@ -223,6 +234,8 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
         type,
         condition,
         ...(category ? { category } : mode === "edit" ? { category: null } : {}),
+        digitalContent:
+          type === "DIGITAL" ? digitalContent.trim() || null : null,
         badge: badge || null,
         ...(stock ? { stock: Number(stock) } : mode === "edit" ? { stock: null } : {}),
         ...(mode === "edit" ? { status } : {}),
@@ -449,6 +462,31 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
             </div>
           </Field>
         </div>
+
+        {/* Digital fulfillment template — visible only for DIGITAL
+            products. Snapshotted onto the order when slip-verify flips
+            it PAID, then auto-emailed + surfaced on the buyer's order
+            page. Past buyers see what they paid for even after future
+            edits (911korn 2026-05-27 "ผู้ขายต้องใส่รายละเอียดสิ่งที่
+            ลูกค้าจะได้หลังจ่ายตังไปเลย"). */}
+        {type === "DIGITAL" ? (
+          <Field
+            label="เนื้อหาที่ลูกค้าจะได้รับหลังชำระเงิน"
+            hint="ลูกค้าจะเห็นในอีเมล + หน้า Order ทันทีหลังสลิปผ่าน · ใส่ ID/PW, license key, ลิงก์ดาวน์โหลด หรือคำแนะนำการใช้งาน · ระบบ snapshot ตอนขาย แก้ทีหลังไม่กระทบลูกค้าเก่า"
+          >
+            <textarea
+              value={digitalContent}
+              onChange={(e) => setDigitalContent(e.target.value)}
+              placeholder="เช่น&#10;ID: example@mail.com&#10;PW: 1234abcd&#10;Server: Asia"
+              rows={6}
+              maxLength={5000}
+              className="w-full rounded-xl border border-[color:var(--color-border)] bg-white px-3 py-2 font-mono text-sm focus:border-[color:var(--color-brand)]/40 focus:outline-none"
+            />
+            <p className="mt-1 text-right text-xs text-zinc-400">
+              {digitalContent.length}/5000
+            </p>
+          </Field>
+        ) : null}
 
         {/* Category — optional. Falls back to shop.category on listing
             surfaces when left blank. Chips are single-select with a "ไม่

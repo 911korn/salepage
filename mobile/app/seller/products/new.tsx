@@ -65,6 +65,7 @@ export default function NewProductScreen() {
   const [type, setType] = useState<"PHYSICAL" | "DIGITAL">("PHYSICAL");
   const [category, setCategory] = useState<CategoryKey | null>(null);
   const [condition, setCondition] = useState<"NEW" | "PRE_OWNED">("NEW");
+  const [digitalContent, setDigitalContent] = useState("");
 
   async function handlePickFromGallery() {
     if (images.length >= MAX_IMAGES) return;
@@ -141,13 +142,16 @@ export default function NewProductScreen() {
   const priceBahtNum = Number(priceBaht.replace(/,/g, ""));
   const stockNum = stock.trim() ? Number(stock) : null;
 
+  const digitalContentRequired =
+    type === "DIGITAL" && digitalContent.trim().length < 2;
   const canSubmit =
     name.trim().length >= 2 &&
     Number.isInteger(priceBahtNum) &&
     priceBahtNum > 0 &&
     (stockNum === null || (Number.isInteger(stockNum) && stockNum >= 0)) &&
     uploadedUrls.length >= 1 &&
-    !stillUploading;
+    !stillUploading &&
+    !digitalContentRequired;
 
   const createMutation = useMutation({
     mutationFn: () => {
@@ -160,6 +164,8 @@ export default function NewProductScreen() {
         type,
         condition,
         category: category ?? undefined,
+        digitalContent:
+          type === "DIGITAL" ? digitalContent.trim() || null : null,
         ...(stockNum !== null ? { stock: stockNum } : {}),
       });
     },
@@ -329,6 +335,36 @@ export default function NewProductScreen() {
             />
           </View>
         </Section>
+
+        {/* Digital fulfillment — the content the buyer receives the
+            moment slip-verify flips the order to PAID. Snapshotted on
+            the order so future product edits don't affect past buyers
+            (911korn 2026-05-27 "ผู้ขายต้องใส่รายละเอียดสิ่งที่ลูกค้าจะได้
+            หลังจ่ายตังไปเลย"). Only mounted when type=DIGITAL. */}
+        {type === "DIGITAL" ? (
+          <Section title="เนื้อหาที่ลูกค้าจะได้รับหลังชำระเงิน">
+            <View className="rounded-2xl border border-violet-200 bg-violet-50 px-3 py-2">
+              <Text className="text-[11px] leading-relaxed text-violet-900">
+                ลูกค้าจะเห็นข้อความนี้ในอีเมล + หน้า Order ทันทีหลังสลิป
+                ผ่าน · ใส่ ID/PW, license key, ลิงก์ดาวน์โหลด หรือคำสั่ง
+                การใช้งานได้ · ข้อความจะถูก snapshot ตอนขาย แก้ทีหลังไม่
+                กระทบลูกค้าที่ซื้อไปแล้ว
+              </Text>
+            </View>
+            <TextInput
+              value={digitalContent}
+              onChangeText={setDigitalContent}
+              placeholder="เช่น ID: example@mail.com / PW: 1234abcd / Server: Asia · หรือคำแนะนำการใช้งาน"
+              multiline
+              maxLength={5000}
+              className="rounded-2xl border border-border bg-white px-3 py-2.5 font-mono text-[13px] text-fg"
+              style={{ minHeight: 140, textAlignVertical: "top" }}
+            />
+            <Text className="text-right text-[10px] text-muted">
+              {digitalContent.length}/5000
+            </Text>
+          </Section>
+        ) : null}
 
         {/* Condition — New vs Pre-owned (มือสอง). Pre-owned surfaces a
             distinct badge on the marketplace + product detail. */}

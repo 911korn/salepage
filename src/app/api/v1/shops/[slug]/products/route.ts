@@ -90,6 +90,9 @@ const Body = z.object({
   category: z.string().min(1).max(40).optional().nullable(),
   /// V2.1 condition flag. PRE_OWNED renders a "มือสอง" badge on cards.
   condition: z.enum(["NEW", "PRE_OWNED"]).optional(),
+  /// V2.1 digital fulfillment template. Only meaningful when type=DIGITAL.
+  /// Snapshotted onto the order at the slip-verified PAID transition.
+  digitalContent: z.string().max(5000).optional().nullable(),
   stock: z.number().int().nonnegative().max(99999).optional(),
 });
 
@@ -150,6 +153,13 @@ export async function POST(
       type: input.type as ProductType,
       category: input.category?.trim() || null,
       ...(input.condition ? { condition: input.condition } : {}),
+      // Digital fulfillment content only persists for DIGITAL products
+      // — clearing it on PHYSICAL avoids stale templates if a seller
+      // toggles type back and forth while building the listing.
+      digitalContent:
+        input.type === "DIGITAL" && input.digitalContent
+          ? input.digitalContent.trim() || null
+          : null,
       stock: input.stock ?? null,
       status: ProductStatus.ACTIVE,
     },

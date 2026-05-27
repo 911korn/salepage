@@ -1,7 +1,8 @@
 import { useLocalSearchParams, router } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { View, Text, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, ScrollView, ActivityIndicator, Alert, Pressable, Clipboard } from "react-native";
 import { useState } from "react";
+import { Copy, Sparkles } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
@@ -171,6 +172,19 @@ export default function TrackingScreen() {
         </View>
       </View>
 
+      {/* V2.1 digital fulfillment card — surfaces the seller-provided
+          content (game ID:PW, license keys, instructions) the moment
+          slip-verify flips PAID. Positioned ABOVE the protected-pay
+          banner because it's the buyer's actual product (911korn
+          2026-05-27 "พอเห็นภาพมั้ย ตอนนี้ Work Flow มันเหมือนกับส่ง
+          ไปรษณีย์เลย ซึ่งมันผิด"). */}
+      {data.digitalFulfillment ? (
+        <DigitalFulfillmentCard
+          content={data.digitalFulfillment}
+          fulfilledAt={data.digitalFulfilledAt}
+        />
+      ) : null}
+
       {/* V1.5 Protected Pay status banner. Shows only on opted-in orders.
           Visually distinct based on lifecycle: HELD (active protection),
           RELEASED/REFUNDED (terminal). DISPUTED gets its own amber pill. */}
@@ -283,6 +297,67 @@ export default function TrackingScreen() {
         onDismiss={() => setContactOpen(false)}
       />
     </Screen>
+  );
+}
+
+/**
+ * V2.1 digital fulfillment card. High-contrast dark surface so the
+ * delivered content (game ID:PW, license key, etc) reads as a "receipt"
+ * rather than chrome. Copy button uses the legacy Clipboard API (still
+ * supported in Expo 51+) to land the whole block in the user's clipboard
+ * on tap. Mono font so credentials don't wrap awkwardly.
+ */
+function DigitalFulfillmentCard({
+  content,
+  fulfilledAt,
+}: {
+  content: string;
+  fulfilledAt: string | null;
+}) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <View className="mx-5 mt-4 overflow-hidden rounded-3xl bg-zinc-900">
+      <View className="flex-row items-center justify-between border-b border-white/10 px-5 py-3">
+        <View className="flex-row items-center gap-2">
+          <Sparkles size={16} color="#ffffff" strokeWidth={2.4} />
+          <Text className="text-[13px] font-bold text-white">
+            เนื้อหาที่คุณได้รับ
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => {
+            try {
+              Clipboard.setString(content);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            } catch {
+              /* clipboard unavailable; silent no-op */
+            }
+          }}
+          hitSlop={8}
+          className="flex-row items-center gap-1 rounded-full bg-white/10 px-2.5 py-1"
+        >
+          <Copy size={12} color="#ffffff" strokeWidth={2.2} />
+          <Text className="text-[11px] font-semibold text-white">
+            {copied ? "คัดลอกแล้ว" : "คัดลอก"}
+          </Text>
+        </Pressable>
+      </View>
+      <View className="px-5 py-4">
+        <Text
+          selectable
+          className="text-[13px] leading-relaxed text-white"
+          style={{ fontFamily: "Menlo" }}
+        >
+          {content}
+        </Text>
+      </View>
+      {fulfilledAt ? (
+        <Text className="px-5 pb-3 text-[10px] text-zinc-500">
+          ส่งมอบ {new Date(fulfilledAt).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })} · เก็บอีเมลฉบับยืนยันการชำระเงินไว้ด้วยอีกหนึ่งช่องทาง
+        </Text>
+      ) : null}
+    </View>
   );
 }
 

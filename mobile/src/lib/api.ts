@@ -1243,6 +1243,8 @@ export const api = {
         type?: "PHYSICAL" | "DIGITAL";
         category?: string | null;
         condition?: "NEW" | "PRE_OWNED";
+        /** V2.1 digital fulfillment — text the buyer receives on PAID. */
+        digitalContent?: string | null;
         stock?: number;
       },
     ) =>
@@ -1275,6 +1277,7 @@ export const api = {
         type?: "PHYSICAL" | "DIGITAL";
         category?: string | null;
         condition?: "NEW" | "PRE_OWNED";
+        digitalContent?: string | null;
         stock?: number | null;
         status?: "ACTIVE" | "HIDDEN" | "SOLD_OUT";
       },

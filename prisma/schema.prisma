@@ -283,6 +283,12 @@ model Product {
   // V2.1 condition flag — NEW vs PRE_OWNED. PRE_OWNED renders a prominent
   // "มือสอง" badge on cards and the product detail page.
   condition ProductCondition @default(NEW)
+  // V2.1 digital-fulfillment template — only meaningful when type=DIGITAL.
+  // Seller pre-fills the content the buyer will receive (game ID:PW, license
+  // key, download link, service instructions, etc). On the slip-verified
+  // PAID transition we snapshot this onto `Order.digitalFulfillment` so a
+  // later product edit doesn't change what a past buyer was sold.
+  digitalContent String? @db.Text
   stock     Int?
   sold      Int           @default(0)
   status    ProductStatus @default(ACTIVE)
@@ -418,6 +424,14 @@ model Order {
   cancelledAt   DateTime?
   cancelledBy   OrderCancelledBy?
   cancelReason  String?
+
+  // V2.1 digital fulfillment — snapshot of `product.digitalContent` taken
+  // at the moment slip-verify flipped the order to PAID. Null for
+  // physical orders. Buyer reads this from the order tracking page +
+  // gets it embedded in the order-paid email. Editing the source product
+  // later does NOT mutate this — past buyers see what they paid for.
+  digitalFulfillment    String?   @db.Text
+  digitalFulfilledAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -167,6 +167,8 @@ export interface ProductSummary {
   type: ProductType;
   category: string | null;
   condition: ProductCondition;
+  /** V2.1 digital fulfillment template — only set when type=DIGITAL. */
+  digitalContent: string | null;
   stock: number | null;
   sold: number;
   status: ProductStatus;
@@ -206,6 +208,13 @@ export interface OrderDetail {
   trackingNumber: string | null;
   notes: string | null;
   createdAt: string;
+  /**
+   * V2.1 digital fulfillment — snapshot of the seller-provided content
+   * the buyer is owed. Populated on the slip-verified PAID transition
+   * for DIGITAL line items, null on physical-only orders.
+   */
+  digitalFulfillment: string | null;
+  digitalFulfilledAt: string | null;
   /**
    * V1.5 Protected Pay summary — mirrors EscrowHold on the server. Null
    * if the order didn't opt in. Used by the tracking screen to render the

@@ -165,17 +165,31 @@ export async function POST(request: Request, ctx: Ctx) {
     }
   }
 
+  // V2.1 digital fulfillment — snapshot the seller's pre-filled content
+  // from every line item that's a DIGITAL product, joined into one block
+  // separated by line-item headers. Done BEFORE the order update so we
+  // can roll it into the same write. If ANY line is digital we ALSO
+  // flip the order straight to DELIVERED — there's nothing to ship,
+  // it's been delivered the moment the slip cleared (911korn 2026-05-27
+  // "พอเห็นภาพมั้ย ตอนนี้ Work Flow มันเหมือนกับส่งไปรษณีย์เลย ซึ่งมันผิด").
+  const fulfillment = await buildDigitalFulfillment(order);
+  const isDigitalOrder = fulfillment.allLinesDigital;
+  const now = new Date();
+
   const updated = await db.order.update({
     where: { id: order.id },
     data: {
-      status: OrderStatus.PAID,
+      status: isDigitalOrder ? OrderStatus.DELIVERED : OrderStatus.PAID,
       slipImageUrl: uploadedSlipUrl ?? order.slipImageUrl,
       slipRef: result.ref,
-      slipVerifiedAt: new Date(),
+      slipVerifiedAt: now,
       slipProvider: result.provider,
       slipRaw: result.raw
         ? JSON.parse(JSON.stringify(result.raw))
         : undefined,
+      ...(fulfillment.content
+        ? { digitalFulfillment: fulfillment.content, digitalFulfilledAt: now }
+        : {}),
     },
     include: { shop: { select: { name: true, slug: true } } },
   });
@@ -249,7 +263,10 @@ export async function POST(request: Request, ctx: Ctx) {
     shopContactEmail,
     slipRef: updated.slipRef ?? undefined,
   };
-  void sendOrderPaid(emailCtx);
+  void sendOrderPaid({
+    ...emailCtx,
+    digitalFulfillment: fulfillment.content,
+  });
   if (order.shop.owner?.email) {
     void sendPaymentReceivedAlert({
       ...emailCtx,
@@ -341,4 +358,67 @@ function buildLineUrl(line: string) {
 
 function toJson(value: unknown) {
   return JSON.parse(JSON.stringify(value));
+}
+
+/**
+ * Snapshot digital-fulfillment content from every line item in `order.items`.
+ *
+ * For each productSlug in the snapshot, look up `Product.digitalContent`.
+ * If the product is DIGITAL and has content set, we join all of them into
+ * one block separated by clear headers per line item (the seller might
+ * have grouped multiple skus into the same digital product, or sold
+ * multiples — we keep the read flat).
+ *
+ * Returns whether every line was digital so the caller knows whether to
+ * auto-flip the order to DELIVERED.
+ */
+interface SnapshotInput {
+  shopId: string;
+  items: unknown;
+}
+async function buildDigitalFulfillment(
+  order: SnapshotInput,
+): Promise<{ content: string | null; allLinesDigital: boolean }> {
+  const itemsRaw = Array.isArray(order.items) ? order.items : [];
+  if (itemsRaw.length === 0) return { content: null, allLinesDigital: false };
+
+  const slugs = itemsRaw
+    .map((i) => (i as { productSlug?: string })?.productSlug)
+    .filter((s): s is string => Boolean(s));
+  if (slugs.length === 0) return { content: null, allLinesDigital: false };
+
+  const products = await db.product.findMany({
+    where: { shopId: order.shopId, slug: { in: slugs } },
+    select: { slug: true, type: true, digitalContent: true, name: true },
+  });
+  const bySlug = new Map(products.map((p) => [p.slug, p]));
+
+  const blocks: string[] = [];
+  let allDigital = true;
+  for (const raw of itemsRaw) {
+    const slug = (raw as { productSlug?: string })?.productSlug;
+    const qty = (raw as { qty?: number })?.qty ?? 1;
+    if (!slug) {
+      allDigital = false;
+      continue;
+    }
+    const p = bySlug.get(slug);
+    if (!p) {
+      allDigital = false;
+      continue;
+    }
+    if (p.type !== "DIGITAL") {
+      allDigital = false;
+      continue;
+    }
+    if (p.digitalContent) {
+      blocks.push(
+        `▼ ${p.name}${qty > 1 ? ` × ${qty}` : ""}\n${p.digitalContent}`,
+      );
+    }
+  }
+  return {
+    content: blocks.length ? blocks.join("\n\n────────\n\n") : null,
+    allLinesDigital: allDigital && blocks.length > 0,
+  };
 }

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ArrowLeft, Check, MapPin, ShieldCheck, Truck, XCircle } from "lucide-react";
+import { DigitalFulfillmentCard } from "@/components/storefront/digital-fulfillment-card";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -134,6 +135,18 @@ export default async function OrderTrackingPage({ params }: PageProps) {
               slipRef={order.slipRef}
             />
           )}
+
+          {/* V2.1 digital fulfillment surface — shows the buyer the
+              content they paid for (game ID:PW, license keys, links,
+              instructions). Snapshot taken at the slip-verified PAID
+              transition so future product edits don't mutate past
+              orders (911korn 2026-05-27). */}
+          {order.digitalFulfillment ? (
+            <DigitalFulfillmentCard
+              content={order.digitalFulfillment}
+              fulfilledAt={order.digitalFulfilledAt?.toISOString() ?? null}
+            />
+          ) : null}
 
           {isFulfillmentStatus(order.status) ? (
             <ShipmentStatusCard

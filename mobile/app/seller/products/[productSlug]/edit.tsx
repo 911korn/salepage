@@ -77,6 +77,7 @@ export default function EditProductScreen() {
   const [type, setType] = useState<"PHYSICAL" | "DIGITAL">("PHYSICAL");
   const [category, setCategory] = useState<CategoryKey | null>(null);
   const [condition, setCondition] = useState<"NEW" | "PRE_OWNED">("NEW");
+  const [digitalContent, setDigitalContent] = useState("");
   const [initialized, setInitialized] = useState(false);
 
   // Prefill once the product row arrives from the cache/network.
@@ -93,6 +94,7 @@ export default function EditProductScreen() {
         : null,
     );
     setCondition(product.condition);
+    setDigitalContent(product.digitalContent ?? "");
     setImages(
       (product.imageUrls ?? []).map((url) => ({
         uri: url,
@@ -197,6 +199,8 @@ export default function EditProductScreen() {
         type,
         category: category ?? null,
         condition,
+        digitalContent:
+          type === "DIGITAL" ? digitalContent.trim() || null : null,
         stock: stockNum,
       });
     },
@@ -398,6 +402,29 @@ export default function EditProductScreen() {
             />
           </View>
         </Section>
+
+        {type === "DIGITAL" ? (
+          <Section title="เนื้อหาที่ลูกค้าจะได้รับหลังชำระเงิน">
+            <View className="rounded-2xl border border-violet-200 bg-violet-50 px-3 py-2">
+              <Text className="text-[11px] leading-relaxed text-violet-900">
+                แก้ไขที่นี่จะมีผลกับการขายครั้งต่อไปเท่านั้น · ลูกค้าที่ซื้อ
+                ไปแล้วเห็นเนื้อหาที่ snapshot ตอนซื้อ (ไม่กระทบจากการแก้)
+              </Text>
+            </View>
+            <TextInput
+              value={digitalContent}
+              onChangeText={setDigitalContent}
+              placeholder="เช่น ID: example@mail.com / PW: 1234abcd"
+              multiline
+              maxLength={5000}
+              className="rounded-2xl border border-border bg-white px-3 py-2.5 font-mono text-[13px] text-fg"
+              style={{ minHeight: 140, textAlignVertical: "top" }}
+            />
+            <Text className="text-right text-[10px] text-muted">
+              {digitalContent.length}/5000
+            </Text>
+          </Section>
+        ) : null}
 
         <Section title="สภาพสินค้า">
           <View className="flex-row gap-2">

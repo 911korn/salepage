@@ -69,6 +69,11 @@ export async function GET(_request: Request, ctx: Ctx) {
     trackingNumber: order.trackingNumber,
     notes: order.notes,
     createdAt: order.createdAt,
+    // V2.1 digital fulfillment — snapshot taken at slip-verified PAID
+    // transition. Only present on DIGITAL orders. Token-scoped endpoint
+    // already protects access by public token.
+    digitalFulfillment: order.digitalFulfillment,
+    digitalFulfilledAt: order.digitalFulfilledAt,
     // V1.5 Protected Pay surface. `escrow` is null on non-escrow orders.
     useEscrow: order.useEscrow,
     escrowFeeSatang: order.escrowFeeSatang,

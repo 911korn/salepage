@@ -52,6 +52,7 @@ const PatchBody = z.object({
   type: z.enum(["PHYSICAL", "DIGITAL"]).optional(),
   category: z.string().min(1).max(40).optional().nullable(),
   condition: z.enum(["NEW", "PRE_OWNED"]).optional(),
+  digitalContent: z.string().max(5000).optional().nullable(),
   stock: z.number().int().nonnegative().max(99999).optional().nullable(),
   status: z.enum(["ACTIVE", "HIDDEN", "SOLD_OUT"]).optional(),
 });
@@ -93,6 +94,11 @@ export async function PATCH(request: Request, context: RouteCtx) {
   if (input.category !== undefined)
     data.category = input.category === null ? null : input.category.trim() || null;
   if (input.condition !== undefined) data.condition = input.condition;
+  if (input.digitalContent !== undefined) {
+    data.digitalContent = input.digitalContent === null
+      ? null
+      : input.digitalContent.trim() || null;
+  }
   if (input.stock !== undefined) data.stock = input.stock;
   if (input.status !== undefined) data.status = input.status as ProductStatus;
 

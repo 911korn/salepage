@@ -51,6 +51,7 @@ export default async function EditProductPage({
         type: product.type as ProductType,
         category: product.category,
         condition: product.condition as ProductCondition,
+        digitalContent: product.digitalContent,
         stock: product.stock,
         status: product.status as ProductStatus,
       }}

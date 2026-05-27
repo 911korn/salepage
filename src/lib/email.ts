@@ -144,21 +144,45 @@ export async function sendOrderCreated(ctx: OrderContext): Promise<void> {
 }
 
 /** Customer: payment verified, order moved to PAID. */
-export async function sendOrderPaid(ctx: OrderContext & { slipRef?: string }): Promise<void> {
+export async function sendOrderPaid(
+  ctx: OrderContext & {
+    slipRef?: string;
+    /** V2.1 digital fulfillment — when set, replaces the shipping-prep
+        copy with the actual delivered content (game ID/PW, license keys,
+        instructions, etc). */
+    digitalFulfillment?: string | null;
+  },
+): Promise<void> {
   if (!ctx.customerEmail) return;
   const trackingUrl = `${siteUrl()}/o/${ctx.token}`;
-  const html = shell({
-    heading: `ยืนยันการชำระเงิน ${ctx.ref}`,
-    body: `
+  const fulfillment = ctx.digitalFulfillment?.trim();
+  const body = fulfillment
+    ? `
+      <p>ขอบคุณ! เราได้รับการชำระเงินของคุณเรียบร้อย — สินค้าดิจิทัลของคุณพร้อมใช้งานทันที</p>
+      <div style="background:#0a0a0a;color:#fff;border-radius:14px;padding:18px;margin:18px 0;">
+        <p style="color:#d4d4d8;font-size:11px;text-transform:uppercase;letter-spacing:.16em;margin:0 0 10px 0;">เนื้อหาที่คุณได้รับ</p>
+        <pre style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;margin:0;color:#fff;">${escapeHtml(fulfillment)}</pre>
+      </div>
+      <p style="color:#a1a1aa;font-size:13px;">เก็บอีเมลฉบับนี้ไว้ — หรือดูซ้ำได้ตลอดที่หน้าออเดอร์ผ่านลิงก์ด้านล่าง</p>
+      ${ctx.slipRef ? `<p style="color:#a1a1aa;font-size:12px;">เลขอ้างอิงสลิป: <code>${escapeHtml(ctx.slipRef)}</code></p>` : ""}
+    `
+    : `
       <p>ขอบคุณ! เรายืนยันการชำระเงินของคุณเรียบร้อย</p>
       <p>ร้าน <strong>${escapeHtml(ctx.shopName)}</strong> จะจัดเตรียมพัสดุของคุณภายในเร็วๆ นี้</p>
       ${ctx.slipRef ? `<p style="color:#a1a1aa;font-size:13px;">เลขอ้างอิงสลิป: <code>${escapeHtml(ctx.slipRef)}</code></p>` : ""}
-    `,
-    cta: { label: "ดูสถานะออเดอร์", url: trackingUrl },
+    `;
+  const html = shell({
+    heading: fulfillment
+      ? `สินค้าดิจิทัลของคุณพร้อมใช้งาน — ${ctx.ref}`
+      : `ยืนยันการชำระเงิน ${ctx.ref}`,
+    body,
+    cta: { label: fulfillment ? "ดูเนื้อหาในออเดอร์" : "ดูสถานะออเดอร์", url: trackingUrl },
   });
   await send({
     to: ctx.customerEmail,
-    subject: `ยืนยันการชำระเงิน · ${ctx.shopName} (${ctx.ref})`,
+    subject: fulfillment
+      ? `🎁 สินค้าดิจิทัลของคุณ · ${ctx.shopName} (${ctx.ref})`
+      : `ยืนยันการชำระเงิน · ${ctx.shopName} (${ctx.ref})`,
     html,
     replyTo: ctx.shopContactEmail ?? undefined,
   });
