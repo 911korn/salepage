@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { View, Text, Linking, ScrollView, Pressable, Platform } from "react-native";
+import { View, Text, Linking, ScrollView, Pressable, Platform, Alert } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as AppleAuthentication from "expo-apple-authentication";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronLeft, Check } from "lucide-react-native";
 import { safeBack } from "@/lib/safe-back";
 import { Button } from "@/components/ui/button";
 import { AppLogo } from "@/components/brand/app-logo";
@@ -40,6 +40,18 @@ export default function SignIn() {
   const googleSignIn = useGoogleSignIn();
   const appleSignIn = useAppleSignIn();
   const anyLoading = lineSignIn.loading || googleSignIn.loading || appleSignIn.loading;
+
+  // Apple Guideline 1.2 EULA gate. Reviewer must check this box before
+  // any provider button reacts — implicit "by continuing" no longer counts.
+  const [agreed, setAgreed] = useState(false);
+  const requireAgree = () => {
+    if (agreed) return true;
+    Alert.alert(
+      t("signin.agreeRequiredTitle") as string,
+      t("signin.agreeRequired") as string,
+    );
+    return false;
+  };
 
   // Runtime detection of the expo-apple-authentication native module —
   // an older binary (OTA'd to a newer JS bundle) will lack the native
@@ -150,12 +162,24 @@ export default function SignIn() {
             elevation: 2,
           }}
         >
-          {/* Apple Sign In — iOS only (mandatory per App Store Review
-              Guideline 4.8 when any other 3rd-party login is present).
-              Uses the OS-native sheet with biometric auth — no password
-              typing. Rendered FIRST on iOS so Apple is happy.
-              Gated on `appleAvailable` so older binaries that received
-              this JS via OTA don't blow up on the missing native module. */}
+          {/* Apple Guideline 1.2 explicit EULA acceptance. All provider
+              buttons below are disabled until this is checked. */}
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: agreed }}
+            onPress={() => setAgreed((v) => !v)}
+            className="flex-row gap-2 items-start mb-4 rounded-2xl bg-soft/60 border border-border p-3"
+          >
+            <View
+              className={`mt-[2px] h-5 w-5 rounded-md border ${agreed ? "bg-brand-600 border-brand-600" : "border-border bg-white"} items-center justify-center`}
+            >
+              {agreed ? <Check size={14} color="#fff" strokeWidth={3} /> : null}
+            </View>
+            <Text className="text-[12.5px] leading-[18px] text-fg flex-1">
+              {t("signin.agreeLabel")}
+            </Text>
+          </Pressable>
+
           {Platform.OS === "ios" && appleAvailable ? (
             <>
               <AppleAuthentication.AppleAuthenticationButton
@@ -166,8 +190,11 @@ export default function SignIn() {
                   AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
                 }
                 cornerRadius={16}
-                style={{ width: "100%", height: 52 }}
-                onPress={() => appleSignIn.signIn({ redirectAfter: redirect })}
+                style={{ width: "100%", height: 52, opacity: agreed ? 1 : 0.4 }}
+                onPress={() => {
+                  if (!requireAgree()) return;
+                  appleSignIn.signIn({ redirectAfter: redirect });
+                }}
               />
               <View className="h-3" />
             </>
@@ -177,9 +204,12 @@ export default function SignIn() {
             variant="line"
             size="lg"
             loading={lineSignIn.loading}
-            disabled={anyLoading}
+            disabled={anyLoading || !agreed}
             leftIcon={<LineMark size={20} />}
-            onPress={() => lineSignIn.signIn({ redirectAfter: redirect })}
+            onPress={() => {
+              if (!requireAgree()) return;
+              lineSignIn.signIn({ redirectAfter: redirect });
+            }}
           >
             {t("signin.lineBtn")}
           </Button>
@@ -190,9 +220,12 @@ export default function SignIn() {
             variant="google"
             size="lg"
             loading={googleSignIn.loading}
-            disabled={anyLoading}
+            disabled={anyLoading || !agreed}
             leftIcon={<GoogleGMark size={20} />}
-            onPress={() => googleSignIn.signIn({ redirectAfter: redirect })}
+            onPress={() => {
+              if (!requireAgree()) return;
+              googleSignIn.signIn({ redirectAfter: redirect });
+            }}
           >
             {t("signin.googleBtn")}
           </Button>
@@ -207,13 +240,15 @@ export default function SignIn() {
           </View>
 
           <Pressable
-            disabled={anyLoading}
+            disabled={anyLoading || !agreed}
             onPress={() => {
+              if (!requireAgree()) return;
               const dest = redirect
                 ? `/signin/email?redirect=${encodeURIComponent(redirect)}`
                 : "/signin/email";
               router.push(dest as never);
             }}
+            style={{ opacity: agreed ? 1 : 0.4 }}
             className="flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-soft px-5 py-4 active:bg-border/40"
           >
             <Text className="text-[15px] font-semibold text-fg">

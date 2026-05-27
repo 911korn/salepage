@@ -36,10 +36,20 @@ export function SignInForm({
   const [email, setEmail] = useState("");
   const [pending, startTransition] = useTransition();
   const [submitting, setSubmitting] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+
+  function requireAgree() {
+    if (!agreed) {
+      toast.error(t("agreeRequired"));
+      return false;
+    }
+    return true;
+  }
 
   function onEmail(e: React.FormEvent) {
     e.preventDefault();
     if (!email) return;
+    if (!requireAgree()) return;
     setSubmitting(true);
     startTransition(async () => {
       try {
@@ -65,12 +75,25 @@ export function SignInForm({
   return (
     <div className="space-y-4">
       <InAppBrowserBanner />
+      <label className="flex items-start gap-2 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-soft)]/40 p-3 text-[13px] leading-relaxed text-zinc-700">
+        <input
+          type="checkbox"
+          checked={agreed}
+          onChange={(e) => setAgreed(e.target.checked)}
+          className="mt-[3px] size-4 shrink-0 cursor-pointer accent-rose-600"
+        />
+        <span>{t("agreeLabel")}</span>
+      </label>
       {hasLine ? (
         <Button
           variant="outline"
           size="lg"
-          className="w-full bg-[#06C755] text-white hover:bg-[#05a847] hover:text-white"
-          onClick={() => signIn("line", { callbackUrl })}
+          disabled={!agreed}
+          className="w-full bg-[#06C755] text-white hover:bg-[#05a847] hover:text-white disabled:bg-[#06C755]/40"
+          onClick={() => {
+            if (!requireAgree()) return;
+            signIn("line", { callbackUrl });
+          }}
         >
           <LineIcon className="size-5" />
           {t("withLine")}
@@ -80,12 +103,12 @@ export function SignInForm({
         <Button
           variant="outline"
           size="lg"
+          disabled={!agreed}
           className="w-full"
-          onClick={() =>
-            signIn("google", {
-              callbackUrl,
-            })
-          }
+          onClick={() => {
+            if (!requireAgree()) return;
+            signIn("google", { callbackUrl });
+          }}
         >
           <GoogleIcon className="size-5" />
           {t("withGoogle")}
@@ -107,12 +130,12 @@ export function SignInForm({
         <Button
           variant="outline"
           size="lg"
-          className="w-full bg-black text-white hover:bg-black/90 hover:text-white"
-          onClick={() =>
-            signIn("apple", {
-              callbackUrl,
-            })
-          }
+          disabled={!agreed}
+          className="w-full bg-black text-white hover:bg-black/90 hover:text-white disabled:bg-black/40"
+          onClick={() => {
+            if (!requireAgree()) return;
+            signIn("apple", { callbackUrl });
+          }}
         >
           <AppleIcon className="size-5" />
           {t("withApple")}
@@ -146,7 +169,7 @@ export function SignInForm({
             size="lg"
             className="w-full"
             loading={pending || submitting}
-            disabled={!email}
+            disabled={!email || !agreed}
           >
             {t("sendMagicLink")}
           </Button>

@@ -42,6 +42,9 @@
     "terms": "Terms",
     "and": "and",
     "privacy": "Privacy Policy",
-    "errorTitle": "Sign in failed"
+    "errorTitle": "Sign in failed",
+    "agreeLabel": "I have read and agree to the Terms of Service, including the Zero Tolerance policy on objectionable content and abusive users — and I understand I can report or block from within the app at any time.",
+    "agreeRequired": "Please accept the terms before signing in.",
+    "agreeRequiredTitle": "Acceptance required"
   }
 }

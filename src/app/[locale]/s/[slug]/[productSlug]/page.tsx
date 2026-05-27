@@ -9,6 +9,7 @@ import { CheckoutPanel } from "@/components/storefront/checkout-panel";
 import { ProductImageGallery } from "@/components/storefront/product-image-gallery";
 import { ProductTypeTag } from "@/components/buyer/product-type-tag";
 import { ShareButton } from "@/components/storefront/share-button";
+import { ReportButton } from "@/components/report/report-button";
 import { getStorefrontProductView } from "@/lib/storefront-product-view";
 import {
   absoluteStorefrontUrl,
@@ -176,6 +177,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   ) : null}
                 </Link>
                 <ShareButton title={product.name} text={shareText} url={productUrl} />
+                <ReportButton
+                  kind="PRODUCT"
+                  targetId={product.slug}
+                  label="รายงานสินค้า"
+                />
               </div>
 
               <h1 className="font-display mt-4 text-2xl font-bold tracking-tight sm:text-3xl">

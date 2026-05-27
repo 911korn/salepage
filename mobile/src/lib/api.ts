@@ -564,6 +564,24 @@ export const api = {
       ),
   },
 
+  /**
+   * Apple Guideline 1.2 — instant block. Hides the shop from the user's
+   * feeds and auto-files a HARASSMENT report so the admin queue is
+   * notified of the offending user.
+   */
+  blocks: {
+    block: (shopSlug: string) =>
+      apiFetch<{ blocked: true }>("/api/v1/blocks", {
+        method: "POST",
+        body: { shopSlug },
+      }),
+    unblock: (shopSlug: string) =>
+      apiFetch<{ blocked: false }>("/api/v1/blocks", {
+        method: "DELETE",
+        body: { shopSlug },
+      }),
+  },
+
   me: {
     /**
      * Apple Guideline 5.1.1(v) mandatory in-app account deletion. The

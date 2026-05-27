@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { ok, fail } from "@/lib/api";
 import { db, ShopStatus, ProductStatus } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { getBlockedOwnerIds } from "@/lib/blocks";
 
 /**
  * GET /api/v1/search?q=...&category=...&sort=&cursor=
@@ -35,6 +37,11 @@ export async function GET(request: Request) {
     return fail("invalid_query", "ใส่คำค้นหา (q) ด้วย", 422);
   }
   const { q, category, sort, cursor, verified, minPriceSatang, maxPriceSatang, minRating } = parsed.data;
+  const session = await auth();
+  const blockedOwnerIds = await getBlockedOwnerIds(session?.user?.id ?? null);
+  const blockFilter = blockedOwnerIds.length
+    ? { ownerId: { notIn: blockedOwnerIds } }
+    : {};
   const verifiedShopFilter = verified ? { kycStatus: "VERIFIED" as const } : {};
   const ratingFilter = minRating ? { rating: { gte: minRating } } : {};
   const priceFilter =
@@ -64,6 +71,7 @@ export async function GET(request: Request) {
             ...(category ? { category } : {}),
             ...verifiedShopFilter,
             ...ratingFilter,
+            ...blockFilter,
           },
           orderBy: [{ featured: "desc" }, { totalSold: "desc" }],
           take: 6, // shops shown as a chip rail above products
@@ -95,6 +103,7 @@ export async function GET(request: Request) {
           ...(category ? { category } : {}),
           ...verifiedShopFilter,
           ...ratingFilter,
+          ...blockFilter,
         },
         OR: [
           { name: { contains: q, mode: "insensitive" } },

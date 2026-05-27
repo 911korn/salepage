@@ -6,6 +6,7 @@ import {
   Bell,
   Building2,
   CreditCard,
+  Flag,
   Gauge,
   LogOut,
   Menu,
@@ -55,6 +56,7 @@ const NAV_SECTIONS = [
       { href: "/admin/kyc", label: "KYC review", icon: ShieldCheck },
       { href: "/admin/orders", label: "Orders", icon: Package },
       { href: "/admin/disputes", label: "Disputes", icon: ShieldAlert },
+      { href: "/admin/reports", label: "Reports", icon: Flag },
     ],
   },
   {

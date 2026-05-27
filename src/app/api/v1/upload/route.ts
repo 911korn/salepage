@@ -1,6 +1,7 @@
 import { del, put } from "@vercel/blob";
 import { ok, fail } from "@/lib/api";
 import { resolveSession } from "@/lib/api-auth";
+import { moderateImage } from "@/lib/content-moderation";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -92,6 +93,16 @@ export async function POST(request: Request) {
       "Expected multipart/form-data or application/json",
       400,
     );
+  }
+
+  // Apple Guideline 1.2 — moderate every image before it touches Blob.
+  // Videos are skipped (Claude vision doesn't take video frames in this
+  // path; mobile story flow does a separate prompt before upload).
+  if (ALLOWED_IMAGE_TYPES.has(file.type)) {
+    const verdict = await moderateImage(Buffer.from(file.bytes), file.type);
+    if (!verdict.ok) {
+      return fail("blocked_by_moderation", verdict.reason, 422);
+    }
   }
 
   // Namespace by user id so dashboards stay tidy + no path collisions.

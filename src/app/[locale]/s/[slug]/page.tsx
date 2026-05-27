@@ -22,6 +22,8 @@ import {
   storefrontPath,
 } from "@/lib/storefront-url";
 import { itemListSchema, storeSchema } from "@/lib/jsonld-shared";
+import { ReportButton } from "@/components/report/report-button";
+import { BlockButton } from "@/components/report/block-button";
 import type { Locale } from "@/i18n/routing";
 
 interface PageProps {
@@ -421,6 +423,8 @@ export default async function StorefrontPage({ params }: PageProps) {
                     {t("sold")} {shop.totalSold.toLocaleString()}+
                   </Badge>
                 ) : null}
+                <ReportButton kind="SHOP" targetId={shop.slug} label="รายงานร้าน" />
+                <BlockButton shopSlug={shop.slug} />
               </div>
             </div>
 

@@ -637,7 +637,9 @@
       "privacyLink": "Privacy Policy",
       "sentTitle": "Sign-in link sent ✉",
       "sentDesc": "Open your inbox and click the link to sign in — valid for 24 hours.",
-      "googleNotConfigured": "Google sign-in is enabled once admin adds credentials."
+      "googleNotConfigured": "Google sign-in is enabled once admin adds credentials.",
+      "agreeLabel": "I have read and agree to the Terms of Service, including the Zero Tolerance policy on objectionable content and abusive users — and I understand I can report or block from within the app at any time.",
+      "agreeRequired": "Please accept the terms before signing in."
     }
   },
   "brand": {
@@ -709,6 +711,10 @@
         {
           "h": "3. Shop content",
           "p": "Shop owners are solely responsible for the goods and services sold in their shop. Illegal goods, IP infringement, and content violating community standards are prohibited. SalePage may suspend non-compliant shops."
+        },
+        {
+          "h": "3.1 Zero tolerance for objectionable content and abusive users",
+          "p": "SalePage has zero tolerance for objectionable content or abusive users — including pornographic/sexual content, violence, harassment, hate speech against race/religion/gender, fraud, counterfeit goods, illegal goods, and photos that violate other people's privacy. Every signed-in user can (1) report objectionable content via the “Report” button on every shop/product/review/message, and (2) block abusive users — blocking instantly hides their content from your feed and notifies us. We review every report and act within 24 hours: offending content is removed and the offending user is ejected from the platform."
         },
         {
           "h": "4. Intellectual property",

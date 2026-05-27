@@ -13,7 +13,7 @@ import { VerifiedBadge, TrustMeter, RiskWarning } from "@/components/trust-badge
 import { ReviewsList } from "@/components/reviews-list";
 import { GroupBuyRail } from "@/components/group-buy-rail";
 import { ShopCover } from "@/components/shop-cover";
-import { Share2, Heart, Plus, Check, Flag } from "lucide-react-native";
+import { Share2, Heart, Plus, Check, Flag, Ban } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { i18n } from "@/lib/i18n";
 import { api, ApiClientError } from "@/lib/api";
@@ -42,6 +42,40 @@ function ShopBackFloatingButton() {
     >
       <BrandBackButton tone="light" />
     </View>
+  );
+}
+
+async function confirmBlock(slug: string, name: string) {
+  // Apple Guideline 1.2 — instant block with admin notification.
+  Alert.alert(
+    "บล็อกร้านนี้?",
+    `ร้าน ${name} จะหายจากฟีดของคุณทันที และทีมงานได้รับแจ้งให้ตรวจสอบเนื้อหา.`,
+    [
+      { text: "ยกเลิก", style: "cancel" },
+      {
+        text: "บล็อก",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const token = await getAuthToken();
+            if (!token) {
+              Alert.alert("กรุณาเข้าสู่ระบบก่อน");
+              return;
+            }
+            await api.blocks.block(slug);
+            Alert.alert(
+              "บล็อกแล้ว",
+              "ร้านนี้จะไม่ขึ้นในฟีดของคุณอีก ทีมงานได้รับแจ้งแล้ว.",
+            );
+            router.back();
+          } catch (err) {
+            const msg =
+              err instanceof ApiClientError ? err.message : "ลองใหม่อีกครั้ง";
+            Alert.alert("บล็อกไม่สำเร็จ", msg);
+          }
+        },
+      },
+    ],
   );
 }
 
@@ -137,6 +171,13 @@ export default function ShopScreen() {
               accessibilityLabel="รายงานร้านนี้"
             >
               <Flag size={15} color="#737373" strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              onPress={() => confirmBlock(shop.slug, shop.name)}
+              className="size-9 items-center justify-center rounded-full border border-border bg-white"
+              accessibilityLabel="บล็อกร้านนี้"
+            >
+              <Ban size={15} color="#737373" strokeWidth={2} />
             </Pressable>
           </View>
         </View>
