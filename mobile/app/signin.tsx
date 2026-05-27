@@ -67,19 +67,25 @@ export default function SignIn() {
   const gradientHeight = insets.top + 360;
 
   return (
-    <View className="flex-1 bg-white">
+    // Wrapper bg matches the gradient start color so the area under
+    // the iOS status bar (and any rendering gap above the LinearGradient)
+    // is still warm-pink, not jarring white (911korn 2026-05-27 "Patch
+    // กราฟฟิกตรงนี้ให้มันเต็มๆ ที").
+    <View className="flex-1" style={{ backgroundColor: "#ffe4e6" }}>
       {/* Full-bleed gradient — extends under the status bar so the back
-          button (and the iOS time) sit on warm pink, not on white. */}
+          button (and the iOS time) sit on warm pink, not on white. We
+          push it up by `insets.top` to be sure it covers the area iOS
+          reserves for the status bar. */}
       <LinearGradient
         pointerEvents="none"
-        colors={["#ffe4e6", "#fff1f2", "#ffffff"]}
-        locations={[0, 0.55, 1]}
+        colors={["#fecdd3", "#ffe4e6", "#fff1f2", "#ffffff"]}
+        locations={[0, 0.25, 0.65, 1]}
         style={{
           position: "absolute",
           left: 0,
           right: 0,
-          top: 0,
-          height: gradientHeight,
+          top: -insets.top,
+          height: gradientHeight + insets.top,
         }}
       />
 
