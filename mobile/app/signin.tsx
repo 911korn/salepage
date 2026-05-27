@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { View, Text, Linking, ScrollView, Pressable, Platform } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -37,6 +38,29 @@ export default function SignIn() {
   const googleSignIn = useGoogleSignIn();
   const appleSignIn = useAppleSignIn();
   const anyLoading = lineSignIn.loading || googleSignIn.loading || appleSignIn.loading;
+
+  // Runtime detection of the expo-apple-authentication native module —
+  // an older binary (OTA'd to a newer JS bundle) will lack the native
+  // module and the button renders as <UnimplementedView> + a red error.
+  // 911korn 2026-05-27 first encountered this on Build 5 after the
+  // Build 10 JS shipped via OTA. We only render the Apple button when
+  // `isAvailableAsync()` confirms native code is present.
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const ok = await AppleAuthentication.isAvailableAsync();
+        if (!cancelled) setAppleAvailable(Boolean(ok));
+      } catch {
+        if (!cancelled) setAppleAvailable(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Header chrome = status bar + 40px back button + 12px breathing
   const topGap = insets.top + 52;
@@ -94,8 +118,10 @@ export default function SignIn() {
           {/* Apple Sign In — iOS only (mandatory per App Store Review
               Guideline 4.8 when any other 3rd-party login is present).
               Uses the OS-native sheet with biometric auth — no password
-              typing. Rendered FIRST on iOS so Apple is happy. */}
-          {Platform.OS === "ios" ? (
+              typing. Rendered FIRST on iOS so Apple is happy.
+              Gated on `appleAvailable` so older binaries that received
+              this JS via OTA don't blow up on the missing native module. */}
+          {Platform.OS === "ios" && appleAvailable ? (
             <>
               <AppleAuthentication.AppleAuthenticationButton
                 buttonType={
