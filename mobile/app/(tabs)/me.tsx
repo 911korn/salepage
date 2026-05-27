@@ -55,45 +55,34 @@ export default function MeScreen() {
   });
   const hasShops = (ownedShopsQuery.data?.shops.length ?? 0) > 0;
 
-  function handleLogout() {
-    Alert.alert(t("auth.signOut"), t("auth.signOut") + "?", [
-      { text: t("actions.cancel"), style: "cancel" },
-      {
-        text: t("auth.signOut"),
-        style: "destructive",
-        // Sync onPress so the alert dismisses immediately; the
-        // async work runs in the background via doLogout().
-        // 911korn 2026-05-27 23:30 follow-up: previous attempt with
-        // `void clearAuthToken()` raced — useFocusEffect re-read the
-        // cached SecureStore value before the delete finished and
-        // flipped authed back to true. Now we await the keychain
-        // clear BEFORE flipping state.
-        onPress: () => {
-          void doLogout();
-        },
-      },
-    ]);
+  const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
 
-    async function doLogout() {
-      // Fire-and-forget network unregister; server-side push token
-      // cleanup is best-effort and we don't want to block UI on it.
-      void unregisterPushToken();
-      // Await the keychain delete so any subsequent getAuthToken()
-      // (e.g., from useFocusEffect on the next focus) returns null.
-      try {
-        await clearAuthToken();
-      } catch {
-        /* SecureStore can fail silently — auth state below still flips */
-      }
-      // Reset per-user device state. Persisted Zustand stores
-      // survived logout otherwise (cart, seller-mode).
-      useCart.getState().clear();
-      useSellerMode.setState({ mode: "buyer", activeShopSlug: null });
-      queryClient.clear();
-      // Last — flip authed AFTER SecureStore is actually clear, so
-      // useFocusEffect can't race-read the stale token and revert.
-      setAuthed(false);
-    }
+  // No Alert.alert — 911korn 2026-05-27 23:35: "Logout จาก LINE แล้ว
+  // ทุกอย่างค้าง" persisted through 3 OTA iterations of the Alert-
+  // based flow. The native Alert dialog appears to interact badly
+  // with /me's state-reset sequence on iOS (touch events stopped
+  // reaching the React tree after the destructive button fired).
+  // We render our own in-React confirmation banner instead, which
+  // keeps the whole flow on the JS thread and inside the React
+  // render cycle.
+  function handleLogout() {
+    setConfirmLogoutOpen(true);
+  }
+
+  async function performLogout() {
+    setConfirmLogoutOpen(false);
+    // Flip authed FIRST so the UI immediately swaps to guest view —
+    // no waiting for any async work to complete. The destructive
+    // button has already committed the user to logging out.
+    setAuthed(false);
+    // Reset per-user device state synchronously. Persisted Zustand
+    // stores survived logout otherwise (cart, seller-mode).
+    useCart.getState().clear();
+    useSellerMode.setState({ mode: "buyer", activeShopSlug: null });
+    queryClient.clear();
+    // Best-effort async cleanup — runs in the background.
+    void clearAuthToken();
+    void unregisterPushToken();
   }
 
   if (authed === null) {
@@ -320,9 +309,35 @@ export default function MeScreen() {
 
         {authed ? (
           <View className="mx-5 mt-4">
-            <Button variant="outline" onPress={handleLogout}>
-              {t("me:menu.signOut")}
-            </Button>
+            {confirmLogoutOpen ? (
+              <View className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                <Text className="text-[14px] font-semibold text-rose-900">
+                  {t("auth.signOut")}?
+                </Text>
+                <View className="mt-3 flex-row gap-2">
+                  <Pressable
+                    onPress={() => setConfirmLogoutOpen(false)}
+                    className="flex-1 items-center justify-center rounded-xl border border-border bg-white py-3"
+                  >
+                    <Text className="text-[14px] font-semibold text-fg">
+                      {t("actions.cancel")}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void performLogout()}
+                    className="flex-1 items-center justify-center rounded-xl bg-rose-600 py-3"
+                  >
+                    <Text className="text-[14px] font-semibold text-white">
+                      {t("auth.signOut")}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <Button variant="outline" onPress={handleLogout}>
+                {t("me:menu.signOut")}
+              </Button>
+            )}
           </View>
         ) : null}
       </ScrollView>
