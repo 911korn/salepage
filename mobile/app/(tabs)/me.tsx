@@ -55,24 +55,41 @@ export default function MeScreen() {
   });
   const hasShops = (ownedShopsQuery.data?.shops.length ?? 0) > 0;
 
-  async function handleLogout() {
+  function handleLogout() {
     Alert.alert(t("auth.signOut"), t("auth.signOut") + "?", [
       { text: t("actions.cancel"), style: "cancel" },
       {
         text: t("auth.signOut"),
         style: "destructive",
-        onPress: async () => {
-          await unregisterPushToken();
-          await clearAuthToken();
-          // Reset per-user device state so the next sign-in starts clean
-          // (911korn 2026-05-27: "ทดลอง Logout แล้ว Login with LINE
-          // แต่ของในตระกร้า ยังค้าง"). The Zustand cart + seller-mode
-          // stores are persisted to AsyncStorage and survived logout
-          // otherwise. React Query cache cleared right after.
-          useCart.getState().clear();
-          useSellerMode.setState({ mode: "buyer", activeShopSlug: null });
-          queryClient.clear();
-          setAuthed(false);
+        // Don't make onPress async — iOS keeps the alert overlay
+        // alive until an async onPress resolves, and a long await
+        // chain (network unregister + secureStore delete + zustand
+        // resets + query cache clear) makes the UI feel frozen
+        // (911korn 2026-05-27 23:25: "Logout แล้วทุกอย่างยังค้าง").
+        onPress: () => {
+          // Defer the work one tick so the alert fully dismisses
+          // before we start updating state — avoids the iOS
+          // alert-while-rerender deadlock.
+          setTimeout(() => {
+            // Fire-and-forget the network unregister. Server-side
+            // push token cleanup is best-effort; we don't block
+            // logout on it.
+            void unregisterPushToken();
+            void clearAuthToken();
+            useCart.getState().clear();
+            useSellerMode.setState({ mode: "buyer", activeShopSlug: null });
+            queryClient.clear();
+            setAuthed(false);
+            // Force a full navigation reset so any cached
+            // signed-in screens (cart, seller dashboard, etc.) are
+            // unmounted instead of lingering with stale auth.
+            try {
+              if (router.canDismiss()) router.dismissAll();
+            } catch {
+              /* older expo-router */
+            }
+            router.replace("/(tabs)/me");
+          }, 0);
         },
       },
     ]);
