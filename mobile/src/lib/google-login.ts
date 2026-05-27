@@ -158,10 +158,42 @@ export async function loginWithGoogle(): Promise<GoogleBridgeResult> {
       presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       dismissButtonStyle: "close",
     },
-  ).then((result) => {
-    // If the poll already wrote finalResult, leave it alone. Otherwise
-    // the user closed the browser (cancel / dismiss / type-success-but-
-    // no-token) — cancel the poll.
+  ).then(async (result) => {
+    // If the poll already wrote finalResult, leave it alone.
+    if (finalResult || finalError) {
+      cancelled = true;
+      return;
+    }
+    // 911korn 2026-05-27: the server-side complete endpoint writes the
+    // token to the bridge BEFORE returning the HTML that redirects to
+    // salepage://auth/google. So when this resolves with type "success"
+    // the token is already persisted — the poll just hasn't caught up
+    // yet (1.5s tick interval). Fetch immediately instead of treating
+    // browser-close as cancellation.
+    if (result.type === "success") {
+      try {
+        const res = await fetch(
+          `${apiBase}/api/v1/auth/mobile-bridge/poll?bridge=${encodeURIComponent(bridgeId)}`,
+        );
+        const json = (await res.json()) as ApiResp<
+          | { pending: true }
+          | { pending: false; token: string; expiresAt: string; user: GoogleBridgeResult["user"] }
+        >;
+        if (json.ok && json.data.pending === false) {
+          finalResult = {
+            token: json.data.token,
+            expiresAt: json.data.expiresAt,
+            user: json.data.user,
+          };
+        } else {
+          // Bridge wasn't ready — give the poll loop one last 1.5s shot
+          // before giving up. Most cases the next regular tick catches it.
+          await new Promise((r) => setTimeout(r, 1700));
+        }
+      } catch {
+        // Network blip — let the regular poll loop handle it.
+      }
+    }
     if (!finalResult && !finalError) {
       finalError = new GoogleLoginCancelledError();
     }
@@ -169,6 +201,10 @@ export async function loginWithGoogle(): Promise<GoogleBridgeResult> {
   });
 
   await Promise.race([pollPromise, browserPromise]);
+  // Wait for the final 1.7s grace period in the browserPromise handler
+  // above to complete if it kicked one off. The race already resolved,
+  // but the .then() that adopted the token may still be running.
+  await browserPromise;
 
   cancelled = true;
   if (pollHandle) clearTimeout(pollHandle);
