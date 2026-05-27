@@ -134,13 +134,43 @@ export async function POST(request: Request, ctx: Ctx) {
   });
 
   if (!result.verified) {
+    // Auto-verify failed AFTER we consumed quota — could be a SlipOK
+    // service blip, an unusual slip format, or a real mismatch (wrong
+    // amount / wrong receiver). We persist the slip image either way so
+    // the seller can manually review in the dashboard, and we tell the
+    // buyer that the slip is on file (911korn 2026-05-27 "ร้านฟรี ยัง
+    // ขึ้นแบบเดิม" — bulletproof every failure path, not just the
+    // pre-consume one). When the mismatch IS clearly the buyer's fault
+    // (wrong amount or wrong receiver), we still surface that so they
+    // can retry with the correct slip.
+    const hasExplicitMismatch =
+      Array.isArray(result.mismatch) && result.mismatch.length > 0;
+    await db.order.update({
+      where: { id: order.id },
+      data: {
+        slipImageUrl: uploadedSlipUrl ?? order.slipImageUrl,
+        slipProvider: result.provider,
+        slipRaw: toJson({
+          autoVerifyFailed: true,
+          reason: result.errorCode ?? "verification_failed",
+          mismatch: result.mismatch ?? [],
+          submittedAt: new Date().toISOString(),
+        }),
+      },
+    });
     return ok({
       verified: false,
+      // Soft-route to manual review when we can't pin the failure on the
+      // buyer (no explicit amount/receiver mismatch). The mobile + web
+      // checkout panels show a friendly "shop will review" message
+      // instead of a "verification failed" alert.
+      manualReview: !hasExplicitMismatch,
       status: order.status,
       mismatch: result.mismatch ?? [],
       reason: result.errorCode ?? "verification_failed",
       message: result.errorMessage,
       provider: result.provider,
+      slipImageUrl: uploadedSlipUrl ?? order.slipImageUrl,
     });
   }
 

@@ -1,8 +1,17 @@
-import { useMemo, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, Alert } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ScrollView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { router } from "expo-router";
 import { Image } from "expo-image";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
@@ -16,6 +25,7 @@ import {
 import { formatBaht } from "@/lib/format";
 import { api } from "@/lib/api";
 import { ApiClientError } from "@/lib/api";
+import { getAuthToken } from "@/lib/auth";
 import { AddressPicker } from "@/components/address-picker";
 import { CouponLoyaltyPanel } from "@/components/coupon-loyalty-panel";
 import { getActiveReferrer } from "@/lib/affiliate";
@@ -41,6 +51,27 @@ export default function CartScreen() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
+  // When the buyer taps a saved address chip we bypass AddressPicker
+  // entirely — the chip's full string goes straight into `address` and we
+  // render a compact summary with "เปลี่ยน" instead of the postcode picker.
+  // Tapping "เปลี่ยน" clears this so AddressPicker comes back (911korn
+  // 2026-05-27 "ตอนสั่งใน App มันควรจะขึ้นที่อยู่มาเลย").
+  const [presetAddress, setPresetAddress] = useState<string | null>(null);
+
+  // Pull the buyer's cross-shop address book once on mount — only fires
+  // for signed-in users (the endpoint 401s otherwise). Cached forever
+  // within the session; the buyer can tap "ใส่ใหม่" to bypass.
+  const [authed, setAuthed] = useState(false);
+  useEffect(() => {
+    void getAuthToken().then((t) => setAuthed(Boolean(t)));
+  }, []);
+  const savedAddressesQuery = useQuery({
+    queryKey: ["me", "addresses"],
+    queryFn: () => api.me.addresses(),
+    enabled: authed,
+    staleTime: 5 * 60 * 1000,
+  });
+  const savedAddresses = savedAddressesQuery.data?.addresses ?? [];
 
   // Detect cart composition so the form can swap fields on the fly:
   // any digital line → require email; any physical → require address.
@@ -249,7 +280,17 @@ export default function CartScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerClassName="pb-32">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={0}
+      >
+      <ScrollView
+        contentContainerClassName="pb-32"
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
+      >
         <View className="px-5 pt-4">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
             {t("title")}
@@ -313,19 +354,22 @@ export default function CartScreen() {
                 onRemove={() => removeLine(shop.shopSlug, it.productSlug)}
               />
             ))}
-            {/* V1.5 Protected Pay toggle per-shop. We always show the row — if
-                the shop opted out, the server returns 409 and we surface the
-                error in onError. UX-wise it's clearer than silently hiding. */}
-            <ProtectedPayToggle
-              enabled={Boolean(shopProtect[shop.shopSlug])}
-              shopSubtotal={shop.subtotalSatang}
-              onToggle={(next) =>
-                setShopProtect((prev) => ({
-                  ...prev,
-                  [shop.shopSlug]: next,
-                }))
-              }
-            />
+            {/* V1.5 Protected Pay toggle — hidden 2026-05-27 until the
+                user base is large enough that the +1.5% friction is offset
+                by the dispute-protection benefit (911korn "hide ระบบนี้
+                ไว้ก่อนคนเยอะๆค่อยกลับมาใช้"). Server still honors the
+                useEscrow field if passed, so this is a UI-only hide.
+                <ProtectedPayToggle
+                  enabled={Boolean(shopProtect[shop.shopSlug])}
+                  shopSubtotal={shop.subtotalSatang}
+                  onToggle={(next) =>
+                    setShopProtect((prev) => ({
+                      ...prev,
+                      [shop.shopSlug]: next,
+                    }))
+                  }
+                />
+            */}
             {/* V1.1 per-shop coupon + loyalty. Each shop runs its own catalog
                 + wallet so this panel is repeated for every shop in the bag. */}
             <View className="border-t border-border">
@@ -387,18 +431,63 @@ export default function CartScreen() {
           <Text className="text-[13px] font-semibold uppercase tracking-wider text-muted">
             {t("recipient")}
           </Text>
-          <FieldInput
-            label={t("nameLabel")}
-            value={name}
-            onChangeText={setName}
-            placeholder={t("namePlaceholder")}
-          />
+          {/* Phone-first flow (911korn 2026-05-27 "Flow มันควรจะเป็นเหมือนเว็บ
+              ที่ใส่เบอร์อันดับแรก"). Buyers usually remember their phone
+              before their full address, and entering it surfaces saved
+              addresses below so they can one-tap fill. */}
           <FieldInput
             label={t("phoneLabel")}
             value={phone}
             onChangeText={setPhone}
             placeholder={t("phonePlaceholder")}
             keyboardType="phone-pad"
+          />
+          {/* Saved-address chips — visible only when (a) the buyer is signed
+              in, (b) they have past orders with addresses, (c) they haven't
+              already picked one this session. Tapping fills name + phone +
+              email (if available) + address in one go, then collapses the
+              postcode picker. */}
+          {authed && savedAddresses.length > 0 && !presetAddress && hasPhysical ? (
+            <View className="mt-3 gap-2">
+              <Text className="text-[11px] font-semibold text-muted">
+                ใช้ที่อยู่ที่เคยส่ง
+              </Text>
+              {savedAddresses.slice(0, 3).map((a) => (
+                <Pressable
+                  key={a.id}
+                  onPress={() => {
+                    setName(a.name);
+                    if (a.phone && !phone) setPhone(a.phone);
+                    setAddress(a.address);
+                    setPresetAddress(a.address);
+                  }}
+                  className="rounded-2xl border border-border bg-soft px-3 py-2.5"
+                >
+                  <Text
+                    className="text-[13px] font-semibold text-fg"
+                    numberOfLines={1}
+                  >
+                    {a.name}
+                    {a.phone ? ` · ${a.phone}` : ""}
+                  </Text>
+                  <Text
+                    className="mt-0.5 text-[11px] text-muted"
+                    numberOfLines={2}
+                  >
+                    {a.address}
+                  </Text>
+                </Pressable>
+              ))}
+              <Text className="mt-1 text-[11px] text-muted">
+                หรือกรอกใหม่ด้านล่าง
+              </Text>
+            </View>
+          ) : null}
+          <FieldInput
+            label={t("nameLabel")}
+            value={name}
+            onChangeText={setName}
+            placeholder={t("namePlaceholder")}
           />
           {/* Email is required for any cart that contains a DIGITAL line
               — that's the channel the fulfillment content lands on. We
@@ -423,8 +512,35 @@ export default function CartScreen() {
             />
           ) : null}
           {/* Postcode-driven address only needed when something must
-              actually be shipped. Pure-digital carts skip it entirely. */}
-          {hasPhysical ? (
+              actually be shipped. Pure-digital carts skip it entirely.
+              If a saved address was tapped above, we render its summary
+              instead — the buyer can tap "เปลี่ยน" to bring back the
+              postcode picker. */}
+          {hasPhysical && presetAddress ? (
+            <View className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+              <View className="flex-row items-start justify-between gap-2">
+                <View className="flex-1">
+                  <Text className="text-[11px] font-semibold text-emerald-700">
+                    ✓ ที่อยู่จัดส่ง
+                  </Text>
+                  <Text className="mt-1 text-[12px] leading-relaxed text-emerald-900">
+                    {presetAddress}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => {
+                    setPresetAddress(null);
+                    setAddress("");
+                  }}
+                  hitSlop={8}
+                >
+                  <Text className="text-[12px] font-semibold text-emerald-700">
+                    เปลี่ยน
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : hasPhysical ? (
             <AddressPicker value={address} onChange={setAddress} />
           ) : null}
         </View>
@@ -480,6 +596,7 @@ export default function CartScreen() {
           ) : null}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <View className="absolute bottom-0 left-0 right-0 border-t border-border bg-white px-4 py-3 pb-6">
         <Button
