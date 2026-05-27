@@ -272,12 +272,13 @@ function RootLayout() {
             <Stack.Screen
               name="signin"
               options={{
-                // Modal presentation — 911korn 2026-05-26: "หน้านี้ใช้
-                // เป็น modal ไปเลยจะสวยกว่า". The signin sheet now slides
-                // up from the bottom on iOS, with the floating
-                // BrandBackButton (white pill + brand-rose accent) as
-                // the dismiss affordance instead of the default chevron.
-                presentation: "modal",
+                // Full-screen modal — 911korn 2026-05-27 "Patch กราฟฟิก
+                // ตรงนี้ให้มันเต็มๆ ที / มันสูงขึ้นแทน". The card-style
+                // modal exposed the previous screen's white background
+                // above the sheet, leaving an unbranded strip under the
+                // status bar. fullScreenModal covers the entire viewport
+                // so the pink gradient bleeds all the way to the top.
+                presentation: "fullScreenModal",
                 headerTransparent: true,
                 headerTitle: "",
                 headerBackButtonDisplayMode: "minimal",
