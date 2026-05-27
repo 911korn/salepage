@@ -39,7 +39,19 @@ export default function CartScreen() {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
+
+  // Detect cart composition so the form can swap fields on the fly:
+  // any digital line → require email; any physical → require address.
+  // A mixed cart (digital + physical) asks for both.
+  const hasDigital = shopList.some((s) =>
+    s.items.some((it) => it.type === "DIGITAL"),
+  );
+  const hasPhysical = shopList.some((s) =>
+    s.items.some((it) => it.type !== "DIGITAL"),
+  );
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   // Per-shop notes — keyed by shopSlug. Sent through to the order so the
   // shop sees customer-specific instructions ("รอฝากหน้าร้าน", "ไม่บีบขนาด", etc.).
   // Cleared automatically when the shop is removed from the cart.
@@ -113,7 +125,8 @@ export default function CartScreen() {
             })),
             customerName: name.trim(),
             customerPhone: phone.trim() || undefined,
-            customerAddress: address.trim() || undefined,
+            customerEmail: email.trim() || undefined,
+            customerAddress: hasPhysical ? address.trim() || undefined : undefined,
             notes: shopNotes[slug]?.trim() || undefined,
             couponCode: appliedCoupons[slug]?.code || undefined,
             redeemPoints: points > 0 ? points : undefined,
@@ -140,7 +153,8 @@ export default function CartScreen() {
         return api.orders.createMulti({
           customerName: name.trim(),
           customerPhone: phone.trim() || undefined,
-          customerAddress: address.trim() || undefined,
+          customerEmail: email.trim() || undefined,
+          customerAddress: hasPhysical ? address.trim() || undefined : undefined,
           shops: shopList.map((shop) => {
             const points = redeemPointsByShop[shop.shopSlug] ?? 0;
             return {
@@ -217,7 +231,14 @@ export default function CartScreen() {
     );
   }
 
-  const canCheckout = name.trim().length >= 2;
+  // Email required when any digital line is in the bag — we have to
+  // know where to deliver the fulfillment content. Address required
+  // when there's any physical line (still need to ship). Pure digital
+  // carts skip the address altogether.
+  const canCheckout =
+    name.trim().length >= 2 &&
+    (!hasDigital || isEmailValid) &&
+    (!hasPhysical || address.trim().length >= 5);
 
   return (
     <Screen>
@@ -372,9 +393,33 @@ export default function CartScreen() {
             placeholder={t("phonePlaceholder")}
             keyboardType="phone-pad"
           />
-          {/* Postcode-driven autocomplete (V0.5 polish). Composes the final
-              address string before we POST so the server gets a single field. */}
-          <AddressPicker value={address} onChange={setAddress} />
+          {/* Email is required for any cart that contains a DIGITAL line
+              — that's the channel the fulfillment content lands on. We
+              show it above the address field so the buyer fills it
+              first when the form context is digital-heavy (911korn
+              2026-05-27 "ก็ต้องเป็น e-mail แทนเพื่อรับ"). */}
+          {hasDigital ? (
+            <View className="mt-3 rounded-2xl border border-violet-200 bg-violet-50 px-3 py-2">
+              <Text className="text-[11px] leading-relaxed text-violet-900">
+                ตะกร้านี้มีสินค้าดิจิทัล — ระบบจะส่งเนื้อหา (ID/PW, ลิงก์,
+                license key ฯลฯ) ไปยังอีเมลนี้ทันทีที่สลิปผ่าน
+              </Text>
+            </View>
+          ) : null}
+          {hasDigital ? (
+            <FieldInput
+              label="อีเมล (สำหรับรับสินค้าดิจิทัล)"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              keyboardType="default"
+            />
+          ) : null}
+          {/* Postcode-driven address only needed when something must
+              actually be shipped. Pure-digital carts skip it entirely. */}
+          {hasPhysical ? (
+            <AddressPicker value={address} onChange={setAddress} />
+          ) : null}
         </View>
 
         <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">

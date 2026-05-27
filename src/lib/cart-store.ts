@@ -19,6 +19,12 @@ export interface CartLine {
   priceSatang: number;
   imageUrl: string | null;
   qty: number;
+  /**
+   * Product type at add-to-cart time. Drives the checkout form
+   * (digital carts ask for email instead of shipping address). Falls
+   * back to PHYSICAL for legacy lines persisted before V2.1.
+   */
+  type?: "PHYSICAL" | "DIGITAL";
 }
 
 export interface CartShop {

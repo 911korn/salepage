@@ -27,10 +27,21 @@ export function CartView() {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Digital-aware: any digital line → require email (the delivery
+  // channel). Any physical → require address. Mixed asks for both.
+  const hasDigital = shopList.some((s) =>
+    s.items.some((it) => it.type === "DIGITAL"),
+  );
+  const hasPhysical = shopList.some((s) =>
+    s.items.some((it) => it.type !== "DIGITAL"),
+  );
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   const router = useRouter();
 
@@ -38,6 +49,14 @@ export function CartView() {
     if (shopList.length === 0) return;
     if (name.trim().length < 2) {
       setError("กรุณากรอกชื่อผู้รับ");
+      return;
+    }
+    if (hasDigital && !isEmailValid) {
+      setError("กรอกอีเมลให้ถูกต้อง — เราจะส่งสินค้าดิจิทัลไปที่นี่");
+      return;
+    }
+    if (hasPhysical && address.trim().length < 5) {
+      setError("กรอกที่อยู่จัดส่ง");
       return;
     }
     setError(null);
@@ -60,7 +79,8 @@ export function CartView() {
             })),
             customerName: name.trim(),
             customerPhone: phone.trim() || undefined,
-            customerAddress: address.trim() || undefined,
+            customerEmail: email.trim() || undefined,
+            customerAddress: hasPhysical ? address.trim() || undefined : undefined,
             notes: notes[shop.shopSlug]?.trim() || undefined,
           }),
         });
@@ -83,7 +103,8 @@ export function CartView() {
           body: JSON.stringify({
             customerName: name.trim(),
             customerPhone: phone.trim() || undefined,
-            customerAddress: address.trim() || undefined,
+            customerEmail: email.trim() || undefined,
+            customerAddress: hasPhysical ? address.trim() || undefined : undefined,
             shops: shopList.map((shop) => ({
               shopSlug: shop.shopSlug,
               items: shop.items.map((it) => ({
@@ -266,12 +287,30 @@ export function CartView() {
               placeholder="0xx-xxx-xxxx"
               inputMode="tel"
             />
-            <FormField
-              label="ที่อยู่จัดส่ง"
-              value={address}
-              onChange={setAddress}
-              multiline
-            />
+            {hasDigital ? (
+              <>
+                <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-[11px] leading-relaxed text-violet-900">
+                  ตะกร้านี้มีสินค้าดิจิทัล — ระบบจะส่งเนื้อหา (ID/PW, ลิงก์,
+                  license key ฯลฯ) ไปยังอีเมลทันทีที่สลิปผ่าน
+                </div>
+                <FormField
+                  label="อีเมล (สำหรับรับสินค้าดิจิทัล)"
+                  value={email}
+                  onChange={setEmail}
+                  placeholder="you@example.com"
+                  required
+                />
+              </>
+            ) : null}
+            {hasPhysical ? (
+              <FormField
+                label="ที่อยู่จัดส่ง"
+                value={address}
+                onChange={setAddress}
+                multiline
+                required
+              />
+            ) : null}
           </div>
           <div className="rounded-3xl border border-[color:var(--color-border)] bg-white p-5">
             <h2 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
@@ -298,7 +337,12 @@ export function CartView() {
             ) : null}
             <button
               onClick={placeOrder}
-              disabled={submitting || name.trim().length < 2}
+              disabled={
+                submitting ||
+                name.trim().length < 2 ||
+                (hasDigital && !isEmailValid) ||
+                (hasPhysical && address.trim().length < 5)
+              }
               className="mt-4 w-full rounded-2xl bg-[color:var(--color-brand)] py-3 text-sm font-semibold text-white disabled:opacity-50"
             >
               {submitting
