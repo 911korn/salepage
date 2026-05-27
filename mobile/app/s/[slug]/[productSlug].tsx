@@ -31,6 +31,8 @@ import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { ProductImageGallery } from "@/components/product-image-gallery";
 import { ProductTypeTag } from "@/components/product-type-tag";
+import { ReportSheet } from "@/components/report-sheet";
+import { Flag } from "lucide-react-native";
 import { api } from "@/lib/api";
 import { formatBaht } from "@/lib/format";
 import { shareProduct } from "@/lib/share";
@@ -238,6 +240,7 @@ export default function ProductScreen() {
   // "Add to cart" + "Buy now" buttons share a single in-flight animation.
   const cartScale = useSharedValue(1);
   const [flying, setFlying] = useState<{ uri: string; startY: number; id: number } | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const bounceCart = useCallback(() => {
     cartScale.value = withSequence(
@@ -521,8 +524,26 @@ export default function ProductScreen() {
               </Text>
             </View>
           ) : null}
+
+          {/* Apple Guideline 1.2 — UGC report affordance. Subtle so it
+              doesn't compete with the BUY flow, but visible on every
+              product page so any buyer can flag inappropriate content. */}
+          <Pressable
+            onPress={() => setReportOpen(true)}
+            className="mt-4 flex-row items-center justify-center gap-1.5 py-3"
+          >
+            <Flag size={13} color="#737373" strokeWidth={2} />
+            <Text className="text-[12px] text-muted">รายงานสินค้านี้</Text>
+          </Pressable>
         </View>
       </ScrollView>
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        kind="PRODUCT"
+        targetId={product.slug}
+        targetLabel={product.name}
+      />
 
       {/* Sticky Add-to-Cart bar — lifted above iOS home indicator
           (same pattern as cart confirmation CTA). */}

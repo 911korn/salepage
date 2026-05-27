@@ -22,6 +22,9 @@ export {
   LiveBroadcastStatus,
   EscrowStatus,
   GroupBuyStatus,
+  ContentReportKind,
+  ContentReportReason,
+  ContentReportStatus,
 } from "@/generated/prisma";
 
 function makeClient() {

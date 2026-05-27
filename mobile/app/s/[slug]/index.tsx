@@ -2,17 +2,18 @@ import { useLocalSearchParams, router, Link } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { Image } from "expo-image";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { safeBack } from "@/lib/safe-back";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { BrandBackButton } from "@/components/ui/back-button";
+import { ReportSheet } from "@/components/report-sheet";
 import { VerifiedBadge, TrustMeter, RiskWarning } from "@/components/trust-badge";
 import { ReviewsList } from "@/components/reviews-list";
 import { GroupBuyRail } from "@/components/group-buy-rail";
 import { ShopCover } from "@/components/shop-cover";
-import { Share2, Heart, Plus, Check } from "lucide-react-native";
+import { Share2, Heart, Plus, Check, Flag } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { i18n } from "@/lib/i18n";
 import { api, ApiClientError } from "@/lib/api";
@@ -47,6 +48,7 @@ function ShopBackFloatingButton() {
 export default function ShopScreen() {
   const { t } = useTranslation(["shop", "common"]);
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  const [reportOpen, setReportOpen] = useState(false);
   const { data, isLoading, error } = useQuery({
     queryKey: ["shop", slug],
     queryFn: () => api.shop.get(slug!),
@@ -121,13 +123,22 @@ export default function ShopScreen() {
               <Text className="mt-0.5 text-[13px] text-muted">{shop.category}</Text>
             ) : null}
           </View>
-          <Pressable
-            onPress={() => shareShop(shop.slug, shop.name)}
-            className="size-9 items-center justify-center rounded-full border border-border bg-white"
-            accessibilityLabel={t("share")}
-          >
-            <Share2 size={16} color="#0a0a0a" strokeWidth={2} />
-          </Pressable>
+          <View className="flex-row gap-1.5">
+            <Pressable
+              onPress={() => shareShop(shop.slug, shop.name)}
+              className="size-9 items-center justify-center rounded-full border border-border bg-white"
+              accessibilityLabel={t("share")}
+            >
+              <Share2 size={16} color="#0a0a0a" strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              onPress={() => setReportOpen(true)}
+              className="size-9 items-center justify-center rounded-full border border-border bg-white"
+              accessibilityLabel="รายงานร้านนี้"
+            >
+              <Flag size={15} color="#737373" strokeWidth={2} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Follow + follower count */}
@@ -223,6 +234,13 @@ export default function ShopScreen() {
         <ReviewsList slug={shop.slug} limit={6} />
       </View>
 
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        kind="SHOP"
+        targetId={shop.slug}
+        targetLabel={shop.name}
+      />
     </Screen>
   );
 }

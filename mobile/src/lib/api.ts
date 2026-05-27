@@ -539,7 +539,44 @@ export const api = {
       }),
   },
 
+  /**
+   * UGC moderation (Apple Guideline 1.2). File a report against any
+   * content the buyer/seller considers objectionable. Throttled to
+   * one report per target per 24h server-side.
+   */
+  reports: {
+    file: (input: {
+      kind: "SHOP" | "PRODUCT" | "REVIEW" | "STORY" | "LIVE_COMMENT";
+      targetId: string;
+      reason:
+        | "SPAM"
+        | "INAPPROPRIATE"
+        | "COUNTERFEIT"
+        | "HARASSMENT"
+        | "ILLEGAL"
+        | "MISLEADING"
+        | "OTHER";
+      note?: string;
+    }) =>
+      apiFetch<{ reported?: true; alreadyReported?: true }>(
+        "/api/v1/reports",
+        { method: "POST", body: input },
+      ),
+  },
+
   me: {
+    /**
+     * Apple Guideline 5.1.1(v) mandatory in-app account deletion. The
+     * server soft-deletes the user + suspends their shops + severs
+     * OAuth links. Client follows up by clearing SecureStore +
+     * reloading the JS bundle.
+     */
+    deleteAccount: () =>
+      apiFetch<{ deleted: true; deletedAt: string }>(
+        "/api/v1/me/delete-account",
+        { method: "POST" },
+      ),
+
     registerPushToken: (token: string) =>
       apiFetch<{ registered: true }>("/api/v1/me/push-token", {
         method: "POST",

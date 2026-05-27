@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Linking,
+  Alert,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
@@ -100,6 +101,34 @@ export default function MeScreen() {
       // best-effort state reset so the dev experience still works.
       queryClient.clear();
       setAuthed(false);
+    }
+  }
+
+  // Apple Guideline 5.1.1(v): in-app account deletion. Same UX shape
+  // as logout (inline confirm card) but with sharper warning copy +
+  // a separate "confirm" state so the buyer can't accidentally tap
+  // through. After server returns, we reload the bundle to land on a
+  // fully fresh guest state.
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function performDeleteAccount() {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await api.me.deleteAccount();
+      // Sever local state in the same order as logout.
+      await clearAuthToken().catch(() => undefined);
+      void unregisterPushToken();
+      useCart.getState().clear();
+      useSellerMode.setState({ mode: "buyer", activeShopSlug: null });
+      await Updates.reloadAsync();
+    } catch (e) {
+      setDeleting(false);
+      Alert.alert(
+        "ลบบัญชีไม่สำเร็จ",
+        e instanceof Error ? e.message : "กรุณาลองใหม่อีกครั้ง",
+      );
     }
   }
 
@@ -312,15 +341,15 @@ export default function MeScreen() {
 
         <View className="mx-5 mt-4 overflow-hidden rounded-3xl border border-border bg-white">
           <MenuItem
-            label="Terms"
+            label={t("me:menu.terms")}
             onPress={() => Linking.openURL("https://salepage.in.th/terms")}
           />
           <MenuItem
-            label="Privacy"
+            label={t("me:menu.privacy")}
             onPress={() => Linking.openURL("https://salepage.in.th/privacy")}
           />
           <MenuItem
-            label="Contact"
+            label={t("me:menu.contact")}
             onPress={() => Linking.openURL("https://salepage.in.th/contact")}
           />
         </View>
@@ -355,6 +384,60 @@ export default function MeScreen() {
               <Button variant="outline" onPress={handleLogout}>
                 {t("me:menu.signOut")}
               </Button>
+            )}
+          </View>
+        ) : null}
+
+        {/* Account deletion — Apple Guideline 5.1.1(v). Placed below
+            sign-out, with a separate inline confirm so it can't be
+            tapped through. Sharper warning than logout (this is
+            destructive + irreversible). */}
+        {authed ? (
+          <View className="mx-5 mt-3">
+            {confirmDeleteOpen ? (
+              <View className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4">
+                <Text className="text-[15px] font-bold text-rose-900">
+                  ลบบัญชีนี้ถาวร?
+                </Text>
+                <Text className="mt-2 text-[12px] leading-relaxed text-rose-900">
+                  • ออเดอร์เก่า + รีวิว + ที่อยู่จะถูกลบ{"\n"}
+                  • ร้านค้าของคุณ (ถ้ามี) จะถูกปิดทันที{"\n"}
+                  • LINE / Google / Apple ของคุณจะถูกถอด — เปิดบัญชีใหม่ได้ภายหลัง{"\n"}
+                  • การลบนี้ไม่สามารถย้อนกลับได้
+                </Text>
+                <View className="mt-3 flex-row gap-2">
+                  <Pressable
+                    onPress={() => setConfirmDeleteOpen(false)}
+                    disabled={deleting}
+                    className="flex-1 items-center justify-center rounded-xl border border-border bg-white py-3"
+                  >
+                    <Text className="text-[14px] font-semibold text-fg">
+                      ยกเลิก
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void performDeleteAccount()}
+                    disabled={deleting}
+                    className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-rose-700 py-3"
+                  >
+                    {deleting ? (
+                      <ActivityIndicator color="#ffffff" size="small" />
+                    ) : null}
+                    <Text className="text-[14px] font-semibold text-white">
+                      {deleting ? "กำลังลบ..." : "ลบบัญชีถาวร"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => setConfirmDeleteOpen(true)}
+                className="items-center py-3"
+              >
+                <Text className="text-[13px] font-medium text-rose-700 underline">
+                  {t("me:menu.deleteAccount")}
+                </Text>
+              </Pressable>
             )}
           </View>
         ) : null}

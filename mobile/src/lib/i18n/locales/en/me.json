@@ -13,6 +13,10 @@
     "kyc": "Identity verification (KYC)",
     "language": "Language",
     "sellerMode": "Seller mode",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "contact": "Contact",
+    "deleteAccount": "Delete account",
     "signOut": "Sign out"
   }
 }

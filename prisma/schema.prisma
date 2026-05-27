@@ -41,6 +41,14 @@ model User {
   // signIn callback; does not delete data.
   suspended Boolean @default(false)
 
+  // User-initiated soft delete (Apple Guideline 5.1.1(v) — mandatory
+  // in-app account deletion since June 2022). Set when the buyer taps
+  // "ลบบัญชี" in /me. We blank out PII (email, name, image, lineUserId,
+  // expoPushToken) atomically with this flag flip; the record itself is
+  // kept so foreign keys on orders/reviews/shops survive. A nightly cron
+  // hard-deletes rows where deletedAt is older than 30 days.
+  deletedAt DateTime?
+
   // Expo push notification token (set by mobile app on launch).
   // Cleared on logout via DELETE /api/v1/me/push-token. Single device for now;
   // multi-device support lands when we add a separate UserDevice model.
@@ -73,6 +81,13 @@ model User {
 
   // V2.1 email-OTP login — code requests issued for this user's email.
   emailOtps EmailLoginOtp[] @relation("EmailLoginOtpUser")
+
+  // V2.2 UGC moderation (Apple Guideline 1.2). Reports authored by
+  // this user against shops/products/reviews/stories/live-comments.
+  reportsFiled ContentReport[] @relation("ReportReporter")
+  // Shops the buyer has blocked — hidden from their feeds + search.
+  blocks       UserBlock[]    @relation("Blocker")
+  blockedBy    UserBlock[]    @relation("Blockee")
 }
 
 enum UserRole {
@@ -1302,4 +1317,85 @@ model EmailLoginOtp {
   @@index([email, createdAt])
   @@index([expiresAt])
   @@index([userId])
+}
+
+// V2.2 — UGC moderation (Apple Guideline 1.2). Buyers + sellers can
+// report any user-generated content (shop, product, review, story,
+// live comment) and block other users they don't want to see.
+//
+// Apple expects:
+//   - In-app report → reaches an operator within 24h
+//   - In-app block → immediately hides the blocked party from the
+//     reporter's feeds + comments
+//   - Terms of Service that explicitly forbid objectionable content
+//
+// We satisfy the 24h commitment via an admin queue at /admin/reports
+// that pages super-admins on new entries.
+model ContentReport {
+  id          String           @id @default(cuid())
+  reporterId  String
+  reporter    User             @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  // Target — exactly one of these is set per the kind.
+  kind        ContentReportKind
+  // For SHOP / PRODUCT this is the shop slug + optional product slug.
+  shopId      String?
+  productId   String?
+  reviewId    String?
+  storyId     String?
+  liveCommentId String?
+  // Operator-canonical reason code so the admin queue can be filtered.
+  reason      ContentReportReason
+  // Free-text detail from the reporter. Limited to 1000 chars client-side.
+  note        String?         @db.Text
+  status      ContentReportStatus @default(OPEN)
+  // Set when an admin acts on the report.
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  resolutionNote String?      @db.Text
+  createdAt   DateTime         @default(now())
+
+  @@index([status, createdAt])
+  @@index([reporterId, createdAt])
+  @@index([kind, status])
+}
+
+enum ContentReportKind {
+  SHOP
+  PRODUCT
+  REVIEW
+  STORY
+  LIVE_COMMENT
+}
+
+enum ContentReportReason {
+  SPAM
+  INAPPROPRIATE
+  COUNTERFEIT
+  HARASSMENT
+  ILLEGAL
+  MISLEADING
+  OTHER
+}
+
+enum ContentReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED_REMOVED
+  RESOLVED_KEPT
+  DUPLICATE
+}
+
+// User-to-shop block. Once present, the blocked shop disappears from
+// the reporter's discovery feed + search results, and the reporter's
+// comments/reviews on that shop are hidden from the shop owner.
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockeeId String
+  blockee   User     @relation("Blockee", fields: [blockeeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockeeId])
+  @@index([blockerId])
 }

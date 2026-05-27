@@ -132,6 +132,21 @@ export const authConfig: NextAuthConfig = {
       }
       return session;
     },
+    // Block sign-in for suspended OR soft-deleted users. Soft-deleted
+    // users had their PII wiped via /api/v1/me/delete-account — if they
+    // attempt to OAuth back into the same provider, the PrismaAdapter
+    // would match by providerAccountId and try to re-bind to the dead
+    // row. Reject here so they get a fresh User row via re-signup.
+    async signIn({ user }) {
+      if (!user?.id) return true;
+      const row = await db.user.findUnique({
+        where: { id: user.id },
+        select: { suspended: true, deletedAt: true },
+      });
+      if (row?.suspended) return false;
+      if (row?.deletedAt) return false;
+      return true;
+    },
   },
 };
 
