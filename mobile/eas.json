@@ -29,13 +29,16 @@
         "resourceClass": "m-medium"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://salepage.in.th"
+        "EXPO_PUBLIC_API_BASE_URL": "https://salepage.in.th",
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   },
   "submit": {
     "production": {
       "ios": {
+        "ascAppId": "6773590301",
         "appleTeamId": "MR3FF57WDB",
         "ascApiKeyPath": "./credentials/AuthKey_6R5FJ3YKJ5.p8",
         "ascApiKeyId": "6R5FJ3YKJ5",
