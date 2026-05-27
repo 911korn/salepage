@@ -77,6 +77,27 @@ if (hasLineConfig) {
       clientId: process.env.LINE_LOGIN_CHANNEL_ID!,
       clientSecret: process.env.LINE_LOGIN_CHANNEL_SECRET!,
       allowDangerousEmailAccountLinking: true,
+      // LINE only releases `email` when the channel has "Email address
+      // permission" approved (a separate Apply step in the LINE Developer
+      // Console). For channels still pending approval, we synthesize an
+      // email from the LINE userId — matches the existing LIFF mobile
+      // flow at /api/v1/auth/mobile-bridge/line-liff so signing in via
+      // either surface lands on the same User row. Without this fallback
+      // NextAuth's PrismaAdapter tries to insert User.email=null and
+      // crashes because the column is @unique String (NOT NULL).
+      profile(profile: {
+        sub: string;
+        name?: string;
+        email?: string;
+        picture?: string;
+      }) {
+        return {
+          id: profile.sub,
+          name: profile.name ?? null,
+          email: profile.email ?? `${profile.sub}@line.salepage.in.th`,
+          image: profile.picture ?? null,
+        };
+      },
     }),
   );
 }
