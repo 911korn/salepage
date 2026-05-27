@@ -13,6 +13,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { SuggestedSlip } from "@/components/suggested-slip";
+import { CheckoutTutorialModal } from "@/components/checkout-tutorial-modal";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import {
@@ -164,6 +165,7 @@ export default function CheckoutPayScreen() {
 
   return (
     <Screen>
+      <CheckoutTutorialModal />
       <ScrollView contentContainerClassName="pb-24">
         <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">

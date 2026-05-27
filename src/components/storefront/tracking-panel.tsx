@@ -14,6 +14,7 @@ import jsQR from "jsqr";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
+import { CheckoutTutorialModal } from "@/components/storefront/checkout-tutorial-modal";
 
 interface Props {
   token: string;
@@ -123,6 +124,7 @@ export function TrackingPanel({
 
   return (
     <div className="space-y-4">
+      <CheckoutTutorialModal />
       {/* QR section */}
       <section className="rounded-3xl border border-[color:var(--color-brand-200)] bg-gradient-to-br from-rose-50 via-white to-rose-50 p-5 shadow-xl shadow-rose-100/40 sm:p-7">
         <div className="flex items-center justify-between">
