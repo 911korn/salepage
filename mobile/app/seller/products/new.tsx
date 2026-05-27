@@ -108,7 +108,7 @@ export default function NewProductScreen() {
     const placeholderIdx = images.length;
     setImages((prev) => [...prev, { uri, url: "", status: "uploading" }]);
     try {
-      const { base64 } = await compressForSlipUpload(uri);
+      const { base64 } = await compressForSlipUpload(uri, "product");
       const res = await api.upload.fromBase64({
         filename: `product-${Date.now()}.jpg`,
         contentType: "image/jpeg",
@@ -224,8 +224,7 @@ export default function NewProductScreen() {
             ถ่ายรูป → ตั้งราคา → ขึ้นร้าน
           </Text>
           <Text className="mt-1 text-[12px] leading-relaxed text-muted">
-            อัปโหลดได้สูงสุด {MAX_IMAGES} รูป — ระบบบีบรูปอัตโนมัติให้เหลือ ~200 KB
-            ก่อนส่งเข้า Vercel Blob ที่ Singapore
+            อัปโหลดได้สูงสุด {MAX_IMAGES} รูป · ระบบบีบรูปให้เบาอัตโนมัติ
           </Text>
         </View>
 

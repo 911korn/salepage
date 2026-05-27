@@ -151,7 +151,7 @@ export default function EditProductScreen() {
     const placeholderIdx = images.length;
     setImages((prev) => [...prev, { uri, url: "", status: "uploading" }]);
     try {
-      const { base64 } = await compressForSlipUpload(uri);
+      const { base64 } = await compressForSlipUpload(uri, "product");
       const res = await api.upload.fromBase64({
         filename: `product-${Date.now()}.jpg`,
         contentType: "image/jpeg",

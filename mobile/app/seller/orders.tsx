@@ -450,7 +450,7 @@ const OrderCard = memo(function OrderCard({
               className="items-center justify-center rounded-xl bg-zinc-900 px-4 py-3"
             >
               <Text className="text-[13px] font-bold text-white">
-                ออกใบปะหน้าอัตโนมัติ (EasyParcel) →
+                ออกใบปะหน้าอัตโนมัติ →
               </Text>
             </Pressable>
             <View className="flex-row items-center gap-2 rounded-xl border border-border bg-white px-3 py-2">

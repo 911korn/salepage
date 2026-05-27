@@ -158,7 +158,7 @@ export function EasyParcelPanel({ token, initialAwb, initialLabelUrl }: Props) {
     <section className="rounded-3xl border border-zinc-900 bg-zinc-900 p-5 text-white">
       <div className="flex items-center gap-2">
         <Truck className="size-5" />
-        <h2 className="text-base font-bold">ออกใบปะหน้าอัตโนมัติ · EasyParcel</h2>
+        <h2 className="text-base font-bold">ออกใบปะหน้าอัตโนมัติ</h2>
       </div>
       <p className="mt-1 text-[12px] leading-relaxed text-zinc-300">
         เลือกขนส่ง → ปริ๊นใบปะหน้า → drop-off · เฉพาะแผน Pro+

@@ -23,7 +23,7 @@ import * as ImageManipulator from "expo-image-manipulator";
  */
 export async function compressForSlipUpload(
   uri: string,
-  mode: "slip" | "banner" | "thumb" = "slip",
+  mode: "slip" | "banner" | "product" | "thumb" = "slip",
 ): Promise<{ uri: string; base64: string }> {
   const preset = COMPRESSION_PRESETS[mode];
   const result = await ImageManipulator.manipulateAsync(
@@ -44,6 +44,12 @@ export async function compressForSlipUpload(
 const COMPRESSION_PRESETS = {
   slip: { width: 1600, quality: 0.82 },
   banner: { width: 1280, quality: 0.78 },
+  // Product photo preset — slightly smaller than slip to make multi-image
+  // uploads (up to 5 per product) finish quickly. 1200px is ~2x the
+  // largest visible render size (storefront detail gallery at 600px on
+  // 3x retina) and lands at ~70-160 KB per image. 911korn 2026-05-27
+  // "อัพทีละรูปได้หลายรูปช้า ถึง ค้าง".
+  product: { width: 1200, quality: 0.78 },
   thumb: { width: 640, quality: 0.75 },
 } as const;
 
