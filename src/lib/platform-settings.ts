@@ -27,6 +27,18 @@ export interface PlatformSettingsMap {
     ordersPerMonth: number;
     slipsPerMonth: number;
   };
+  /**
+   * V2.1 — limit the buyer marketplace feed to shops on Pro+ plans
+   * (or higher: BUSINESS / AGENCY). Off by default so we can fill the
+   * catalog with free-tier shops in the early days; super-admin flips
+   * it on once supply outstrips demand (911korn 2026-05-27 "ทำ toggle
+   * นี้ไว้รอหน่อยในหลังบ้าน Super Admin · ช่วงแรกปล่อยไปก่อน รอร้านเยอะๆ").
+   * Free-tier shops remain fully usable — buyers reaching their
+   * storefront directly via shared link still see + buy products.
+   */
+  feed_pro_only: {
+    enabled: boolean;
+  };
 }
 
 export type PlatformSettingKey = keyof PlatformSettingsMap;
@@ -41,6 +53,7 @@ export const DEFAULTS: PlatformSettingsMap = {
   email_from_override: { from: "" },
   slip_verify_provider: { provider: "mock" },
   default_plan_caps: { products: 10, ordersPerMonth: 100, slipsPerMonth: 0 },
+  feed_pro_only: { enabled: false },
 };
 
 interface CacheEntry<T> {

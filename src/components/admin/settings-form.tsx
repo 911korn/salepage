@@ -21,6 +21,7 @@ export function SettingsForm({ viewerIsSuperAdmin, initial }: Props) {
   const [email, setEmail] = useState(initial.email_from_override);
   const [slip, setSlip] = useState(initial.slip_verify_provider);
   const [planCaps, setPlanCaps] = useState(initial.default_plan_caps);
+  const [feedProOnly, setFeedProOnly] = useState(initial.feed_pro_only);
 
   function save<K extends keyof PlatformSettingsMap>(
     key: K,
@@ -165,6 +166,44 @@ export function SettingsForm({ viewerIsSuperAdmin, initial }: Props) {
             size="sm"
             disabled={pending}
             onClick={() => save("slip_verify_provider", slip, "slip provider")}
+          >
+            บันทึก
+          </Button>
+        </div>
+      </Card>
+
+      {/* V2.1 — Pro-only marketplace toggle. Off by default during
+          launch so we can fill the feed with free-tier shops. When the
+          catalog density gets healthy, super-admin flips this on so
+          the buyer marketplace only surfaces shops on a paid plan. */}
+      <Card
+        title="Marketplace feed: shop เฉพาะแพลน Pro+"
+        description="ปิดอยู่ในช่วงแรกเพื่อรอเก็บร้าน Free tier ให้ครบก่อน · เปิดเมื่อมีร้าน Pro เยอะพอแล้ว"
+        warn={!viewerIsSuperAdmin}
+        warnText="ต้องเป็น SUPER_ADMIN ถึงจะกดได้"
+      >
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={feedProOnly.enabled}
+            disabled={!viewerIsSuperAdmin}
+            onChange={(e) =>
+              setFeedProOnly({ ...feedProOnly, enabled: e.target.checked })
+            }
+            className="size-4 rounded border-zinc-300"
+          />
+          เปิด — โชว์ใน feed เฉพาะร้านที่อยู่ใน Pro / Business / Agency (active หรือ trial)
+        </label>
+        <p className="text-[11px] text-zinc-500">
+          ร้าน Free tier ยังขายของได้ตามปกติ — storefront URL ที่แชร์ตรงๆ
+          ยังเข้าได้ปกติ แค่จะไม่ถูก surface ในหน้า /shops + product feed
+          ของ mobile home tab
+        </p>
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            disabled={pending || !viewerIsSuperAdmin}
+            onClick={() => save("feed_pro_only", feedProOnly, "feed Pro-only")}
           >
             บันทึก
           </Button>

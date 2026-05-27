@@ -36,6 +36,9 @@ const SCHEMAS: Record<PlatformSettingKey, z.ZodSchema> = {
     ordersPerMonth: z.number().int().min(0).max(1000000),
     slipsPerMonth: z.number().int().min(0).max(1000000),
   }),
+  feed_pro_only: z.object({
+    enabled: z.boolean(),
+  }),
 };
 
 /// Keys that any ADMIN can edit. Keys requiring SUPER_ADMIN are everything else

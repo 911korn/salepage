@@ -5,8 +5,11 @@ import {
   KycStatus,
   ProductCondition,
   ProductType,
+  SubscriptionStatus,
+  PlanKey,
   type Prisma,
 } from "@/lib/db";
+import { getPlatformSetting } from "@/lib/platform-settings";
 
 /**
  * Shared product-feed core. Used by BOTH `/api/v1/products-feed` (mobile)
@@ -71,10 +74,29 @@ export async function getProductsFeed(
   const sort = q.sort ?? "relevance";
   const pageSize = q.pageSize ?? PRODUCTS_FEED_PAGE_SIZE;
 
+  // Super-admin toggle: when enabled, the buyer marketplace only shows
+  // shops whose owner is on Pro / Business / Agency. Free-tier shops
+  // are NOT delisted — they're just removed from discovery (their
+  // storefront URL still works for buyers arriving via shared link).
+  const feedSetting = await getPlatformSetting("feed_pro_only");
+  const proOnlyShopFilter: Prisma.ShopWhereInput | undefined = feedSetting.enabled
+    ? {
+        owner: {
+          subscription: {
+            plan: { in: [PlanKey.PRO, PlanKey.BUSINESS, PlanKey.AGENCY] },
+            status: {
+              in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING],
+            },
+          },
+        },
+      }
+    : undefined;
+
   const shopFilter: Prisma.ShopWhereInput = {
     status: ShopStatus.ACTIVE,
     suspended: false,
     ...(q.verified ? { kycStatus: KycStatus.VERIFIED } : {}),
+    ...(proOnlyShopFilter ?? {}),
   };
 
   // Category filter is on the PRODUCT itself when set, with a fallback
