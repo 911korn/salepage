@@ -381,7 +381,15 @@ function RootLayout() {
             />
             <Stack.Screen
               name="seller/index"
-              options={{ headerTitle: brandHeader("sellerHome") }}
+              options={{
+                headerTitle: brandHeader("sellerHome"),
+                // Seller dashboard home is the root of the seller flow —
+                // no back chevron, the "โหมดผู้ซื้อ" toggle in the
+                // header switches contexts instead (911korn 2026-05-27
+                // "เอาปุ่ม back ออก ... จะได้ไม่งง").
+                headerBackVisible: false,
+                headerLeft: () => null,
+              }}
             />
             <Stack.Screen
               name="seller/orders"
