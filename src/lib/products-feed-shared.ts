@@ -128,7 +128,14 @@ export async function getProductsFeed(
   // SOLD_OUT listings stay in the feed for 4h after the last unit
   // sold — gives the marketplace a "fresh activity" signal (911korn
   // 2026-05-27 "มันจะได้ดูรู้สึกว่ามีการเคลื่อนไหว"). After 4h, the
-  // listing drops off until the seller tops up stock. ACTIVE always shows.
+  // listing drops off until the seller tops up stock.
+  //
+  // The third OR branch is a defensive net: if a product somehow ends
+  // up `stock=0` while still flagged ACTIVE (data drift, or sale that
+  // pre-dated the auto-SOLD_OUT updateMany), we treat it as sold-out
+  // anyway — show it for 4h after updatedAt, then drop. The map step
+  // below also derives `status="SOLD_OUT"` for those rows so the card
+  // renders the ribbon correctly.
   const FOUR_HOURS_AGO = new Date(Date.now() - 4 * 60 * 60 * 1000);
   const products = await db.product.findMany({
     where: {
@@ -136,10 +143,22 @@ export async function getProductsFeed(
       ...(categoryFilter ?? {}),
       ...(q.condition ? { condition: q.condition } : {}),
       OR: [
-        { status: ProductStatus.ACTIVE },
+        // Truly active — explicit ACTIVE + has stock (or unlimited)
+        {
+          status: ProductStatus.ACTIVE,
+          OR: [{ stock: null }, { stock: { gt: 0 } }],
+        },
+        // Explicit SOLD_OUT inside the 4h window
         {
           status: ProductStatus.SOLD_OUT,
           soldOutAt: { gte: FOUR_HOURS_AGO },
+        },
+        // Drift safety net — ACTIVE w/ stock=0, surface for 4h
+        // after last update then auto-drop
+        {
+          status: ProductStatus.ACTIVE,
+          stock: 0,
+          updatedAt: { gte: FOUR_HOURS_AGO },
         },
       ],
     },
@@ -159,6 +178,7 @@ export async function getProductsFeed(
       condition: true,
       type: true,
       status: true,
+      stock: true,
       shop: {
         select: {
           slug: true,
@@ -200,7 +220,14 @@ export async function getProductsFeed(
       category: p.category ?? p.shop.category ?? null,
       condition: p.condition,
       type: p.type,
-      status: p.status as "ACTIVE" | "SOLD_OUT",
+      // Derive: stock=0 ALWAYS reads as SOLD_OUT regardless of the
+      // explicit status column. Belt-and-suspenders for legacy rows
+      // whose SOLD_OUT stamping pre-dates V2.1 (911korn 2026-05-27
+      // screenshot 08:20 — sold-out card was leaking through).
+      status:
+        p.stock === 0 || p.status === "SOLD_OUT"
+          ? ("SOLD_OUT" as const)
+          : ("ACTIVE" as const),
     })),
     nextCursor: hasMore ? slice[slice.length - 1]!.id : null,
   };
