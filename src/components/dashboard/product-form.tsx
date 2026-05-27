@@ -439,12 +439,12 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
               <ToggleBtn
                 active={condition === "NEW"}
                 onClick={() => setCondition("NEW")}
-                label="✨ ของใหม่"
+                label="ของใหม่"
               />
               <ToggleBtn
                 active={condition === "PRE_OWNED"}
                 onClick={() => setCondition("PRE_OWNED")}
-                label="♻️ มือสอง"
+                label="มือสอง"
               />
             </div>
           </Field>

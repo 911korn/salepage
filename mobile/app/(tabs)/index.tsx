@@ -15,6 +15,7 @@ import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { VerifiedBadge } from "@/components/trust-badge";
+import { ProductTypeTag } from "@/components/product-type-tag";
 import { StoriesRail } from "@/components/stories-rail";
 import { DiscoveryRails } from "@/components/discovery-rails";
 import { LiveRail } from "@/components/live-rail";
@@ -362,6 +363,12 @@ const ProductCard = memo(function ProductCard({
             ) : null}
           </View>
         ) : null}
+        {/* Type/condition tag — top-right, opposite the HOT/discount
+            stack. Priority: Digital > PRE_OWNED > NEW. Matches the web
+            ProductTypeTag exactly (911korn 2026-05-27 parity rule). */}
+        <View style={{ position: "absolute", top: 6, right: 6 }}>
+          <ProductTypeTag type={product.type} condition={product.condition} />
+        </View>
       </View>
       <View className="p-2.5">
         <Text className="text-[13px] font-medium text-fg" numberOfLines={2}>

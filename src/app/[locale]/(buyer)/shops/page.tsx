@@ -1,6 +1,7 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { ShieldCheck, Store, Shirt, UtensilsCrossed, Smartphone, Sparkles, HeartPulse, Sofa, PawPrint, Book, Dumbbell, Box, Check } from "lucide-react";
+import { ShieldCheck, Store, Shirt, UtensilsCrossed, Smartphone, Sparkles, HeartPulse, Sofa, PawPrint, Book, Dumbbell, Box, Check, Recycle } from "lucide-react";
+import { ProductTypeTag } from "@/components/buyer/product-type-tag";
 import type { Locale } from "@/i18n/routing";
 import type { Metadata } from "next";
 import { getProductsFeed, type FeedSort } from "@/lib/products-feed-shared";
@@ -261,7 +262,8 @@ function PreOwnedToggle({
           : "border border-[color:var(--color-border)] bg-white text-zinc-700"
       }`}
     >
-      ♻️ มือสอง
+      <Recycle size={12} strokeWidth={2.4} />
+      มือสอง
     </Link>
   );
 }
@@ -307,6 +309,7 @@ interface ProductCardProps {
     shopRating: number;
     category: string | null;
     condition: "NEW" | "PRE_OWNED";
+    type: "PHYSICAL" | "DIGITAL";
   };
 }
 
@@ -331,6 +334,7 @@ function ProductCard({ product }: ProductCardProps) {
         )
       : 0;
   const isPreOwned = product.condition === "PRE_OWNED";
+  const isDigital = product.type === "DIGITAL";
   const categoryLabel = product.category
     ? CATEGORY_LABELS_INLINE[product.category] ?? null
     : null;
@@ -338,9 +342,11 @@ function ProductCard({ product }: ProductCardProps) {
     <Link
       href={`/s/${product.shopSlug}/${product.slug}`}
       className={`group overflow-hidden rounded-2xl border bg-white transition hover:-translate-y-0.5 hover:shadow-md ${
-        isPreOwned
-          ? "border-amber-300/70 ring-1 ring-amber-100"
-          : "border-[color:var(--color-border)]"
+        isDigital
+          ? "border-violet-300/70 ring-1 ring-violet-100"
+          : isPreOwned
+            ? "border-amber-300/70 ring-1 ring-amber-100"
+            : "border-[color:var(--color-border)]"
       }`}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-[color:var(--color-soft)]">
@@ -353,7 +359,7 @@ function ProductCard({ product }: ProductCardProps) {
             className="h-full w-full object-cover transition group-hover:scale-105"
           />
         ) : null}
-        {/* Left stack — discount + product badge */}
+        {/* Left stack — discount + product badge (HOT/NEW/SALE). */}
         <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
           {product.badge ? (
             <span className="rounded-md bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
@@ -366,15 +372,12 @@ function ProductCard({ product }: ProductCardProps) {
             </span>
           ) : null}
         </div>
-        {/* Right stack — condition pin. PRE_OWNED is the differentiator
-            we promote (911korn 2026-05-27: "tag สินค้ามือสอง อันนี้น่าจะ
-            มีประโยชน์มาก ทำให้แอพดูมีจุดเด่นขึ้นมาเลย"). NEW shows nothing
-            so we don't pollute every card. */}
-        {isPreOwned ? (
-          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-amber-500/95 px-2 py-0.5 text-[10px] font-bold text-white shadow">
-            ♻️ มือสอง
-          </span>
-        ) : null}
+        {/* Right — single type/condition tag, priority Digital > PRE_OWNED > NEW. */}
+        <ProductTypeTag
+          type={product.type}
+          condition={product.condition}
+          className="absolute right-2 top-2"
+        />
       </div>
       <div className="p-3">
         {categoryLabel ? (

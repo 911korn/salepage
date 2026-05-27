@@ -24,6 +24,8 @@ import {
   PRODUCT_CATEGORIES,
   type CategoryKey,
 } from "@/lib/product-categories";
+import { Package, Download, Sparkles, Recycle } from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
 
 /**
  * /seller/products/new — owner-only mobile create-product flow.
@@ -313,16 +315,17 @@ export default function NewProductScreen() {
             <TogglePill
               active={type === "PHYSICAL"}
               onPress={() => setType("PHYSICAL")}
-              icon="📦"
+              Icon={Package}
               label="จัดส่งจริง"
               hint="สินค้าที่ต้องส่งของ"
             />
             <TogglePill
               active={type === "DIGITAL"}
               onPress={() => setType("DIGITAL")}
-              icon="💾"
+              Icon={Download}
               label="ดิจิทัล"
               hint="ไฟล์ / โค้ด / บริการ"
+              tone="violet"
             />
           </View>
         </Section>
@@ -334,17 +337,18 @@ export default function NewProductScreen() {
             <TogglePill
               active={condition === "NEW"}
               onPress={() => setCondition("NEW")}
-              icon="✨"
+              Icon={Sparkles}
               label="ของใหม่"
               hint="ป้ายห้อย ยังไม่เคยใช้"
+              tone="emerald"
             />
             <TogglePill
               active={condition === "PRE_OWNED"}
               onPress={() => setCondition("PRE_OWNED")}
-              icon="♻️"
+              Icon={Recycle}
               label="มือสอง"
               hint="ใช้แล้ว / สภาพดี"
-              tone="rose"
+              tone="amber"
             />
           </View>
         </Section>
@@ -446,35 +450,37 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function TogglePill({
   active,
   onPress,
-  icon,
+  Icon,
   label,
   hint,
   tone = "brand",
 }: {
   active: boolean;
   onPress: () => void;
-  icon: string;
+  Icon: LucideIcon;
   label: string;
   hint: string;
-  tone?: "brand" | "rose";
+  tone?: "brand" | "emerald" | "amber" | "violet";
 }) {
-  const activeBorder =
-    tone === "rose" ? "border-rose-300" : "border-brand-300";
-  const activeBg = tone === "rose" ? "bg-rose-50" : "bg-brand-50";
-  const activeText = tone === "rose" ? "text-rose-700" : "text-brand-700";
+  const palette =
+    tone === "violet"
+      ? { border: "border-violet-300", bg: "bg-violet-50", text: "text-violet-700", icon: "#7c3aed" }
+      : tone === "amber"
+        ? { border: "border-amber-300", bg: "bg-amber-50", text: "text-amber-800", icon: "#d97706" }
+        : tone === "emerald"
+          ? { border: "border-emerald-300", bg: "bg-emerald-50", text: "text-emerald-700", icon: "#059669" }
+          : { border: "border-brand-300", bg: "bg-brand-50", text: "text-brand-700", icon: "#e11d48" };
   return (
     <Pressable
       onPress={onPress}
       className={`flex-1 rounded-2xl border px-3 py-3 ${
-        active
-          ? `${activeBorder} ${activeBg}`
-          : "border-border bg-white"
+        active ? `${palette.border} ${palette.bg}` : "border-border bg-white"
       }`}
     >
-      <Text className="text-[20px]">{icon}</Text>
+      <Icon size={22} color={active ? palette.icon : "#52525b"} strokeWidth={2.2} />
       <Text
-        className={`mt-1 text-[14px] font-semibold ${
-          active ? activeText : "text-fg"
+        className={`mt-1.5 text-[14px] font-semibold ${
+          active ? palette.text : "text-fg"
         }`}
       >
         {label}

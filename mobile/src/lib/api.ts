@@ -981,6 +981,8 @@ export const api = {
         sort?: "relevance" | "sold" | "newest" | "price-asc" | "price-desc";
         /** V1.5: restrict feed to KYC-verified shops only. */
         verified?: boolean;
+        /** V2.1: restrict feed to PRE_OWNED listings only. */
+        condition?: "NEW" | "PRE_OWNED";
       } = {},
     ) =>
       apiFetch<{
@@ -1001,6 +1003,9 @@ export const api = {
           imageUrl: string | null;
           badge: "HOT" | "NEW" | "SALE" | null;
           sold: number;
+          category: string | null;
+          condition: "NEW" | "PRE_OWNED";
+          type: "PHYSICAL" | "DIGITAL";
         }>;
         nextCursor: string | null;
       }>("/api/v1/products-feed", { query: params, anonymous: true }),

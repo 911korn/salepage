@@ -4,6 +4,7 @@ import {
   ProductStatus,
   KycStatus,
   ProductCondition,
+  ProductType,
   type Prisma,
 } from "@/lib/db";
 
@@ -53,6 +54,8 @@ export interface FeedProductRow {
   category: string | null;
   /** "NEW" | "PRE_OWNED". UI surfaces a "มือสอง" badge for PRE_OWNED. */
   condition: ProductCondition;
+  /** "PHYSICAL" | "DIGITAL". Drives the violet "ดิจิทัล" tag. */
+  type: ProductType;
 }
 
 export interface ProductsFeedResult {
@@ -119,6 +122,7 @@ export async function getProductsFeed(
       sold: true,
       category: true,
       condition: true,
+      type: true,
       shop: {
         select: {
           slug: true,
@@ -159,6 +163,7 @@ export async function getProductsFeed(
       // surface a category pill on the marketplace cards.
       category: p.category ?? p.shop.category ?? null,
       condition: p.condition,
+      type: p.type,
     })),
     nextCursor: hasMore ? slice[slice.length - 1]!.id : null,
   };
