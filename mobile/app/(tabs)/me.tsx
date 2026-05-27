@@ -61,38 +61,39 @@ export default function MeScreen() {
       {
         text: t("auth.signOut"),
         style: "destructive",
-        // Don't make onPress async — iOS keeps the alert overlay
-        // alive until an async onPress resolves, and a long await
-        // chain (network unregister + secureStore delete + zustand
-        // resets + query cache clear) makes the UI feel frozen
-        // (911korn 2026-05-27 23:25: "Logout แล้วทุกอย่างยังค้าง").
+        // Sync onPress so the alert dismisses immediately; the
+        // async work runs in the background via doLogout().
+        // 911korn 2026-05-27 23:30 follow-up: previous attempt with
+        // `void clearAuthToken()` raced — useFocusEffect re-read the
+        // cached SecureStore value before the delete finished and
+        // flipped authed back to true. Now we await the keychain
+        // clear BEFORE flipping state.
         onPress: () => {
-          // Defer the work one tick so the alert fully dismisses
-          // before we start updating state — avoids the iOS
-          // alert-while-rerender deadlock.
-          setTimeout(() => {
-            // Fire-and-forget the network unregister. Server-side
-            // push token cleanup is best-effort; we don't block
-            // logout on it.
-            void unregisterPushToken();
-            void clearAuthToken();
-            useCart.getState().clear();
-            useSellerMode.setState({ mode: "buyer", activeShopSlug: null });
-            queryClient.clear();
-            setAuthed(false);
-            // Force a full navigation reset so any cached
-            // signed-in screens (cart, seller dashboard, etc.) are
-            // unmounted instead of lingering with stale auth.
-            try {
-              if (router.canDismiss()) router.dismissAll();
-            } catch {
-              /* older expo-router */
-            }
-            router.replace("/(tabs)/me");
-          }, 0);
+          void doLogout();
         },
       },
     ]);
+
+    async function doLogout() {
+      // Fire-and-forget network unregister; server-side push token
+      // cleanup is best-effort and we don't want to block UI on it.
+      void unregisterPushToken();
+      // Await the keychain delete so any subsequent getAuthToken()
+      // (e.g., from useFocusEffect on the next focus) returns null.
+      try {
+        await clearAuthToken();
+      } catch {
+        /* SecureStore can fail silently — auth state below still flips */
+      }
+      // Reset per-user device state. Persisted Zustand stores
+      // survived logout otherwise (cart, seller-mode).
+      useCart.getState().clear();
+      useSellerMode.setState({ mode: "buyer", activeShopSlug: null });
+      queryClient.clear();
+      // Last — flip authed AFTER SecureStore is actually clear, so
+      // useFocusEffect can't race-read the stale token and revert.
+      setAuthed(false);
+    }
   }
 
   if (authed === null) {
