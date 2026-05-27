@@ -7,6 +7,8 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -185,7 +187,21 @@ export default function NewProductScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerClassName="pb-32">
+      {/* KeyboardAvoidingView pushes the sticky bottom CTA above the
+          keyboard so seller can hit "เพิ่มสินค้า" without dismissing
+          first (911korn 2026-05-27 "คีย์บอร์ดบัง บัง พิมพ์ลำบาก หน้า
+          แอดสินค้า"). `padding` is the iOS-canonical behavior; Android
+          ignores `behavior` and uses the system soft-input mode. */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+      >
+      <ScrollView
+        contentContainerClassName="pb-40"
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         <View className="px-5 pt-6">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
             เพิ่มสินค้าใหม่
@@ -387,7 +403,10 @@ export default function NewProductScreen() {
         ) : null}
       </ScrollView>
 
-      <View className="absolute bottom-0 left-0 right-0 border-t border-border bg-white p-4">
+      {/* Sticky submit — sits INSIDE the KeyboardAvoidingView so the
+          padding push lifts it above the keyboard rather than the older
+          absolute-position trick that left it stranded behind. */}
+      <View className="border-t border-border bg-white p-4 pb-6">
         <Button
           disabled={!canSubmit || createMutation.isPending}
           onPress={() => createMutation.mutate()}
@@ -401,6 +420,7 @@ export default function NewProductScreen() {
           )}
         </Button>
       </View>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }

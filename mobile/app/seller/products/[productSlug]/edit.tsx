@@ -7,6 +7,8 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -266,7 +268,16 @@ export default function EditProductScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerClassName="pb-32">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+      >
+      <ScrollView
+        contentContainerClassName="pb-40"
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         <View className="px-5 pt-6">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
             แก้ไขสินค้า
@@ -470,7 +481,7 @@ export default function EditProductScreen() {
         </View>
       </ScrollView>
 
-      <View className="absolute bottom-0 left-0 right-0 border-t border-border bg-white p-4">
+      <View className="border-t border-border bg-white p-4 pb-6">
         <Button
           disabled={!canSubmit || updateMutation.isPending}
           onPress={() => updateMutation.mutate()}
@@ -484,6 +495,7 @@ export default function EditProductScreen() {
           )}
         </Button>
       </View>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }
