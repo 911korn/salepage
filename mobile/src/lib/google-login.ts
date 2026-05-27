@@ -168,6 +168,13 @@ export async function loginWithGoogle(): Promise<GoogleBridgeResult> {
     {
       presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       dismissButtonStyle: "close",
+      // 911korn 2026-05-28 "เลือกเมลอื่นแต่ก็เป็นเมลเดิมตลอด · Session
+      // เดิมไม่เคลีย": without preferEphemeralSession, ASWebAuthentication
+      // shares Safari's cookie jar — the previous NextAuth session at
+      // salepage.in.th persists, so even when Google's picker returns a
+      // different account, the callback re-binds to the cached session.
+      // Ephemeral = fresh cookie jar per sign-in attempt.
+      preferEphemeralSession: true,
     },
   ).then(async (result) => {
     // If the poll already wrote finalResult, leave it alone.

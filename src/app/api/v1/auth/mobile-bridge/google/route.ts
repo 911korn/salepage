@@ -59,6 +59,34 @@ export async function GET(request: Request) {
     path: "/",
     maxAge: 60 * 10,
   });
+  // 911korn 2026-05-28: "เลือกเมลอื่นแต่ก็เป็นเมลเดิมตลอด — Session
+  // เดิมไม่เคลีย". If the WebBrowser cookie jar already has a NextAuth
+  // session from a prior sign-in (non-ephemeral system browser on
+  // iOS), the OAuth callback re-binds to that session instead of
+  // creating a new one. Nuke every NextAuth cookie at this origin
+  // before the auto-submit fires so the OAuth roundtrip is always
+  // fresh. Mirrors the mobile-side `preferEphemeralSession: true`.
+  const isHttps = url.protocol === "https:";
+  for (const name of [
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
+    "authjs.csrf-token",
+    "__Host-authjs.csrf-token",
+    "authjs.callback-url",
+    "__Secure-authjs.callback-url",
+    "authjs.pkce.code_verifier",
+    "__Secure-authjs.pkce.code_verifier",
+    "authjs.state",
+    "__Secure-authjs.state",
+  ]) {
+    jar.set(name, "", {
+      httpOnly: true,
+      secure: isHttps,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+  }
   return res;
 }
 
