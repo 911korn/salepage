@@ -289,6 +289,14 @@ model Product {
   // PAID transition we snapshot this onto `Order.digitalFulfillment` so a
   // later product edit doesn't change what a past buyer was sold.
   digitalContent String? @db.Text
+  // V2.1 per-product shipping fee in satang. Default 0 = free shipping.
+  // Buyer pays this at checkout (per-shop max() across line items), money
+  // flows directly to the seller via PromptPay. Seller bears the actual
+  // courier cost — they drop off at any Flash/Kerry/J&T/Thai Post counter,
+  // pay cash, scan the receipt back into SalePage (Claude vision OCR auto-
+  // fills the tracking). Digital products always ship for 0. 911korn
+  // 2026-05-27 "ตอนแอด product มีช่องให้ระบุค่าส่งไปเลย".
+  shippingFeeSatang Int @default(0)
   stock     Int?
   sold      Int           @default(0)
   status    ProductStatus @default(ACTIVE)
@@ -439,6 +447,23 @@ model Order {
   // later does NOT mutate this — past buyers see what they paid for.
   digitalFulfillment    String?   @db.Text
   digitalFulfilledAt    DateTime?
+
+  // V2.1 Drop-off + AI Tracking flow. Replaces EasyParcel for the default
+  // shipping path. Seller flow:
+  //   1. PAID → click "พิมพ์ใบปะหน้า" → server stamps `labelGeneratedAt`,
+  //      returns printable HTML (address + QR linking to /o/<token>).
+  //   2. Seller takes parcel + label to any courier, pays cash.
+  //   3. Courier prints receipt with tracking#. Seller snaps photo →
+  //      uploads → Claude vision OCR extracts {trackingNumber, receiverName,
+  //      courier}. Match by receiverName → auto-fills `trackingNumber`
+  //      + flips PAID→SHIPPING + emails buyer + LINE push.
+  // `shippingReceiptUrl` = Vercel Blob URL of the uploaded receipt photo
+  // (kept for dispute audit). `shippingReceiptScannedAt` = when OCR
+  // completed successfully. 911korn 2026-05-27 idea — "ให้ ai scan แล้ว
+  // เอาไปยัดให้กับสินค้านั้นๆ ก็จบแล้ว".
+  labelGeneratedAt         DateTime?
+  shippingReceiptUrl       String?
+  shippingReceiptScannedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -32,6 +32,7 @@ interface ProductView {
   badge: "HOT" | "NEW" | "SALE" | null;
   type: "physical" | "digital";
   sold: number;
+  shippingFeeBaht: number;
 }
 
 interface ShopView {
@@ -157,6 +158,7 @@ export default async function StorefrontPage({ params }: PageProps) {
         badge: p.badge,
         type: p.type === "DIGITAL" ? "digital" : "physical",
         sold: p.sold,
+        shippingFeeBaht: Math.round((p.shippingFeeSatang ?? 0) / 100),
       })),
     };
   }
@@ -189,6 +191,7 @@ export default async function StorefrontPage({ params }: PageProps) {
           badge: p.badge ?? null,
           type: p.type,
           sold: p.sold,
+          shippingFeeBaht: 0,
         })),
       };
     }

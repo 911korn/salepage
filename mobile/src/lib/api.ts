@@ -371,6 +371,57 @@ export const api = {
       }),
 
     /**
+     * V2.1 Drop-off shipping receipt OCR (free for all sellers). Seller
+     * drops a parcel at any courier, snaps a photo of the printed
+     * receipt, calls this — Claude vision extracts tracking# +
+     * receiver name → auto-fills `order.trackingNumber` + flips
+     * PAID→SHIPPING. 911korn 2026-05-27.
+     *
+     * Three outcomes:
+     *   - ok=true → tracking saved, status flipped
+     *   - ok=false, reason="name_mismatch" → AI scanned a name that
+     *     doesn't match the order; UI asks seller to confirm-override
+     *   - ok=false, reason="no_tracking" → AI couldn't find a tracking
+     *     number; UI asks seller to retake the photo or enter manually
+     */
+    scanShippingReceipt: (
+      token: string,
+      input: {
+        dataBase64: string;
+        contentType: "image/jpeg" | "image/png" | "image/webp";
+        confirmOverride?: boolean;
+      },
+    ) =>
+      apiFetch<
+        | {
+            ok: true;
+            trackingNumber: string;
+            courier: string | null;
+            receiverName: string | null;
+            nameMatched: boolean | null;
+            receiptUrl: string;
+            confidence: "high" | "medium" | "low";
+          }
+        | {
+            ok: false;
+            reason: "name_mismatch" | "no_tracking";
+            message: string;
+            receiptUrl: string;
+            scan: {
+              trackingNumber: string | null;
+              receiverName: string | null;
+              receiverPhone: string | null;
+              courier: string | null;
+              confidence: "high" | "medium" | "low";
+              note: string | null;
+            };
+          }
+      >(`/api/v1/orders/${token}/shipment/receipt`, {
+        method: "POST",
+        body: input,
+      }),
+
+    /**
      * The server expects a JSON body `{ imageBase64 }` (NOT multipart) — the
      * same payload shape the web side uses. Caller has already compressed the
      * image with `compressForSlipUpload()` so we ship ~200 KB instead of the
@@ -1310,6 +1361,8 @@ export const api = {
         condition?: "NEW" | "PRE_OWNED";
         /** V2.1 digital fulfillment — text the buyer receives on PAID. */
         digitalContent?: string | null;
+        /** V2.1 per-product shipping fee in baht. 0 = free shipping. */
+        shippingFeeBaht?: number;
         stock?: number;
       },
     ) =>
@@ -1343,6 +1396,8 @@ export const api = {
         category?: string | null;
         condition?: "NEW" | "PRE_OWNED";
         digitalContent?: string | null;
+        /** V2.1 per-product shipping fee in baht. */
+        shippingFeeBaht?: number;
         stock?: number | null;
         status?: "ACTIVE" | "HIDDEN" | "SOLD_OUT";
       },

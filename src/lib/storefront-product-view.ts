@@ -16,6 +16,8 @@ export interface StorefrontProductView {
     type: "PHYSICAL" | "DIGITAL";
     stock: number | null;
     sold: number;
+    /** V2.1 per-product shipping fee in baht. 0 = free shipping. */
+    shippingFeeBaht: number;
     updatedAtMs: number;
   };
   shop: {
@@ -67,6 +69,7 @@ export const getStorefrontProductView = cache(
             type: p.type as "PHYSICAL" | "DIGITAL",
             stock: p.stock,
             sold: p.sold,
+            shippingFeeBaht: Math.round((p.shippingFeeSatang ?? 0) / 100),
             updatedAtMs: p.updatedAt.getTime(),
           },
           shop: {
@@ -99,6 +102,7 @@ export const getStorefrontProductView = cache(
         type: demoProduct.type === "digital" ? "DIGITAL" : "PHYSICAL",
         stock: demoProduct.stock ?? null,
         sold: demoProduct.sold,
+        shippingFeeBaht: 0,
         updatedAtMs: 0,
       },
       shop: {

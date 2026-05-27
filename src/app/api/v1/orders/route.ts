@@ -114,6 +114,14 @@ export async function POST(request: Request) {
   const byslug = new Map(products.map((p) => [p.slug, p]));
 
   let subtotalSatang = 0;
+  // V2.1 — recompute per-shop shipping fee from the products. One parcel
+  // per shop, so we take MAX(item.shippingFeeSatang) across the line
+  // items — adding 2 of the same product or mixing items in one order
+  // never multiplies the shipping fee. Digital products contribute 0.
+  // We deliberately ignore `input.shippingSatang` for trust: the buyer
+  // sends what they were shown at cart, but the server is the source
+  // of truth (911korn 2026-05-27 "ตอนแอด product มีช่องให้ระบุค่าส่ง").
+  let shippingSatang = 0;
   const itemsSnapshot: Array<{
     productSlug: string;
     productName: string;
@@ -127,6 +135,9 @@ export async function POST(request: Request) {
       return fail("out_of_stock", `${p.name}: สต๊อกไม่พอ`, 409);
     }
     subtotalSatang += p.priceSatang * item.qty;
+    if (p.type !== "DIGITAL") {
+      shippingSatang = Math.max(shippingSatang, p.shippingFeeSatang ?? 0);
+    }
     itemsSnapshot.push({
       productSlug: p.slug,
       productName: p.name,
@@ -189,7 +200,7 @@ export async function POST(request: Request) {
 
   const totalBeforeEscrow = Math.max(
     0,
-    subtotalSatang + input.shippingSatang - couponDiscountSatang - pointsDiscountSatang,
+    subtotalSatang + shippingSatang - couponDiscountSatang - pointsDiscountSatang,
   );
 
   // V1.5 Protected Pay: validate shop opt-in + compute buyer-paid fee.
@@ -244,7 +255,7 @@ export async function POST(request: Request) {
       customerAddress: input.customerAddress,
       items: itemsSnapshot,
       subtotalSatang,
-      shippingSatang: input.shippingSatang,
+      shippingSatang,
       totalSatang,
       status: OrderStatus.PENDING,
       paymentMethod: "promptpay",

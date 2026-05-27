@@ -30,6 +30,7 @@ export async function GET(_request: Request, context: RouteCtx) {
         images: p.imageUrls,
         badge: p.badge,
         type: p.type.toLowerCase() as Lowercase<ProductType>,
+        shippingFeeSatang: p.shippingFeeSatang,
         stock: p.stock,
         sold: p.sold,
         status: p.status,
@@ -53,6 +54,8 @@ const PatchBody = z.object({
   category: z.string().min(1).max(40).optional().nullable(),
   condition: z.enum(["NEW", "PRE_OWNED"]).optional(),
   digitalContent: z.string().max(5000).optional().nullable(),
+  /// V2.1 per-product shipping fee in baht. Default 0 = free shipping.
+  shippingFeeBaht: z.number().int().nonnegative().max(99_999).optional(),
   stock: z.number().int().nonnegative().max(99999).optional().nullable(),
   status: z.enum(["ACTIVE", "HIDDEN", "SOLD_OUT"]).optional(),
 });
@@ -98,6 +101,17 @@ export async function PATCH(request: Request, context: RouteCtx) {
     data.digitalContent = input.digitalContent === null
       ? null
       : input.digitalContent.trim() || null;
+  }
+  if (input.shippingFeeBaht !== undefined) {
+    // Force 0 for DIGITAL — either type was passed in this PATCH, or
+    // we leave the toggling-back-to-PHYSICAL case to a follow-up PATCH.
+    const forcedZero = input.type === "DIGITAL";
+    data.shippingFeeSatang = forcedZero ? 0 : input.shippingFeeBaht * 100;
+  }
+  // If type was toggled to DIGITAL without an explicit shippingFee in this
+  // PATCH, still zero the existing fee — never charge shipping on a digital.
+  if (input.type === "DIGITAL" && input.shippingFeeBaht === undefined) {
+    data.shippingFeeSatang = 0;
   }
   if (input.stock !== undefined) {
     data.stock = input.stock;

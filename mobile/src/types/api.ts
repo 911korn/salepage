@@ -169,6 +169,8 @@ export interface ProductSummary {
   condition: ProductCondition;
   /** V2.1 digital fulfillment template — only set when type=DIGITAL. */
   digitalContent: string | null;
+  /** V2.1 per-product shipping fee in satang. 0 = free shipping. */
+  shippingFeeSatang: number;
   stock: number | null;
   sold: number;
   status: ProductStatus;
@@ -206,6 +208,11 @@ export interface OrderDetail {
   slipRef: string | null;
   slipVerifiedAt: string | null;
   trackingNumber: string | null;
+  /** V2.1 Drop-off shipping — timestamp seller first printed our label. */
+  labelGeneratedAt: string | null;
+  /** V2.1 Drop-off shipping — URL of the courier receipt photo we OCR'd. */
+  shippingReceiptUrl: string | null;
+  shippingReceiptScannedAt: string | null;
   notes: string | null;
   createdAt: string;
   /**

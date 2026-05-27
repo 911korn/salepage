@@ -243,6 +243,7 @@ export default function ProductScreen() {
         imageUrl: product.imageUrls[0] ?? null,
         qty: 1,
         type: product.type,
+        shippingFeeSatang: product.shippingFeeSatang,
       });
       // Buy now jumps to /cart immediately — no time for a flight. The
       // bottom-Add button gets the full delight pattern.

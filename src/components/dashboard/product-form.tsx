@@ -31,6 +31,8 @@ interface ProductFormValues {
   condition?: "NEW" | "PRE_OWNED";
   /** V2.1 digital fulfillment template. */
   digitalContent?: string | null;
+  /** V2.1 per-product shipping fee in baht. Default 0 = free shipping. */
+  shippingFeeBaht?: number | null;
   stock?: number | null;
   status?: "ACTIVE" | "HIDDEN" | "SOLD_OUT";
 }
@@ -195,6 +197,12 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
   const [digitalContent, setDigitalContent] = useState<string>(
     initialValues?.digitalContent ?? "",
   );
+  const [shippingFeeBaht, setShippingFeeBaht] = useState<string>(
+    initialValues?.shippingFeeBaht !== undefined &&
+      initialValues.shippingFeeBaht !== null
+      ? String(initialValues.shippingFeeBaht)
+      : "",
+  );
   const [badge, setBadge] = useState<"HOT" | "NEW" | "SALE" | "">(
     (initialValues?.badge as "HOT" | "NEW" | "SALE") ?? "",
   );
@@ -236,6 +244,14 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
         ...(category ? { category } : mode === "edit" ? { category: null } : {}),
         digitalContent:
           type === "DIGITAL" ? digitalContent.trim() || null : null,
+        // V2.1 per-product shipping fee. Digital products always ship 0;
+        // physical defaults to 0 (free) when the seller leaves it blank.
+        shippingFeeBaht:
+          type === "DIGITAL"
+            ? 0
+            : shippingFeeBaht.trim()
+              ? Math.max(0, Math.min(99999, Number(shippingFeeBaht) || 0))
+              : 0,
         badge: badge || null,
         ...(stock ? { stock: Number(stock) } : mode === "edit" ? { stock: null } : {}),
         ...(mode === "edit" ? { status } : {}),
@@ -536,6 +552,29 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
             ))}
           </div>
         </Field>
+
+        {/* V2.1 per-product shipping fee. 911korn 2026-05-27 — buyer sees
+            this at cart, pays seller via PromptPay direct. Seller bears
+            the actual courier cost when they drop off. Hidden for
+            digital products since they don't ship physically. */}
+        {type === "PHYSICAL" ? (
+          <Field
+            label="ค่าจัดส่ง (฿)"
+            hint="ลูกค้าจะเห็นและจ่ายค่าส่งให้คุณตอน checkout · ปล่อยว่าง = ส่งฟรี"
+          >
+            <Input
+              type="number"
+              min={0}
+              max={99999}
+              value={shippingFeeBaht}
+              onChange={(e) =>
+                setShippingFeeBaht(e.target.value.replace(/[^\d]/g, ""))
+              }
+              prefix={<span className="font-semibold">฿</span>}
+              placeholder="0"
+            />
+          </Field>
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("stockLabel")} hint={t("stockHint")}>

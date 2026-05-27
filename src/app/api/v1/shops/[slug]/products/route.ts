@@ -39,6 +39,7 @@ export async function GET(
         imageUrls: true,
         badge: true,
         type: true,
+        shippingFeeSatang: true,
         stock: true,
         sold: true,
         status: true,
@@ -54,6 +55,7 @@ export async function GET(
         images: p.imageUrls,
         badge: p.badge,
         type: p.type.toLowerCase() as Lowercase<ProductType>,
+        shippingFeeSatang: p.shippingFeeSatang,
         stock: p.stock,
         sold: p.sold,
       })),
@@ -93,6 +95,10 @@ const Body = z.object({
   /// V2.1 digital fulfillment template. Only meaningful when type=DIGITAL.
   /// Snapshotted onto the order at the slip-verified PAID transition.
   digitalContent: z.string().max(5000).optional().nullable(),
+  /// V2.1 per-product shipping fee in baht. Default 0 = free shipping.
+  /// Buyer pays seller at checkout; seller bears the courier cost on
+  /// drop-off. Always 0 for digital products (server forces this).
+  shippingFeeBaht: z.number().int().nonnegative().max(99_999).optional(),
   stock: z.number().int().nonnegative().max(99999).optional(),
 });
 
@@ -160,6 +166,10 @@ export async function POST(
         input.type === "DIGITAL" && input.digitalContent
           ? input.digitalContent.trim() || null
           : null,
+      shippingFeeSatang:
+        input.type === "DIGITAL"
+          ? 0
+          : (input.shippingFeeBaht ?? 0) * 100,
       stock: input.stock ?? null,
       status: ProductStatus.ACTIVE,
     },

@@ -25,6 +25,15 @@ export function CartView() {
 
   const shopList = useMemo(() => shopsToList(shops), [shops]);
 
+  // V2.1 — grand total now includes per-shop shipping (max() across each
+  // shop's physical line items). selectSubtotalSatang gives goods only;
+  // we add shipping per shop here for the cart's display total.
+  const totalShippingSatang = shopList.reduce(
+    (sum, shop) => sum + shop.shippingSatang,
+    0,
+  );
+  const grandTotalWithShipping = grandTotal + totalShippingSatang;
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -168,8 +177,8 @@ export function CartView() {
       <h1 className="mb-2 text-2xl font-bold">ตะกร้าสินค้า</h1>
       <p className="mb-6 text-sm text-zinc-500">
         {shopCount === 1
-          ? `${shopList[0]!.shopName} · รวม ฿${(grandTotal / 100).toLocaleString()}`
-          : `${shopCount} ร้าน · รวม ฿${(grandTotal / 100).toLocaleString()}`}
+          ? `${shopList[0]!.shopName} · รวม ฿${(grandTotalWithShipping / 100).toLocaleString()}`
+          : `${shopCount} ร้าน · รวม ฿${(grandTotalWithShipping / 100).toLocaleString()}`}
       </p>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -317,16 +326,36 @@ export function CartView() {
               สรุป
             </h2>
             {shopList.map((shop) => (
-              <SummaryRow
-                key={shop.shopSlug}
-                label={shop.shopName}
-                value={`฿${(shop.subtotalSatang / 100).toLocaleString()}`}
-              />
+              <div key={shop.shopSlug}>
+                <SummaryRow
+                  label={shop.shopName}
+                  value={`฿${(shop.subtotalSatang / 100).toLocaleString()}`}
+                />
+                {shop.shippingSatang > 0 ? (
+                  <SummaryRow
+                    label={`└ ค่าส่ง`}
+                    value={`฿${(shop.shippingSatang / 100).toLocaleString()}`}
+                    muted
+                  />
+                ) : null}
+              </div>
             ))}
             <div className="mt-3 border-t border-[color:var(--color-border)] pt-3">
+              {totalShippingSatang > 0 ? (
+                <>
+                  <SummaryRow
+                    label="ยอดสินค้า"
+                    value={`฿${(grandTotal / 100).toLocaleString()}`}
+                  />
+                  <SummaryRow
+                    label="ค่าส่งรวม"
+                    value={`฿${(totalShippingSatang / 100).toLocaleString()}`}
+                  />
+                </>
+              ) : null}
               <SummaryRow
                 label="ยอดรวมทั้งหมด"
-                value={`฿${(grandTotal / 100).toLocaleString()}`}
+                value={`฿${(grandTotalWithShipping / 100).toLocaleString()}`}
                 bold
               />
             </div>
@@ -347,7 +376,7 @@ export function CartView() {
             >
               {submitting
                 ? "กำลังสร้างคำสั่งซื้อ…"
-                : `ยืนยันสั่งซื้อ ฿${(grandTotal / 100).toLocaleString()}`}
+                : `ยืนยันสั่งซื้อ ฿${(grandTotalWithShipping / 100).toLocaleString()}`}
             </button>
             {shopCount > 1 ? (
               <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
@@ -427,17 +456,29 @@ function SummaryRow({
   label,
   value,
   bold,
+  muted,
 }: {
   label: string;
   value: string;
   bold?: boolean;
+  muted?: boolean;
 }) {
   return (
     <div
-      className={`flex justify-between py-1 ${bold ? "text-base font-bold" : "text-sm"}`}
+      className={`flex justify-between py-1 ${
+        bold ? "text-base font-bold" : muted ? "text-xs" : "text-sm"
+      }`}
     >
-      <span className="text-zinc-600">{label}</span>
-      <span className={bold ? "text-[color:var(--color-brand)]" : "text-zinc-900"}>
+      <span className={muted ? "text-zinc-500" : "text-zinc-600"}>{label}</span>
+      <span
+        className={
+          bold
+            ? "text-[color:var(--color-brand)]"
+            : muted
+              ? "text-zinc-500"
+              : "text-zinc-900"
+        }
+      >
         {value}
       </span>
     </div>

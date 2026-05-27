@@ -66,6 +66,7 @@ export default function NewProductScreen() {
   const [category, setCategory] = useState<CategoryKey | null>(null);
   const [condition, setCondition] = useState<"NEW" | "PRE_OWNED">("NEW");
   const [digitalContent, setDigitalContent] = useState("");
+  const [shippingFeeBaht, setShippingFeeBaht] = useState("");
 
   async function handlePickFromGallery() {
     if (images.length >= MAX_IMAGES) return;
@@ -156,6 +157,9 @@ export default function NewProductScreen() {
   const createMutation = useMutation({
     mutationFn: () => {
       if (!activeSlug) throw new Error("ไม่มีร้านที่ใช้งานอยู่");
+      const shippingFeeNum = shippingFeeBaht.trim()
+        ? Math.max(0, Math.min(99999, Number(shippingFeeBaht) || 0))
+        : 0;
       return api.shops.createProduct(activeSlug, {
         name: name.trim(),
         description: description.trim() || undefined,
@@ -166,6 +170,7 @@ export default function NewProductScreen() {
         category: category ?? undefined,
         digitalContent:
           type === "DIGITAL" ? digitalContent.trim() || null : null,
+        shippingFeeBaht: type === "DIGITAL" ? 0 : shippingFeeNum,
         ...(stockNum !== null ? { stock: stockNum } : {}),
       });
     },
@@ -362,6 +367,27 @@ export default function NewProductScreen() {
             />
             <Text className="text-right text-[10px] text-muted">
               {digitalContent.length}/5000
+            </Text>
+          </Section>
+        ) : null}
+
+        {/* V2.1 per-product shipping fee — what the buyer sees + pays at
+            checkout. Seller bears the actual courier cost on drop-off
+            (911korn 2026-05-27 "ตอนแอด product มีช่องให้ระบุค่าส่งไปเลย").
+            Hidden for digital products since they don't ship. */}
+        {type === "PHYSICAL" ? (
+          <Section title="ค่าจัดส่ง (฿)">
+            <TextInput
+              value={shippingFeeBaht}
+              onChangeText={(v) => setShippingFeeBaht(v.replace(/[^\d]/g, ""))}
+              keyboardType="number-pad"
+              maxLength={5}
+              placeholder="0 = ส่งฟรี"
+              className="rounded-2xl border border-border bg-white px-3 py-2.5 text-[15px] font-semibold text-fg"
+            />
+            <Text className="text-[11px] leading-relaxed text-muted">
+              ลูกค้าจะเห็นค่าส่งและจ่ายให้คุณตอน checkout · คุณรับผิดชอบ
+              ค่าส่งจริงตอน drop-off ที่ courier
             </Text>
           </Section>
         ) : null}

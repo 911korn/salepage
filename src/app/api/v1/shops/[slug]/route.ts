@@ -127,6 +127,7 @@ export async function GET(
           category: true,
           condition: true,
           digitalContent: true,
+          shippingFeeSatang: true,
           stock: true,
           sold: true,
           status: true,

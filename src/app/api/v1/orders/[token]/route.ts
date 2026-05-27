@@ -67,6 +67,11 @@ export async function GET(_request: Request, ctx: Ctx) {
     slipRef: order.slipRef,
     slipVerifiedAt: order.slipVerifiedAt,
     trackingNumber: order.trackingNumber,
+    // V2.1 Drop-off shipping. labelGeneratedAt = seller printed our
+    // label; shippingReceiptUrl = OCR-scanned receipt is on file.
+    labelGeneratedAt: order.labelGeneratedAt,
+    shippingReceiptUrl: order.shippingReceiptUrl,
+    shippingReceiptScannedAt: order.shippingReceiptScannedAt,
     notes: order.notes,
     createdAt: order.createdAt,
     // V2.1 digital fulfillment — snapshot taken at slip-verified PAID

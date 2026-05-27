@@ -25,6 +25,13 @@ export interface CartLine {
    * back to PHYSICAL for legacy lines persisted before V2.1.
    */
   type?: "PHYSICAL" | "DIGITAL";
+  /**
+   * V2.1 per-product shipping fee in satang at add-to-cart time. The
+   * cart summary takes MAX() across a shop's line items — one parcel,
+   * one shipping fee. Server re-derives this from product data at
+   * order POST so the cart value is display-only.
+   */
+  shippingFeeSatang?: number;
 }
 
 export interface CartShop {
@@ -165,6 +172,12 @@ export interface CartShopSummary {
   shopName: string;
   items: CartLine[];
   subtotalSatang: number;
+  /**
+   * V2.1 per-shop shipping fee = MAX(item.shippingFeeSatang) across
+   * physical line items. Digital-only carts ship for free. One parcel
+   * per shop = one shipping fee regardless of qty / number of items.
+   */
+  shippingSatang: number;
 }
 
 export function shopsToList(
@@ -180,5 +193,9 @@ export function shopsToList(
         (sum, it) => sum + it.priceSatang * it.qty,
         0,
       ),
+      shippingSatang: shop.items.reduce((max, it) => {
+        if (it.type === "DIGITAL") return max;
+        return Math.max(max, it.shippingFeeSatang ?? 0);
+      }, 0),
     }));
 }

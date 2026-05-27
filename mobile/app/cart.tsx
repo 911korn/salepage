@@ -96,9 +96,16 @@ export default function CartScreen() {
     (sum, shop) => sum + (redeemPointsByShop[shop.shopSlug] ?? 0) * 100,
     0,
   );
+  // V2.1 — per-shop shipping (max() of physical-line shippingFeeSatang).
+  // Buyer pays seller direct via PromptPay; server re-derives at order
+  // POST so this display value can't be tampered with.
+  const shippingTotal = shopList.reduce(
+    (sum, shop) => sum + shop.shippingSatang,
+    0,
+  );
   const finalTotal = Math.max(
     0,
-    grandTotal - couponDiscountTotal - loyaltyDiscountTotal,
+    grandTotal + shippingTotal - couponDiscountTotal - loyaltyDiscountTotal,
   );
 
   const isSingleShop = shopList.length === 1;
@@ -424,12 +431,23 @@ export default function CartScreen() {
 
         <View className="mx-5 mt-4 rounded-3xl border border-border bg-white p-5">
           {shopList.map((shop) => (
-            <Row
-              key={shop.shopSlug}
-              label={shop.shopName}
-              value={formatBaht(shop.subtotalSatang)}
-            />
+            <View key={shop.shopSlug}>
+              <Row
+                label={shop.shopName}
+                value={formatBaht(shop.subtotalSatang)}
+              />
+              {shop.shippingSatang > 0 ? (
+                <Row
+                  label="└ ค่าส่ง"
+                  value={formatBaht(shop.shippingSatang)}
+                  muted
+                />
+              ) : null}
+            </View>
           ))}
+          {shippingTotal > 0 ? (
+            <Row label="ค่าส่งรวม" value={`+${formatBaht(shippingTotal)}`} />
+          ) : null}
           {couponDiscountTotal > 0 ? (
             <Row
               label={t("totalCoupon")}
@@ -614,13 +632,39 @@ function FieldInput({
   );
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function Row({
+  label,
+  value,
+  bold,
+  muted,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  muted?: boolean;
+}) {
   return (
     <View className="flex-row justify-between py-1">
-      <Text className={`${bold ? "text-[15px] font-semibold" : "text-[13px]"} text-fg`}>
+      <Text
+        className={`${
+          bold
+            ? "text-[15px] font-semibold text-fg"
+            : muted
+              ? "text-[11px] text-muted"
+              : "text-[13px] text-fg"
+        }`}
+      >
         {label}
       </Text>
-      <Text className={`${bold ? "text-[15px] font-bold text-brand-700" : "text-[13px] text-fg"}`}>
+      <Text
+        className={`${
+          bold
+            ? "text-[15px] font-bold text-brand-700"
+            : muted
+              ? "text-[11px] text-muted"
+              : "text-[13px] text-fg"
+        }`}
+      >
         {value}
       </Text>
     </View>

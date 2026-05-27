@@ -52,6 +52,7 @@ export default async function EditProductPage({
         category: product.category,
         condition: product.condition as ProductCondition,
         digitalContent: product.digitalContent,
+        shippingFeeBaht: Math.round(product.shippingFeeSatang / 100),
         stock: product.stock,
         status: product.status as ProductStatus,
       }}

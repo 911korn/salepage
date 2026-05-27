@@ -2,108 +2,151 @@ import { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
-  Pressable,
   ScrollView,
   ActivityIndicator,
   Alert,
   Linking,
+  Pressable,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
+import { Printer, Camera, CheckCircle2 } from "lucide-react-native";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { api, ApiClientError } from "@/lib/api";
-import { formatBaht } from "@/lib/format";
+import { compressForSlipUpload } from "@/lib/image-compress";
+import { getEnv } from "@/lib/env";
+import { Sentry } from "@/lib/sentry";
 
 /**
- * /seller/orders/[token]/ship — Shopee-style EasyParcel flow.
+ * /seller/orders/[token]/ship — V2.1 Drop-off + AI Tracking flow.
  *
- *   1. Seller types parcel weight (gram). Default 500g.
- *   2. POST /shipment/quote returns the courier rate list — render
- *      as a card stack sorted cheapest first.
- *   3. Seller picks one → POST /shipment/buy → returns AWB + PDF URL.
- *   4. Show success screen with "เปิดใบปะหน้า" CTA that opens the PDF
- *      in the system browser for printing. Order auto-flips SHIPPING.
+ * Replaces the EasyParcel-only Pro flow. Free for every seller —
+ * 911korn 2026-05-27 "ใส่ระบบนี้ไปให้ทุก tier ได้เลยตั้งแต่ฟรี
+ * เป็นจุดขายเลย".
  *
- * Pro-gated — server returns 402 "pro_required" if seller isn't on
- * a paid plan. We surface that as an alert with a link to /billing.
+ *   1. Tap "พิมพ์ใบปะหน้า" → opens our printable HTML label in the
+ *      system browser. Seller hits Print → tapes label on parcel.
+ *   2. Drops parcel at ANY courier (Flash/Kerry/J&T/Thai Post),
+ *      pays cash. Courier prints receipt with tracking#.
+ *   3. Tap "ถ่ายรูปใบเสร็จ" → camera → Claude vision OCR extracts
+ *      {trackingNumber, receiverName, courier}, matches the order's
+ *      customer name, auto-fills tracking + flips PAID→SHIPPING.
  */
 export default function SellerShipScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
-  const [weight, setWeight] = useState("500");
-  const [pickedRef, setPickedRef] = useState<string | null>(null);
-  const [purchased, setPurchased] = useState<{
-    awb: string;
-    pdf: string;
-    courier: string;
-  } | null>(null);
+  const { apiBaseUrl } = getEnv();
 
-  const weightGram = Math.max(100, Math.min(50_000, Number(weight) || 0));
-
-  const quoteQuery = useQuery({
-    queryKey: ["shipment", "quote", token, weightGram],
-    queryFn: () => api.orders.shipmentQuote(token!, { weightGram }),
-    enabled: Boolean(token) && weightGram >= 100,
-    staleTime: 60_000,
+  // Pull the order so we know the current tracking status — if the
+  // seller comes back to this screen after the AI scan already fired,
+  // we surface the success card instead of letting them re-scan.
+  const orderQuery = useQuery({
+    queryKey: ["order", token],
+    queryFn: () => api.orders.get(token!),
+    enabled: Boolean(token),
+    refetchInterval: false,
   });
 
-  const buyMutation = useMutation({
-    mutationFn: () => {
-      const rate = quoteQuery.data?.rates.find((r) => r.rateRef === pickedRef);
-      if (!rate || !token) throw new Error("กรุณาเลือก courier ก่อน");
-      return api.orders.shipmentBuy(token, {
-        rateRef: rate.rateRef,
-        courierCode: rate.courierCode,
-        courierName: rate.courierName,
-        serviceName: rate.serviceName,
-        weightGram,
-        shippingFeeSatang: rate.priceSatang,
+  const [pendingScan, setPendingScan] = useState<{
+    receiverName: string | null;
+    trackingNumber: string;
+    receiptUrl: string;
+    message: string;
+  } | null>(null);
+  const [scannedNow, setScannedNow] = useState<{
+    trackingNumber: string;
+    courier: string | null;
+  } | null>(null);
+
+  const labelUrl = token
+    ? `${apiBaseUrl.replace(/\/$/, "")}/api/v1/orders/${token}/shipment/label`
+    : null;
+
+  const scanMutation = useMutation({
+    mutationFn: async (override: boolean) => {
+      if (!token) throw new Error("missing token");
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("ต้องการสิทธิ์ใช้กล้อง", "เปิดในการตั้งค่า > SalePage");
+        throw new Error("camera_perm_denied");
+      }
+      const shot = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.9,
+      });
+      if (shot.canceled || !shot.assets[0]) throw new Error("cancelled");
+      const { base64 } = await compressForSlipUpload(shot.assets[0].uri);
+      return api.orders.scanShippingReceipt(token, {
+        dataBase64: base64,
+        contentType: "image/jpeg",
+        confirmOverride: override,
       });
     },
     onSuccess: (res) => {
-      setPurchased({
-        awb: res.awbNumber,
-        pdf: res.labelPdfUrl,
-        courier: res.courierName,
-      });
-    },
-    onError: (e) => {
-      const msg = e instanceof ApiClientError ? e.message : "ออกใบปะหน้าไม่สำเร็จ";
-      if (e instanceof ApiClientError && e.message.includes("Pro")) {
-        Alert.alert("ต้องอัปเกรด Pro", msg, [
-          { text: "ยกเลิก", style: "cancel" },
-          { text: "ดูแผน Pro", onPress: () => router.push("/me") },
-        ]);
+      if (res.ok) {
+        setScannedNow({
+          trackingNumber: res.trackingNumber,
+          courier: res.courier,
+        });
+        setPendingScan(null);
+        void orderQuery.refetch();
         return;
       }
-      Alert.alert("เกิดข้อผิดพลาด", msg);
+      if (res.reason === "name_mismatch" && res.scan.trackingNumber) {
+        setPendingScan({
+          receiverName: res.scan.receiverName,
+          trackingNumber: res.scan.trackingNumber,
+          receiptUrl: res.receiptUrl,
+          message: res.message,
+        });
+        return;
+      }
+      Alert.alert("AI อ่านใบเสร็จไม่สำเร็จ", res.message);
+    },
+    onError: (err) => {
+      if (err instanceof Error && err.message === "cancelled") return;
+      if (err instanceof Error && err.message === "camera_perm_denied") return;
+      Sentry.captureException(err);
+      Alert.alert(
+        "เกิดข้อผิดพลาด",
+        err instanceof ApiClientError ? err.message : "ลองอีกครั้ง",
+      );
     },
   });
 
-  if (purchased) {
+  const order = orderQuery.data;
+  const trackingNumber = scannedNow?.trackingNumber ?? order?.trackingNumber;
+  const isShipped = Boolean(trackingNumber);
+
+  if (orderQuery.isLoading) {
     return (
       <Screen>
-        <ScrollView contentContainerClassName="px-5 pb-32 pt-6">
-          <View className="rounded-3xl bg-emerald-50 border border-emerald-200 p-5">
-            <Text className="text-[18px] font-bold text-emerald-900">
-              ออกใบปะหน้าสำเร็จ
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#e11d48" />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (isShipped) {
+    return (
+      <Screen>
+        <ScrollView contentContainerClassName="px-5 pt-6 pb-32">
+          <View className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
+            <View className="flex-row items-center gap-2">
+              <CheckCircle2 size={22} color="#047857" strokeWidth={2.2} />
+              <Text className="text-[16px] font-bold text-emerald-900">
+                ส่งของแล้ว · AI ดึงเลข tracking ให้แล้ว
+              </Text>
+            </View>
+            <Text className="mt-3 font-mono text-[18px] font-bold text-emerald-900">
+              {trackingNumber}
             </Text>
-            <Text className="mt-1 text-[13px] text-emerald-700">
-              เลขพัสดุของ {purchased.courier}
-            </Text>
-            <Text className="mt-2 font-mono text-[18px] font-bold text-emerald-900">
-              {purchased.awb}
-            </Text>
-          </View>
-          <View className="mt-4 gap-2">
-            <Button onPress={() => void Linking.openURL(purchased.pdf)}>
-              เปิดใบปะหน้า (PDF) เพื่อปริ๊น →
-            </Button>
-            <Text className="text-center text-[11px] leading-relaxed text-muted">
-              ปริ๊นใบปะหน้า ติดที่กล่อง แล้วเอาไป drop-off ที่จุดรับของ
-              {" "}{purchased.courier}{" "}— ระบบจะอัปเดตสถานะให้ลูกค้าอัตโนมัติเมื่อ
-              courier scan เข้าระบบ
+            <Text className="mt-2 text-[11px] leading-relaxed text-emerald-700">
+              ลูกค้าได้รับอีเมล + LINE แจ้งเลขพัสดุแล้ว · พวกเขาเอา
+              tracking ไปเช็คที่หน้า courier ได้เลย
             </Text>
           </View>
           <Button
@@ -120,97 +163,126 @@ export default function SellerShipScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerClassName="px-5 pb-32 pt-6">
+      <ScrollView contentContainerClassName="px-5 pt-6 pb-32">
         <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-          ออกใบปะหน้าอัตโนมัติ
+          ส่งของให้ลูกค้า · ฟรี
         </Text>
         <Text className="mt-1 text-[20px] font-bold text-fg">
-          เลือกขนส่ง → ปริ๊น → drop-off
+          พิมพ์ → drop ที่ courier → ถ่ายรูปใบเสร็จ
         </Text>
         <Text className="mt-1 text-[12px] leading-relaxed text-muted">
-          ระบบเชื่อมตรงกับ EasyParcel · ค่าส่งจ่ายที่เคาน์เตอร์ courier ตอน
-          drop-off
+          ใช้ courier ไหนก็ได้ (Flash / Kerry / J&T / Thai Post) · จ่ายค่าส่ง
+          เป็นเงินสดที่เคาน์เตอร์ · AI ดึงเลข tracking ให้อัตโนมัติ
         </Text>
 
-        <View className="mt-5 rounded-2xl border border-border bg-white px-4 py-3">
-          <Text className="text-[11px] text-muted">น้ำหนักพัสดุ (กรัม)</Text>
-          <TextInput
-            value={weight}
-            onChangeText={(v) => {
-              setWeight(v.replace(/[^\d]/g, ""));
-              setPickedRef(null);
+        {/* Step 1: print label */}
+        <StepCard step={1} title="พิมพ์ใบปะหน้า">
+          <Text className="text-[12px] leading-relaxed text-muted">
+            เปิดในเบราว์เซอร์ → กด "พิมพ์" → ตัด-ติดที่กล่อง
+          </Text>
+          <Button
+            className="mt-3"
+            variant="outline"
+            onPress={() => {
+              if (labelUrl) void Linking.openURL(labelUrl);
             }}
-            keyboardType="number-pad"
-            maxLength={5}
-            placeholder="500"
-            className="mt-1 text-[20px] font-bold text-fg"
-          />
-        </View>
+            disabled={!labelUrl}
+          >
+            <View className="flex-row items-center gap-2">
+              <Printer size={16} color="#18181b" strokeWidth={2.2} />
+              <Text className="text-[14px] font-semibold text-fg">
+                เปิดใบปะหน้า
+              </Text>
+            </View>
+          </Button>
+          {order?.labelGeneratedAt ? (
+            <Text className="mt-2 text-[10px] text-emerald-700">
+              ✓ เปิดแล้วเมื่อ {new Date(order.labelGeneratedAt).toLocaleString()}
+            </Text>
+          ) : null}
+        </StepCard>
 
-        {quoteQuery.isLoading ? (
-          <View className="mt-5 items-center py-8">
-            <ActivityIndicator color="#e11d48" />
-            <Text className="mt-2 text-[12px] text-muted">กำลังเช็คราคา...</Text>
-          </View>
-        ) : quoteQuery.error ? (
-          <ErrorBlock err={quoteQuery.error} />
-        ) : quoteQuery.data ? (
-          <View className="mt-5 gap-2">
-            {quoteQuery.data.rates.map((r) => {
-              const isPicked = pickedRef === r.rateRef;
-              return (
-                <Pressable
-                  key={r.rateRef}
-                  onPress={() => setPickedRef(r.rateRef)}
-                  className={`rounded-2xl border p-4 ${
-                    isPicked
-                      ? "border-brand-600 bg-brand-50"
-                      : "border-border bg-white"
-                  }`}
-                >
-                  <View className="flex-row items-start justify-between">
-                    <View className="flex-1">
-                      <Text className="text-[14px] font-bold text-fg">
-                        {r.courierName}
-                      </Text>
-                      <Text className="text-[11px] text-muted">
-                        {r.serviceName} · ส่ง {r.etaDays} วัน
-                      </Text>
-                    </View>
-                    <Text className="text-[16px] font-bold text-brand-700">
-                      {formatBaht(r.priceSatang)}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
+        {/* Step 2: scan receipt */}
+        <StepCard step={2} title="ถ่ายรูปใบเสร็จที่ courier ให้">
+          <Text className="text-[12px] leading-relaxed text-muted">
+            หลัง drop ที่เคาน์เตอร์ → courier ให้ใบเสร็จที่มีเลขพัสดุ →
+            ถ่ายรูปให้เห็นชัด AI จะดึงเลขให้ทันที
+          </Text>
+          <Button
+            className="mt-3"
+            onPress={() => scanMutation.mutate(false)}
+            disabled={scanMutation.isPending}
+          >
+            {scanMutation.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <View className="flex-row items-center gap-2">
+                <Camera size={16} color="#fff" strokeWidth={2.2} />
+                <Text className="text-[14px] font-semibold text-white">
+                  ถ่ายรูปใบเสร็จ
+                </Text>
+              </View>
+            )}
+          </Button>
+        </StepCard>
+
+        {pendingScan ? (
+          <View className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4">
+            <Text className="text-[13px] font-bold text-amber-900">
+              ขอยืนยัน — ชื่อผู้รับไม่ตรง
+            </Text>
+            <Text className="mt-1 text-[12px] leading-relaxed text-amber-800">
+              {pendingScan.message}
+            </Text>
+            <Text className="mt-3 text-[11px] text-zinc-500">
+              tracking ที่ AI อ่าน:
+            </Text>
+            <Text className="font-mono text-[15px] font-bold text-zinc-900">
+              {pendingScan.trackingNumber}
+            </Text>
+            <View className="mt-3 flex-row gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onPress={() => setPendingScan(null)}
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1"
+                onPress={() => scanMutation.mutate(true)}
+                disabled={scanMutation.isPending}
+              >
+                ยืนยัน
+              </Button>
+            </View>
           </View>
         ) : null}
-
-        <Button
-          className="mt-6"
-          disabled={!pickedRef || buyMutation.isPending}
-          onPress={() => buyMutation.mutate()}
-        >
-          {buyMutation.isPending ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            "ยืนยัน · ออกใบปะหน้า"
-          )}
-        </Button>
       </ScrollView>
     </Screen>
   );
 }
 
-function ErrorBlock({ err }: { err: unknown }) {
-  const msg =
-    err instanceof ApiClientError
-      ? err.message
-      : "เช็คราคาไม่สำเร็จ ลองอีกครั้ง";
+function StepCard({
+  step,
+  title,
+  children,
+}: {
+  step: number;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <View className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4">
-      <Text className="text-[12px] text-rose-700">{msg}</Text>
+    <View className="mt-4 rounded-3xl border border-border bg-white p-5">
+      <View className="flex-row items-center gap-3">
+        <View className="size-7 items-center justify-center rounded-full bg-zinc-900">
+          <Text className="text-[12px] font-bold text-white">{step}</Text>
+        </View>
+        <Text className="text-[15px] font-bold text-fg">{title}</Text>
+      </View>
+      <View className="mt-3">{children}</View>
     </View>
   );
 }

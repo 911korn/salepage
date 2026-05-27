@@ -61,3 +61,6 @@ mobile/ios/
 mobile/android/
 mobile/node_modules/
 mobile/.eas/
+
+# Claude Code runtime state
+.claude/

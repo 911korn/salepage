@@ -204,6 +204,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   type: product.type,
                   stock: product.stock,
                   image: product.imageUrls[0] ?? null,
+                  shippingFeeBaht: product.shippingFeeBaht,
                 }}
               />
             </div>

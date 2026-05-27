@@ -30,6 +30,7 @@ interface Props {
     type: "PHYSICAL" | "DIGITAL";
     stock?: number | null;
     image?: string | null;
+    shippingFeeBaht?: number;
   };
 }
 
@@ -41,6 +42,7 @@ interface CheckoutItem {
   stock?: number | null;
   image?: string | null;
   qty: number;
+  shippingFeeBaht?: number;
 }
 
 interface AddressSuggestion {
@@ -124,13 +126,19 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
     stock: product.stock,
     image: product.image,
     qty,
+    shippingFeeBaht: product.shippingFeeBaht ?? 0,
   };
   const checkoutItems = checkoutMode === "cart" ? cartItems : [singleItem];
   const subtotal = checkoutItems.reduce(
     (sum, item) => sum + item.priceBaht * item.qty,
     0,
   );
-  const shipping = 0; // v1: shop sets per-product shipping later
+  // V2.1 per-shop shipping = max() across line items, 0 for DIGITAL-only.
+  // Server re-derives at order POST so this is display-only.
+  const shipping = checkoutItems.reduce((max, item) => {
+    if (item.type === "DIGITAL") return max;
+    return Math.max(max, item.shippingFeeBaht ?? 0);
+  }, 0);
   const couponDiscount = couponApplied?.discountBaht ?? 0;
   const pointsDiscount =
     redeemPoints * (loyalty?.bahtValuePerPoint ?? 0);
@@ -378,6 +386,7 @@ export function CheckoutPanel({ shopSlug, product }: Props) {
         stock: product.stock,
         image: product.image,
         qty: 1,
+        shippingFeeBaht: product.shippingFeeBaht ?? 0,
       },
     ]);
     const item = next.find((cartItem) => cartItem.productSlug === product.slug);
@@ -1342,6 +1351,7 @@ function normalizeCartItems(items: CheckoutItem[]) {
       stock: item.stock ?? null,
       image: item.image ?? null,
       qty: Math.min(stockMax, (current?.qty ?? 0) + qty),
+      shippingFeeBaht: item.shippingFeeBaht ?? 0,
     });
   }
   return Array.from(map.values()).slice(0, 20);

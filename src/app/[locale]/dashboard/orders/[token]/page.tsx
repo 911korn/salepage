@@ -1,11 +1,11 @@
 import { notFound, redirect } from "next/navigation";
-import { AlertCircle, ArrowLeft, ExternalLink, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowLeft, ExternalLink } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { OrderActions } from "@/components/dashboard/order-actions";
 import { ShippingWorkflow } from "@/components/dashboard/shipping-workflow";
-import { EasyParcelPanel } from "@/components/dashboard/easyparcel-panel";
+import { DropOffShippingPanel } from "@/components/dashboard/drop-off-shipping-panel";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
@@ -205,15 +205,23 @@ export default async function OrderDetailPage({
             ) : null}
           </section>
 
-          {/* V2.1 EasyParcel Pro auto-shipping (911korn 2026-05-27
-              "ทำให้เหมือน Shopee"). Mounts above the manual workflow
-              so Pro sellers see the auto-label CTA first; free-tier
-              sellers can still type a tracking number below. */}
+          {/* V2.1 Drop-off shipping panel — replaces EasyParcel. Free for
+              every seller, every tier. Step 1 prints our own HTML label
+              (no courier API), step 2 uploads the courier's receipt and
+              Claude vision OCR auto-fills the tracking number (911korn
+              2026-05-27 "ใส่ระบบนี้ไปให้ทุก tier ได้เลยตั้งแต่ฟรี
+              เป็นจุดขายเลย"). */}
           {(order.status === "PAID" || order.status === "SHIPPING") ? (
-            <EasyParcelPanel
+            <DropOffShippingPanel
               token={order.publicToken}
-              initialAwb={order.shipment?.trackingNumber ?? null}
-              initialLabelUrl={order.shipment?.labelUrl ?? null}
+              orderStatus={order.status}
+              initialTrackingNumber={order.trackingNumber}
+              initialReceiptUrl={order.shippingReceiptUrl}
+              initialLabelGeneratedAt={
+                order.labelGeneratedAt
+                  ? order.labelGeneratedAt.toISOString()
+                  : null
+              }
             />
           ) : null}
 
@@ -229,9 +237,7 @@ export default async function OrderDetailPage({
               trackingNumber={order.trackingNumber}
               shipment={order.shipment}
             />
-          ) : (
-            <AutoShippingUpgrade />
-          )}
+          ) : null}
 
           <OrderActions
             token={order.publicToken}
@@ -253,33 +259,6 @@ export default async function OrderDetailPage({
         </aside>
       </div>
     </div>
-  );
-}
-
-function AutoShippingUpgrade() {
-  return (
-    <section className="rounded-3xl border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-5 text-sm sm:p-6">
-      <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-white text-[color:var(--color-brand-600)]">
-          <Sparkles className="size-5" />
-        </span>
-        <div>
-          <h2 className="font-display text-base font-semibold text-[color:var(--color-brand-900)]">
-            Auto Shipping สำหรับ Pro ขึ้นไป
-          </h2>
-          <p className="mt-1 leading-relaxed text-[color:var(--color-brand-800)]">
-            แพ็กปัจจุบันยังใช้การใส่เลขพัสดุแบบ manual ได้ ส่วนการเตรียมพัสดุ
-            ใบปะหน้า และ workflow ขนส่งแบบ marketplace จะเปิดในแพ็ก Pro+
-          </p>
-          <Link
-            href="/#pricing"
-            className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3 text-[13px] font-semibold text-[color:var(--color-brand-700)] ring-1 ring-[color:var(--color-brand-200)]"
-          >
-            ดูแพ็กเกจ
-          </Link>
-        </div>
-      </div>
-    </section>
   );
 }
 

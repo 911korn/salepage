@@ -78,6 +78,7 @@ export default function EditProductScreen() {
   const [category, setCategory] = useState<CategoryKey | null>(null);
   const [condition, setCondition] = useState<"NEW" | "PRE_OWNED">("NEW");
   const [digitalContent, setDigitalContent] = useState("");
+  const [shippingFeeBaht, setShippingFeeBaht] = useState("");
   const [initialized, setInitialized] = useState(false);
 
   // Prefill once the product row arrives from the cache/network.
@@ -95,6 +96,11 @@ export default function EditProductScreen() {
     );
     setCondition(product.condition);
     setDigitalContent(product.digitalContent ?? "");
+    setShippingFeeBaht(
+      product.shippingFeeSatang
+        ? String(Math.round(product.shippingFeeSatang / 100))
+        : "",
+    );
     setImages(
       (product.imageUrls ?? []).map((url) => ({
         uri: url,
@@ -191,6 +197,9 @@ export default function EditProductScreen() {
   const updateMutation = useMutation({
     mutationFn: () => {
       if (!activeSlug || !productSlug) throw new Error("missing slug");
+      const shippingFeeNum = shippingFeeBaht.trim()
+        ? Math.max(0, Math.min(99999, Number(shippingFeeBaht) || 0))
+        : 0;
       return api.shops.updateProduct(activeSlug, productSlug, {
         name: name.trim(),
         description: description.trim() || null,
@@ -201,6 +210,7 @@ export default function EditProductScreen() {
         condition,
         digitalContent:
           type === "DIGITAL" ? digitalContent.trim() || null : null,
+        shippingFeeBaht: type === "DIGITAL" ? 0 : shippingFeeNum,
         stock: stockNum,
       });
     },
@@ -422,6 +432,24 @@ export default function EditProductScreen() {
             />
             <Text className="text-right text-[10px] text-muted">
               {digitalContent.length}/5000
+            </Text>
+          </Section>
+        ) : null}
+
+        {/* V2.1 per-product shipping fee — mirror new-product screen. */}
+        {type === "PHYSICAL" ? (
+          <Section title="ค่าจัดส่ง (฿)">
+            <TextInput
+              value={shippingFeeBaht}
+              onChangeText={(v) => setShippingFeeBaht(v.replace(/[^\d]/g, ""))}
+              keyboardType="number-pad"
+              maxLength={5}
+              placeholder="0 = ส่งฟรี"
+              className="rounded-2xl border border-border bg-white px-3 py-2.5 text-[15px] font-semibold text-fg"
+            />
+            <Text className="text-[11px] leading-relaxed text-muted">
+              ลูกค้าจะเห็นค่าส่งและจ่ายให้คุณตอน checkout · คุณรับผิดชอบ
+              ค่าส่งจริงตอน drop-off
             </Text>
           </Section>
         ) : null}
