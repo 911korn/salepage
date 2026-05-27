@@ -57,10 +57,15 @@ const config: ExpoConfig = {
     bundleIdentifier: "in.th.salepage.mobile",
     associatedDomains: ["applinks:salepage.in.th"],
     infoPlist: {
+      // Apple requires this declaration for every new app since 2024-02
+      // — `false` means we use only standard iOS crypto (TLS) and don't
+      // need an export-compliance review. SalePage doesn't ship any
+      // custom encryption.
+      ITSAppUsesNonExemptEncryption: false,
       NSCameraUsageDescription:
-        "ใช้กล้องเพื่อถ่ายรูปสลิปการโอนเงิน หรือสแกน QR ของสลิป",
+        "ใช้กล้องเพื่อถ่ายรูปสลิปการโอนเงิน · ถ่ายรูปสินค้า · ถ่ายรูปใบเสร็จขนส่งสำหรับ AI scan",
       NSPhotoLibraryUsageDescription:
-        "เลือกรูปสลิปจากคลังภาพเพื่อยืนยันการชำระเงิน",
+        "เลือกรูปสลิป รูปสินค้า หรือรูปใบเสร็จขนส่งจากคลังภาพ",
       LSApplicationQueriesSchemes: [
         "line",
         "kbankline",

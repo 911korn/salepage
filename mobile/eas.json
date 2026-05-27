@@ -25,12 +25,22 @@
     "production": {
       "channel": "production",
       "autoIncrement": true,
+      "ios": {
+        "resourceClass": "m-medium"
+      },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://salepage.in.th"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleTeamId": "MR3FF57WDB",
+        "ascApiKeyPath": "./credentials/AuthKey_6R5FJ3YKJ5.p8",
+        "ascApiKeyId": "6R5FJ3YKJ5",
+        "ascApiKeyIssuerId": "69a6de96-ecf7-47e3-e053-5b8c7c11a4d1"
+      }
+    }
   }
 }

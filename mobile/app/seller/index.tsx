@@ -20,9 +20,8 @@ import { useTranslation } from "react-i18next";
 import {
   Package,
   ShoppingBag,
-  Camera,
-  Radio,
-  Users,
+  // Stories/Live/Group Buy icons kept in case we un-hide before TestFlight 2.
+  // Camera, Radio, Users,
   MessageSquare,
   Globe,
   Palette,
@@ -296,6 +295,12 @@ export default function SellerHomeScreen() {
               subtitle={t("home.actions.productsSub")}
               onPress={() => router.push("/seller/products")}
             />
+            {/* 911korn 2026-05-27 "ตัดฟีเจอพวกนี้ออกก่อน Hide ไว้ก่อน
+                อนาคตค่อยทำ" — Stories / Live / Group Buy เก็บโค้ดไว้
+                (route + screens ยังเหมือนเดิม) แต่ซ่อนจากเมนู seller
+                สำหรับ TestFlight build แรก. กลับมาเปิดได้ภายหลังด้วย
+                การปลด comment บล็อกนี้. */}
+            {/*
             <ActionRow
               Icon={Camera}
               title={t("home.actions.stories")}
@@ -314,6 +319,7 @@ export default function SellerHomeScreen() {
               subtitle={t("home.actions.groupBuySub")}
               onPress={() => router.push("/seller/group-buys")}
             />
+            */}
             <ActionRow
               Icon={MessageSquare}
               title={t("home.actions.chat")}
