@@ -236,6 +236,26 @@ export async function sendNewOrderAlert(
   });
 }
 
+/** Customer: order auto-closed by the 7-day cron. */
+export async function sendOrderAutoDelivered(ctx: OrderContext): Promise<void> {
+  if (!ctx.customerEmail) return;
+  const trackingUrl = `${siteUrl()}/o/${ctx.token}`;
+  const html = shell({
+    heading: `ออเดอร์ของคุณปิดอัตโนมัติแล้ว`,
+    body: `
+      <p>พัสดุของคุณจากร้าน <strong>${escapeHtml(ctx.shopName)}</strong> ส่งไปครบ 7 วันแล้ว · ระบบบันทึกว่าได้รับของแล้วโดยอัตโนมัติ</p>
+      <p style="color:#a1a1aa;font-size:13px;">หากของยังไม่ถึง หรือมีปัญหากับสินค้า กรุณาเปิด dispute ในหน้าออเดอร์ ระบบจะแจ้งร้านให้แก้ไข</p>
+    `,
+    cta: { label: "เปิดหน้าออเดอร์", url: trackingUrl },
+  });
+  await send({
+    to: ctx.customerEmail,
+    subject: `ออเดอร์เสร็จสมบูรณ์ · ${ctx.shopName} (${ctx.ref})`,
+    html,
+    replyTo: ctx.shopContactEmail ?? undefined,
+  });
+}
+
 /** Shop owner: payment was verified for an order. */
 export async function sendPaymentReceivedAlert(
   ctx: OrderContext & { ownerEmail: string; slipRef?: string },

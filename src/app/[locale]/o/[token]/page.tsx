@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { TrackingPanel } from "@/components/storefront/tracking-panel";
 import { CancelOrderSection } from "@/components/storefront/cancel-order-section";
+import { ConfirmDeliveredButton } from "@/components/storefront/confirm-delivered-button";
 import { ReviewForm } from "@/components/storefront/review-form";
 import { LineOrderLinker } from "@/components/storefront/line-order-linker";
 import { cn } from "@/lib/cn";
@@ -156,6 +157,13 @@ export default async function OrderTrackingPage({ params }: PageProps) {
               shipment={order.shipment}
               trackingNumber={order.trackingNumber}
             />
+          ) : null}
+
+          {/* Buyer self-confirm — closes the SHIPPING → DELIVERED loop
+              without a courier API. Mounted only while SHIPPING (and
+              auto-hidden as soon as it flips DELIVERED). */}
+          {order.status === OrderStatus.SHIPPING ? (
+            <ConfirmDeliveredButton token={order.publicToken} />
           ) : null}
 
           {/* Items */}

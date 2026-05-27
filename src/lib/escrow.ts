@@ -100,6 +100,7 @@ export async function markEscrowDelivered(
 export type ReleaseReason =
   | "buyer_confirmed"
   | "auto_release_72h"
+  | "auto_delivered_7d"
   | "admin_manual"
   | "dispute_no_action";
 

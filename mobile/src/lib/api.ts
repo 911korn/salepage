@@ -371,6 +371,22 @@ export const api = {
       }),
 
     /**
+     * V2.1 Buyer-side "ของถึงแล้ว — กดยืนยัน". Closes the SHIPPING loop
+     * without a courier API. For escrow orders this also releases the
+     * hold to the shop. Idempotent — already DELIVERED returns ok.
+     * 911korn 2026-05-27 "จบ Loop เสมือนมี api เองเลย".
+     */
+    markDelivered: (token: string) =>
+      apiFetch<{
+        delivered?: boolean;
+        alreadyDelivered?: boolean;
+        buyerConfirmedAt?: string | null;
+      }>(`/api/v1/orders/${token}/mark-delivered`, {
+        method: "POST",
+        anonymous: true,
+      }),
+
+    /**
      * V2.1 Drop-off shipping receipt OCR (free for all sellers). Seller
      * drops a parcel at any courier, snaps a photo of the printed
      * receipt, calls this — Claude vision extracts tracking# +

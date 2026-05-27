@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { View, Text, ScrollView, ActivityIndicator, Alert, Pressable, Clipboard, Linking } from "react-native";
 import { Image } from "expo-image";
 import { useState } from "react";
-import { Copy, Sparkles, Receipt } from "lucide-react-native";
+import { Copy, Sparkles, Receipt, CheckCircle2 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,27 @@ export default function TrackingScreen() {
     },
   });
 
+  // V2.1 Buyer "ของถึงแล้ว — กดยืนยัน" — closes SHIPPING loop without
+  // courier API. For escrow orders this releases the hold too.
+  const markDelivered = useMutation({
+    mutationFn: () => {
+      if (!token) throw new Error("missing token");
+      return api.orders.markDelivered(token);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["order", token] });
+      Alert.alert(
+        "ขอบคุณที่ยืนยัน",
+        "ออเดอร์เสร็จสมบูรณ์ · หากมีปัญหากับสินค้า เปิด dispute ได้ในหน้านี้",
+      );
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof ApiClientError ? err.message : "ยืนยันไม่สำเร็จ";
+      Alert.alert("เกิดข้อผิดพลาด", msg);
+    },
+  });
+
   if (isLoading || !data) {
     return (
       <Screen>
@@ -90,6 +111,35 @@ export default function TrackingScreen() {
           />
         ))}
       </View>
+
+      {/* Buyer self-confirm — closes SHIPPING loop. Hidden once
+          delivered. Escrow orders use the EscrowStatusBanner's own
+          confirm button instead so we don't double up. */}
+      {data.status === "SHIPPING" && !data.useEscrow ? (
+        <View className="mx-5 mt-4 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
+          <View className="flex-row items-start gap-3">
+            <View className="size-10 items-center justify-center rounded-2xl bg-white">
+              <CheckCircle2 size={20} color="#047857" strokeWidth={2.2} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-[15px] font-bold text-emerald-900">
+                ของถึงแล้วใช่ไหม?
+              </Text>
+              <Text className="mt-1 text-[12px] leading-relaxed text-emerald-800">
+                กดยืนยันให้ร้านรู้ว่าได้รับของแล้ว · ระบบจะปิดออเดอร์อัตโนมัติหลัง 7 วันถ้าไม่กด
+              </Text>
+              <Button
+                className="mt-3"
+                loading={markDelivered.isPending}
+                disabled={markDelivered.isPending}
+                onPress={() => markDelivered.mutate()}
+              >
+                ได้รับของแล้ว
+              </Button>
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       {/* Tracking number */}
       {data.trackingNumber ? (
