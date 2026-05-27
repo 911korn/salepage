@@ -2,11 +2,11 @@
 
 ## Apple App Store Connect — paste verbatim
 
-- **Name (TH primary):** `SalePage — ร้านออนไลน์ใน 30 วิ`
-- **Subtitle (TH primary):** `ขายของไทย · 0% ค่าธรรมเนียม`
+- **Name (TH primary):** `SalePage : ขายของไม่หัก %`
+- **Subtitle (TH primary):** `เงินถึงคุณตรง ไม่ผ่านคนกลาง`
 - **Promotional Text:** see `listing-th.md` → Promotional Text section
 - **Description:** see `listing-th.md` → Description (Full)
-- **Keywords:** `salepage,ขายของ,ร้านออนไลน์,promptpay,ขายของออนไลน์,เปิดร้าน,ค้าขาย,พ่อค้าแม่ค้า,ของกิน,อีคอมเมิร์ซ`
+- **Keywords:** `salepage,thaimart,ขายของ,ร้านออนไลน์,promptpay,ขายของออนไลน์,เปิดร้าน,ค้าขาย,พ่อค้าแม่ค้า,อีคอมเมิร์ซ`
 - **Support URL:** `https://salepage.in.th/contact`
 - **Marketing URL:** `https://salepage.in.th`
 - **Privacy Policy URL:** `https://salepage.in.th/privacy`
@@ -18,7 +18,7 @@
 
 ## Google Play Console — paste verbatim
 
-- **App name:** `SalePage — ร้านออนไลน์ใน 30 วิ`
+- **App name:** `SalePage : ขายของไม่หัก %`
 - **Short description (80):** `เปิดร้านออนไลน์ใน 30 วิ ขายตรง เงินเข้าบัญชีทันที ไม่หักค่าธรรมเนียม`
 - **Full description:** `listing-th.md` → Description (Full)
 - **What's new:** `listing-th.md` → What's New

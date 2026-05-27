@@ -4,11 +4,7 @@
 
 ## App Name (max 30 chars)
 
-**SalePage — Open a Shop in 30s**
-
-Alternatives:
-- SalePage: Sell Online, 0% Fees
-- SalePage — Thai Online Selling
+**SalePage : Shopping**
 
 ---
 
@@ -108,7 +104,7 @@ Sell direct, get paid 100% to your PromptPay. No marketplace cut.
 ## Keywords (App Store, max 100 chars, comma-separated)
 
 ```
-salepage,thai,promptpay,online shop,sell,marketplace,storefront,ecommerce,merchant,seller
+salepage,thaimart,thai,promptpay,online shop,sell,marketplace,storefront,ecommerce,merchant
 ```
 
 ---

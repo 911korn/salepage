@@ -39,9 +39,9 @@
     "titleHighlight": "online store",
     "title2": "get paid",
     "titleStruck": "with no middleman",
-    "desc": "Open in seconds — get paid <qr>PromptPay direct to your bank</qr> · <ai>AI slip-verify in 3s</ai> · use ANY courier, AI reads the receipt and fills tracking for you.",
+    "desc": "Open in seconds — get paid <qr>PromptPay direct to your bank</qr> · <ai>AI slip-verify in 3s</ai> — we cover half the cost · use ANY courier, AI reads the receipt + fills tracking.",
     "trustFree": "Free forever · 0% fees",
-    "trustNoCard": "AI slip auto-verify",
+    "trustNoCard": "AI slip verify — we cover half",
     "trustDirect": "Any courier works",
     "previewProductHotName": "Thong Yip set of 9",
     "previewProductSaleName": "Coconut Lod Chong",
@@ -105,8 +105,8 @@
         "desc": "Enter your phone or national ID; we generate a QR with the right amount instantly."
       },
       "ai": {
-        "title": "AI auto slip verify",
-        "desc": "Customer uploads a slip — AI checks amount, recipient, and time in 3 seconds. Order flips to \"Paid\" automatically. Catches fakes."
+        "title": "AI slip verify · we cover half",
+        "desc": "Customer uploads a slip — AI checks amount, recipient, and time in 3 seconds. Order flips to \"Paid\" automatically. Catches fakes. SalePage covers half the AI cost, so shops only pay half."
       },
       "fees": {
         "title": "Money to you 100% — no middleman",
