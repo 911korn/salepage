@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Linking,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
@@ -13,6 +12,7 @@ import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
+import * as Updates from "expo-updates";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { AppLogo } from "@/components/brand/app-logo";
@@ -70,19 +70,37 @@ export default function MeScreen() {
   }
 
   async function performLogout() {
+    // 911korn 2026-05-27 23:35: through 4 OTAs the UI still froze
+    // after logout from LINE-signed-in state — Alert vs inline,
+    // sync vs async, await vs fire-and-forget, none of it mattered.
+    // The bridge / RN runtime is wedging somewhere we can't reach
+    // from JS state manipulation.
+    //
+    // Nuclear option: hide the confirm panel, clear the keychain +
+    // server push token, then reload the JS bundle. Everything
+    // remounts from scratch with `authed === null` → useFocusEffect
+    // reads getAuthToken() → returns null → guest view. Zero stale
+    // state, zero stuck native modals, zero React Query subscribers
+    // looping.
     setConfirmLogoutOpen(false);
-    // Flip authed FIRST so the UI immediately swaps to guest view —
-    // no waiting for any async work to complete. The destructive
-    // button has already committed the user to logging out.
-    setAuthed(false);
-    // Reset per-user device state synchronously. Persisted Zustand
-    // stores survived logout otherwise (cart, seller-mode).
+    try {
+      await clearAuthToken();
+    } catch {
+      /* SecureStore can fail silently */
+    }
+    void unregisterPushToken();
+    // Reset persisted Zustand stores BEFORE reload so they don't
+    // rehydrate the previous user's cart / seller-mode on relaunch.
     useCart.getState().clear();
     useSellerMode.setState({ mode: "buyer", activeShopSlug: null });
-    queryClient.clear();
-    // Best-effort async cleanup — runs in the background.
-    void clearAuthToken();
-    void unregisterPushToken();
+    try {
+      await Updates.reloadAsync();
+    } catch {
+      // In Expo Go or if Updates isn't available — fall back to
+      // best-effort state reset so the dev experience still works.
+      queryClient.clear();
+      setAuthed(false);
+    }
   }
 
   if (authed === null) {
