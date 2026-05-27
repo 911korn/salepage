@@ -84,6 +84,17 @@ export async function loginWithGoogle(): Promise<GoogleBridgeResult> {
   }
   const { bridgeId, openUrl } = startJson.data;
 
+  // Persist bridgeId so /auth/google can recover the token if iOS
+  // suspended this JS thread while the user was on accounts.google.com
+  // (911korn 2026-05-27 23:10 video — bridge had token but mobile
+  // didn't pick it up).
+  try {
+    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+    await AsyncStorage.setItem("salepage:google-bridge-id", bridgeId);
+  } catch {
+    /* non-fatal */
+  }
+
   let cancelled = false;
   let pollHandle: ReturnType<typeof setTimeout> | null = null;
   let finalResult: GoogleBridgeResult | null = null;

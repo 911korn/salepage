@@ -89,6 +89,18 @@ export async function loginWithLine(): Promise<LineBridgeResult> {
   }
   const { bridgeId } = startJson.data;
 
+  // 911korn 2026-05-27 23:10: persist the bridgeId so the deep-link
+  // receiver at /auth/line can recover the token if iOS suspended the
+  // signin screen's JS thread while the user was in LINE. Without this,
+  // the user returns from LINE → app cold-starts → polling loop is
+  // gone → token sits in the bridge unread.
+  try {
+    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+    await AsyncStorage.setItem("salepage:line-bridge-id", bridgeId);
+  } catch {
+    /* non-fatal */
+  }
+
   // Build a return URL that picks the right scheme at runtime:
   //   Expo Go: `exp://192.168.x.x:8081/--/auth/line?ok=1`
   //   EAS:     `salepage://auth/line?ok=1`

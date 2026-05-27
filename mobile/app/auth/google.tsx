@@ -1,31 +1,72 @@
 import { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
-import { getAuthToken } from "@/lib/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getAuthToken, setAuthToken } from "@/lib/auth";
+import { registerPushToken } from "@/lib/push";
+import { getEnv } from "@/lib/env";
 
 /**
  * Deep-link receiver for the Google bridge auto-return.
  *
- * Same shape as /auth/line — polls getAuthToken until the JWT lands in
- * the keychain (race: deep link fires ~300ms after server JWT write,
- * but the mobile poll iteration may not run for another ~1.5s), then
- * routes to /me.
+ * Two paths to "signed in":
+ *  1. Token already in keychain (signin screen's poll beat us here).
+ *  2. Bridge recovery — if iOS suspended the signin JS thread while
+ *     the user was on accounts.google.com, the token sits in the
+ *     bridge unread. We re-fetch it here using the bridgeId persisted
+ *     in AsyncStorage at flow start (911korn 2026-05-27 23:10 video,
+ *     same root cause as LINE).
  *
- * No dismissAll: the deep link arrives on the root stack so there's
- * nothing to pop, and unconditional dismissAll on an empty stack
- * triggers POP_TO_TOP in dev.
+ * Polls every 300ms with a 12s deadline before falling back to /signin.
  */
+const BRIDGE_KEY = "salepage:google-bridge-id";
+
 export default function AuthGoogleReturn() {
   const [stillWaiting, setStillWaiting] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     const deadline = Date.now() + 12_000;
+    const env = getEnv();
+    const apiBase = env.apiBaseUrl.replace(/\/+$/, "");
+
+    async function recoverFromBridge(): Promise<boolean> {
+      try {
+        const bridgeId = await AsyncStorage.getItem(BRIDGE_KEY);
+        if (!bridgeId) return false;
+        const res = await fetch(
+          `${apiBase}/api/v1/auth/mobile-bridge/poll?bridge=${encodeURIComponent(bridgeId)}`,
+        );
+        const json = (await res.json()) as {
+          ok: boolean;
+          data?: { pending: boolean; token?: string };
+        };
+        if (!json.ok || !json.data || json.data.pending) return false;
+        const token = json.data.token;
+        if (!token) return false;
+        await setAuthToken(token);
+        try {
+          await AsyncStorage.removeItem(BRIDGE_KEY);
+        } catch {
+          /* ignore */
+        }
+        void registerPushToken().catch(() => undefined);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     const check = async () => {
       if (cancelled) return;
       try {
         const token = await getAuthToken();
         if (token) {
+          router.replace("/me");
+          return;
+        }
+        const recovered = await recoverFromBridge();
+        if (recovered) {
           router.replace("/me");
           return;
         }
