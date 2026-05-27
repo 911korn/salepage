@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/ui/google-icon";
 import { AppleIcon } from "@/components/ui/apple-icon";
+import { InAppBrowserBanner } from "@/components/auth/in-app-browser-banner";
 
 interface Props {
   callbackUrl?: string | null;
@@ -60,6 +61,7 @@ export function SignInForm({
 
   return (
     <div className="space-y-4">
+      <InAppBrowserBanner />
       {hasGoogle ? (
         <Button
           variant="outline"
