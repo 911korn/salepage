@@ -139,7 +139,8 @@ const ProductCard = memo(function ProductCard({
       onPress={() =>
         router.push(`/seller/products/${product.slug}/edit` as never)
       }
-      className="m-1 w-[48%] overflow-hidden rounded-2xl border border-border bg-white"
+      style={{ marginHorizontal: 4, marginBottom: 8 }}
+      className="overflow-hidden rounded-2xl border border-border bg-white"
     >
       <View className="aspect-square w-full bg-brand-50">
         {product.imageUrls?.[0] ? (

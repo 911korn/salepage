@@ -301,7 +301,13 @@ const ProductCard = memo(function ProductCard({
   return (
     <Pressable
       onPress={() => router.push(`/s/${product.shopSlug}/${product.slug}`)}
-      className="m-1 w-[48%] overflow-hidden rounded-2xl border border-border bg-white"
+      // FlashList already divides the row into numColumns slots, so the
+      // card just fills its slot width. Old FlatList code had `w-[48%]`
+      // which double-counted under FlashList and squeezed the cards
+      // (911korn 2026-05-27 "Grid มันเพี้ยน · โดนบีบ"). Margin-x 4 +
+      // FlashList's columnar slot = 8px gap between cards, Shopee-tight.
+      style={{ marginHorizontal: 4, marginBottom: 8 }}
+      className="overflow-hidden rounded-2xl border border-border bg-white"
     >
       <View
         className={`aspect-square w-full bg-brand-50 ${
