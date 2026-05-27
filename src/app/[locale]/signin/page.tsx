@@ -36,6 +36,9 @@ export default async function SignInPage({ params, searchParams }: PageProps) {
           process.env.AUTH_APPLE_KEY_ID &&
           process.env.AUTH_APPLE_PRIVATE_KEY)),
   );
+  const hasLine = Boolean(
+    process.env.LINE_LOGIN_CHANNEL_ID && process.env.LINE_LOGIN_CHANNEL_SECRET,
+  );
   const hasResend = Boolean(process.env.AUTH_RESEND_KEY);
 
   return (
@@ -61,6 +64,7 @@ export default async function SignInPage({ params, searchParams }: PageProps) {
                 callbackUrl={normalizedCallbackUrl}
                 hasGoogle={hasGoogle}
                 hasApple={hasApple}
+                hasLine={hasLine}
                 hasEmail={hasResend}
               />
             </div>

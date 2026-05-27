@@ -622,6 +622,7 @@
       "subtitle": "Start managing your shop in 30 seconds",
       "withGoogle": "Continue with Google",
       "withApple": "Continue with Apple",
+      "withLine": "Continue with LINE",
       "withEmail": "Continue with email",
       "emailPlaceholder": "you@example.com",
       "sendMagicLink": "Send sign-in link",

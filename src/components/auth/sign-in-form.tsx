@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/ui/google-icon";
 import { AppleIcon } from "@/components/ui/apple-icon";
+import { LineIcon } from "@/components/ui/line-icon";
 import { InAppBrowserBanner } from "@/components/auth/in-app-browser-banner";
 
 interface Props {
   callbackUrl?: string | null;
   hasGoogle: boolean;
   hasApple: boolean;
+  hasLine: boolean;
   hasEmail: boolean;
 }
 
@@ -22,6 +24,7 @@ export function SignInForm({
   callbackUrl: callbackUrlParam,
   hasGoogle,
   hasApple,
+  hasLine,
   hasEmail,
 }: Props) {
   const t = useTranslations("auth.signIn");
@@ -62,6 +65,17 @@ export function SignInForm({
   return (
     <div className="space-y-4">
       <InAppBrowserBanner />
+      {hasLine ? (
+        <Button
+          variant="outline"
+          size="lg"
+          className="w-full bg-[#06C755] text-white hover:bg-[#05a847] hover:text-white"
+          onClick={() => signIn("line", { callbackUrl })}
+        >
+          <LineIcon className="size-5" />
+          {t("withLine")}
+        </Button>
+      ) : null}
       {hasGoogle ? (
         <Button
           variant="outline"
@@ -105,7 +119,7 @@ export function SignInForm({
         </Button>
       ) : null}
 
-      {(hasGoogle || hasApple) && hasEmail ? (
+      {(hasGoogle || hasApple || hasLine) && hasEmail ? (
         <div className="flex items-center gap-3">
           <span className="h-px flex-1 bg-[color:var(--color-border)]" />
           <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">

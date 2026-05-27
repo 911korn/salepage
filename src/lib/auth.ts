@@ -2,6 +2,7 @@ import NextAuth, { type NextAuthConfig } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Google from "next-auth/providers/google";
 import Apple from "next-auth/providers/apple";
+import Line from "next-auth/providers/line";
 import Resend from "next-auth/providers/resend";
 import { db } from "@/lib/db";
 import { getAppleClientSecret } from "@/lib/apple-client-secret";
@@ -56,6 +57,28 @@ if (hasAppleConfig) {
       }),
     );
   }
+}
+
+// LINE Login — critical for Thai buyers who arrive via LINE chat links.
+// Google blocks OAuth in LINE's in-app browser; sign-in with LINE lets
+// the buyer keep their existing LINE session and not switch browsers
+// (911korn 2026-05-27 IMG_5547 "Login with google ติดอยู่ใน Modal").
+//
+// Uses the same LINE Login channel as verifyPlatformLineIdToken (mobile
+// LIFF flow) — one channel, two consumers. The OIDC `email` scope is
+// requested so we can fall back to dedupe by email when LINE doesn't
+// release a verified one (rare).
+const hasLineConfig = Boolean(
+  process.env.LINE_LOGIN_CHANNEL_ID && process.env.LINE_LOGIN_CHANNEL_SECRET,
+);
+if (hasLineConfig) {
+  providers.push(
+    Line({
+      clientId: process.env.LINE_LOGIN_CHANNEL_ID!,
+      clientSecret: process.env.LINE_LOGIN_CHANNEL_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+    }),
+  );
 }
 
 if (process.env.AUTH_RESEND_KEY) {
