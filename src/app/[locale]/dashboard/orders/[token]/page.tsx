@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { OrderActions } from "@/components/dashboard/order-actions";
 import { ShippingWorkflow } from "@/components/dashboard/shipping-workflow";
+import { EasyParcelPanel } from "@/components/dashboard/easyparcel-panel";
 import { cn } from "@/lib/cn";
 import { db, OrderStatus } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
@@ -203,6 +204,18 @@ export default async function OrderDetailPage({
               </div>
             ) : null}
           </section>
+
+          {/* V2.1 EasyParcel Pro auto-shipping (911korn 2026-05-27
+              "ทำให้เหมือน Shopee"). Mounts above the manual workflow
+              so Pro sellers see the auto-label CTA first; free-tier
+              sellers can still type a tracking number below. */}
+          {(order.status === "PAID" || order.status === "SHIPPING") ? (
+            <EasyParcelPanel
+              token={order.publicToken}
+              initialAwb={order.shipment?.trackingNumber ?? null}
+              initialLabelUrl={order.shipment?.labelUrl ?? null}
+            />
+          ) : null}
 
           {shippingEligible ? (
             <ShippingWorkflow
