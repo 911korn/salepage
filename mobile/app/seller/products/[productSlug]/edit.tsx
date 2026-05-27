@@ -290,9 +290,10 @@ export default function EditProductScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
       <ScrollView
-        contentContainerClassName="pb-40"
+        contentContainerClassName="pb-96"
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
       >
         <View className="px-5 pt-6">
           <Text className="text-[11px] font-semibold uppercase tracking-wider text-muted">
