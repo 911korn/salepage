@@ -92,6 +92,10 @@ export default function SellerShipScreen() {
         });
         setPendingScan(null);
         void orderQuery.refetch();
+        // Auto-navigate back to the orders list after the seller has a
+        // beat to read the success card — same UX win as web (911korn
+        // 2026-05-27 "ระบบมัน ไม่ Redirect ไปไหน อยู่หน้าเดิมทำให้งง").
+        setTimeout(() => router.replace("/seller/orders"), 1800);
         return;
       }
       if (res.reason === "name_mismatch" && res.scan.trackingNumber) {

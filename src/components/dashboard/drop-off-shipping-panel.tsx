@@ -33,6 +33,10 @@ interface Props {
   initialTrackingNumber: string | null;
   initialReceiptUrl: string | null;
   initialLabelGeneratedAt: string | null;
+  /** Shop slug — used to navigate back to /dashboard/orders after a
+   *  successful scan so the seller doesn't get stranded on the same
+   *  page (911korn 2026-05-27 "กดยืนยันแล้วมันควรมี Success page").  */
+  shopSlug: string;
 }
 
 export function DropOffShippingPanel({
@@ -41,6 +45,7 @@ export function DropOffShippingPanel({
   initialTrackingNumber,
   initialReceiptUrl,
   initialLabelGeneratedAt,
+  shopSlug,
 }: Props) {
   const router = useRouter();
   const [scanning, setScanning] = useState(false);
@@ -110,9 +115,18 @@ export function DropOffShippingPanel({
         setTracking(d.trackingNumber);
         setReceiptUrl(d.receiptUrl ?? null);
         setPendingScan(null);
-        toast.success(
-          `อัปเดต tracking ${d.trackingNumber}${d.courier ? ` · ${courierLabel(d.courier)}` : ""}`,
-        );
+        // Lingering toast — survives the navigation below so the seller
+        // can read the captured tracking number on the orders list.
+        toast.success("ส่งของสำเร็จ · ลูกค้าได้รับ email + LINE แล้ว", {
+          description: `tracking ${d.trackingNumber}${d.courier ? ` · ${courierLabel(d.courier)}` : ""}`,
+          duration: 8000,
+        });
+        // Auto-navigate to the orders list so the seller can pick the
+        // next order to ship instead of getting stranded on the same
+        // page (911korn 2026-05-27 "ระบบมัน ไม่ Redirect ไปไหน อยู่
+        // หน้าเดิมทำให้งง"). They can still tap the order row in the
+        // list to verify the tracking landed correctly.
+        router.push(`/dashboard/orders?shop=${encodeURIComponent(shopSlug)}`);
         router.refresh();
         return;
       }

@@ -222,6 +222,7 @@ export default async function OrderDetailPage({
                   ? order.labelGeneratedAt.toISOString()
                   : null
               }
+              shopSlug={order.shop.slug}
             />
           ) : null}
 
