@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Smartphone,
   Sparkles,
+  Truck,
   Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -22,10 +23,11 @@ interface Feature {
 }
 
 const FEATURES: Feature[] = [
+  { key: "fees", icon: Banknote },
+  { key: "ai", icon: Bot },
+  { key: "shipping", icon: Truck },
   { key: "speed", icon: Clock },
   { key: "qr", icon: QrCode },
-  { key: "ai", icon: Bot },
-  { key: "fees", icon: Banknote },
   { key: "link", icon: Link2 },
   { key: "admin", icon: ShieldCheck },
   { key: "mobile", icon: Smartphone },

@@ -39,10 +39,10 @@
     "titleHighlight": "online store",
     "title2": "get paid",
     "titleStruck": "with no middleman",
-    "desc": "Ready-made store platform — just enter your phone and you get <qr>an automatic PromptPay QR</qr>, plus our <ai>AI slip verifier</ai>. Your customer transfers, you verify, you ship — all in 1 minute.",
-    "trustFree": "Free forever",
-    "trustNoCard": "No credit card",
-    "trustDirect": "Money lands in your account",
+    "desc": "Open in seconds — get paid <qr>PromptPay direct to your bank</qr> · <ai>AI slip-verify in 3s</ai> · use ANY courier, AI reads the receipt and fills tracking for you.",
+    "trustFree": "Free forever · 0% fees",
+    "trustNoCard": "AI slip auto-verify",
+    "trustDirect": "Any courier works",
     "previewProductHotName": "Thong Yip set of 9",
     "previewProductSaleName": "Coconut Lod Chong",
     "previewQrLabel": "PromptPay QR · ฿290",
@@ -105,12 +105,16 @@
         "desc": "Enter your phone or national ID; we generate a QR with the right amount instantly."
       },
       "ai": {
-        "title": "AI slip verification",
-        "desc": "Customers upload a slip — we check amount, recipient, and time in under 2 seconds."
+        "title": "AI auto slip verify",
+        "desc": "Customer uploads a slip — AI checks amount, recipient, and time in 3 seconds. Order flips to \"Paid\" automatically. Catches fakes."
       },
       "fees": {
-        "title": "No fees, no skim",
-        "desc": "Money flows directly from your customer's account to yours — SalePage is never a money intermediary."
+        "title": "Money to you 100% — no middleman",
+        "desc": "Customer's PromptPay → your bank, direct. SalePage never touches the money. No escrow, no fees, no skim."
+      },
+      "shipping": {
+        "title": "Use ANY courier on auto",
+        "desc": "Flash, Kerry, J&T, Thai Post, Best, Ninja Van, etc — print your own shipping label, snap the courier receipt, AI fills the tracking number for you."
       },
       "link": {
         "title": "One link, sell everywhere",

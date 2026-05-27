@@ -178,18 +178,20 @@ export default function ShopScreen() {
           </View>
         ) : null}
 
-        {/* V1.5 Protected Pay shield — shown when the shop opted in. Tells
-            buyers they can pay through escrow at checkout (+1.5% fee). */}
-        {shop.acceptsEscrow ? (
-          <View className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
-            <Text className="text-[12px] font-semibold text-emerald-900">
-              {t("protectedPayHeadline")}
-            </Text>
-            <Text className="mt-0.5 text-[11px] text-emerald-800">
-              {t("protectedPayBody")}
-            </Text>
-          </View>
-        ) : null}
+        {/* V1.5 Protected Pay shield — hidden 2026-05-28 along with the
+            cart toggle (911korn "ฝาก hide feture นี้ไว้ก่อน"). Will return
+            when user volume scales enough to justify the +1.5% escrow fee.
+            {shop.acceptsEscrow ? (
+              <View className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+                <Text className="text-[12px] font-semibold text-emerald-900">
+                  {t("protectedPayHeadline")}
+                </Text>
+                <Text className="mt-0.5 text-[11px] text-emerald-800">
+                  {t("protectedPayBody")}
+                </Text>
+              </View>
+            ) : null}
+        */}
       </View>
 
       {/* V2.0 Group Buy rail — self-hides when the shop has no active campaign. */}
