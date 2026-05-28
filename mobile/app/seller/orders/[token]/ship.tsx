@@ -56,6 +56,13 @@ export default function SellerShipScreen() {
     trackingNumber: string;
     receiptUrl: string;
     message: string;
+    /** `name_mismatch` = OCR read a name and it disagrees · `name_unreadable`
+     *  = OCR couldn't find any receiver name on the receipt (very common on
+     *  ไปรษณีย์ไทย / J&T eCo — they don't print one). Both gate on a
+     *  manual seller confirm so we never silently SHIP the wrong parcel.
+     *  911korn 2026-05-28 "ชื่อใน ใบเสร็จขนส่งมันไม่ตรง แต่มัน ผ่านไปเลย
+     *  แบบเหมือนตรง ไม่ขึ้นแจ้งเตือนว่าไม่ตรง". */
+    reason: "name_mismatch" | "name_unreadable";
     /** Base64 of the receipt photo we already sent. We re-use it for
      *  the seller's "ยืนยัน" tap so the camera never reopens after
      *  the first capture (911korn 2026-05-27 "กดยืนยันแล้วมันให้ถ่าย
@@ -101,12 +108,16 @@ export default function SellerShipScreen() {
         setTimeout(() => router.replace("/seller/orders"), 2500);
         return;
       }
-      if (res.reason === "name_mismatch" && res.scan.trackingNumber) {
+      if (
+        (res.reason === "name_mismatch" || res.reason === "name_unreadable") &&
+        res.scan.trackingNumber
+      ) {
         setPendingScan({
           receiverName: res.scan.receiverName,
           trackingNumber: res.scan.trackingNumber,
           receiptUrl: res.receiptUrl,
           message: res.message,
+          reason: res.reason,
           dataBase64: lastBase64 ?? "",
         });
         return;
@@ -337,7 +348,9 @@ export default function SellerShipScreen() {
         {pendingScan ? (
           <View className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4">
             <Text className="text-[13px] font-bold text-amber-900">
-              ขอยืนยัน — ชื่อผู้รับไม่ตรง
+              {pendingScan.reason === "name_unreadable"
+                ? "ขอยืนยัน — ใบเสร็จไม่มีชื่อผู้รับ"
+                : "ขอยืนยัน — ชื่อผู้รับไม่ตรง"}
             </Text>
             <Text className="mt-1 text-[12px] leading-relaxed text-amber-800">
               {pendingScan.message}
@@ -348,6 +361,17 @@ export default function SellerShipScreen() {
             <Text className="font-mono text-[15px] font-bold text-zinc-900">
               {pendingScan.trackingNumber}
             </Text>
+            {pendingScan.reason === "name_mismatch" &&
+            pendingScan.receiverName ? (
+              <>
+                <Text className="mt-3 text-[11px] text-zinc-500">
+                  AI อ่านชื่อผู้รับเป็น:
+                </Text>
+                <Text className="text-[14px] font-semibold text-zinc-900">
+                  {pendingScan.receiverName}
+                </Text>
+              </>
+            ) : null}
             <View className="mt-3 flex-row gap-2">
               <Button
                 variant="outline"
@@ -368,7 +392,9 @@ export default function SellerShipScreen() {
                 }
                 disabled={scanMutation.isPending || !pendingScan.dataBase64}
               >
-                ยืนยัน
+                {pendingScan.reason === "name_unreadable"
+                  ? "ใช่ ส่งต่อ"
+                  : "ยืนยัน"}
               </Button>
             </View>
           </View>

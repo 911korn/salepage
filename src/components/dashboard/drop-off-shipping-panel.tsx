@@ -70,6 +70,10 @@ export function DropOffShippingPanel({
     courier: string | null;
     receiptUrl: string;
     message: string;
+    /** `name_mismatch` = OCR read a name and it disagrees with the order ·
+     *  `name_unreadable` = OCR couldn't find any receiver name on the
+     *  receipt (e.g. Thailand Post / J&T eCo — they don't print one). */
+    reason: "name_mismatch" | "name_unreadable";
   } | null>(null);
 
   async function uploadReceipt(file: File, confirmOverride = false) {
@@ -140,14 +144,22 @@ export function DropOffShippingPanel({
         router.refresh();
         return;
       }
-      // Soft-fail — pending confirm
-      if (d.reason === "name_mismatch" && d.scan?.trackingNumber) {
+      // Soft-fail — pending confirm. Both name_mismatch (OCR read a wrong
+      // name) and name_unreadable (OCR couldn't read any name — common on
+      // Thailand Post / J&T eCo receipts) route to the same pending-scan
+      // confirm UI so the seller has to take a deliberate action before
+      // the order auto-flips to SHIPPING.
+      if (
+        (d.reason === "name_mismatch" || d.reason === "name_unreadable") &&
+        d.scan?.trackingNumber
+      ) {
         setPendingScan({
           receiverName: d.scan.receiverName,
           trackingNumber: d.scan.trackingNumber,
           courier: d.scan.courier,
           receiptUrl: d.receiptUrl!,
-          message: d.message ?? "ชื่อผู้รับไม่ตรงกับออเดอร์",
+          message: d.message ?? "ขอยืนยันก่อนส่ง",
+          reason: d.reason,
         });
         setReceiptUrl(d.receiptUrl ?? null);
       } else if (d.reason === "no_tracking") {
@@ -313,7 +325,9 @@ export function DropOffShippingPanel({
             <AlertCircle className="mt-0.5 size-5 shrink-0 text-amber-600" />
             <div className="flex-1">
               <p className="text-[13px] font-bold text-amber-900">
-                ขอยืนยัน — ชื่อไม่ตรง
+                {pendingScan.reason === "name_unreadable"
+                  ? "ขอยืนยัน — ใบเสร็จไม่มีชื่อผู้รับ"
+                  : "ขอยืนยัน — ชื่อไม่ตรง"}
               </p>
               <p className="mt-1 text-[12px] leading-relaxed text-amber-800">
                 {pendingScan.message}
@@ -331,6 +345,13 @@ export function DropOffShippingPanel({
                     <dd className="inline">
                       {courierLabel(pendingScan.courier)}
                     </dd>
+                  </div>
+                ) : null}
+                {pendingScan.reason === "name_mismatch" &&
+                pendingScan.receiverName ? (
+                  <div>
+                    <dt className="inline font-semibold">AI อ่านได้: </dt>
+                    <dd className="inline">{pendingScan.receiverName}</dd>
                   </div>
                 ) : null}
               </dl>
@@ -360,7 +381,9 @@ export function DropOffShippingPanel({
                       .catch(() => toast.error("ยืนยันไม่สำเร็จ"));
                   }}
                 >
-                  ยืนยัน
+                  {pendingScan.reason === "name_unreadable"
+                    ? "ใช่ ถูกแล้ว ส่งต่อ"
+                    : "ยืนยัน"}
                 </Button>
               </div>
             </div>

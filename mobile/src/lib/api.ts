@@ -393,10 +393,14 @@ export const api = {
      * receiver name → auto-fills `order.trackingNumber` + flips
      * PAID→SHIPPING. 911korn 2026-05-27.
      *
-     * Three outcomes:
+     * Four outcomes:
      *   - ok=true → tracking saved, status flipped
      *   - ok=false, reason="name_mismatch" → AI scanned a name that
      *     doesn't match the order; UI asks seller to confirm-override
+     *   - ok=false, reason="name_unreadable" → receipt didn't print
+     *     a recipient name (e.g. ไปรษณีย์ไทย / J&T eCo); UI shows the
+     *     order's buyer name + address and asks seller to double-check
+     *     before confirming (911korn 2026-05-28)
      *   - ok=false, reason="no_tracking" → AI couldn't find a tracking
      *     number; UI asks seller to retake the photo or enter manually
      */
@@ -420,7 +424,7 @@ export const api = {
           }
         | {
             ok: false;
-            reason: "name_mismatch" | "no_tracking";
+            reason: "name_mismatch" | "name_unreadable" | "no_tracking";
             message: string;
             receiptUrl: string;
             scan: {

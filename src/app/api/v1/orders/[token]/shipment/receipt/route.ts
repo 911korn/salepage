@@ -169,27 +169,56 @@ export async function POST(request: Request, ctx: Ctx) {
     });
   }
 
-  // Name-match guard. Skip when seller has already confirmed once.
+  // Name-match guard. Three cases — each gates the auto-fulfill differently
+  // so we never silently SHIP an order without some kind of seller signal.
+  //
+  //  (a) OCR extracted a name + it matches the order → proceed silently.
+  //      Best case.
+  //
+  //  (b) OCR extracted a name + it does NOT match → "name_mismatch" warning,
+  //      seller must hit confirmOverride to proceed.
+  //
+  //  (c) OCR returned receiverName=null (very common — Thailand Post,
+  //      J&T economy, eCo-Post etc. don't print the recipient name on
+  //      the drop-off receipt). Previously the route silently skipped
+  //      to auto-fulfill — which means a seller could attach the wrong
+  //      parcel's receipt to the wrong order and we'd never catch it.
+  //      Now we return "name_unreadable" — the dashboard shows the
+  //      buyer's name + address from the order and asks the seller to
+  //      double-check before pressing "confirm". 911korn 2026-05-28
+  //      "ชื่อใน ใบเสร็จขนส่งมันไม่ตรง แต่มัน ผ่านไปเลยแบบเหมือนตรง
+  //      ไม่ขึ้นแจ้งเตือนว่าไม่ตรง".
   let nameMatched: boolean | null = null;
   if (scan.receiverName) {
     nameMatched = namesLooselyMatch(scan.receiverName, order.customerName);
   }
-  if (
-    !input.confirmOverride &&
-    scan.receiverName &&
-    nameMatched === false
-  ) {
-    await db.order.update({
-      where: { id: order.id },
-      data: { shippingReceiptUrl: blob.url },
-    });
-    return ok({
-      ok: false,
-      scan,
-      receiptUrl: blob.url,
-      reason: "name_mismatch",
-      message: `AI อ่านชื่อผู้รับเป็น "${scan.receiverName}" แต่ออเดอร์นี้ของ "${order.customerName}" — ยืนยันถ้าใช่จริง`,
-    });
+  if (!input.confirmOverride) {
+    if (scan.receiverName && nameMatched === false) {
+      await db.order.update({
+        where: { id: order.id },
+        data: { shippingReceiptUrl: blob.url },
+      });
+      return ok({
+        ok: false,
+        scan,
+        receiptUrl: blob.url,
+        reason: "name_mismatch",
+        message: `AI อ่านชื่อผู้รับเป็น "${scan.receiverName}" แต่ออเดอร์นี้ของ "${order.customerName}" — ยืนยันถ้าใช่จริง`,
+      });
+    }
+    if (!scan.receiverName) {
+      await db.order.update({
+        where: { id: order.id },
+        data: { shippingReceiptUrl: blob.url },
+      });
+      return ok({
+        ok: false,
+        scan,
+        receiptUrl: blob.url,
+        reason: "name_unreadable",
+        message: `ใบเสร็จไม่มีชื่อผู้รับให้ AI ตรวจสอบ (พบบ่อยใน ไปรษณีย์ไทย / J&T eCo) — กรุณายืนยันว่าพัสดุนี้ส่งให้ "${order.customerName}" ที่ ${order.customerAddress ?? "(ไม่มีที่อยู่)"} จริงก่อนกดยืนยัน`,
+      });
+    }
   }
 
   // Happy path — apply tracking + flip status.
