@@ -14,6 +14,7 @@ import { Coupons } from "./content/coupons";
 import { Chat } from "./content/chat";
 import { Analytics } from "./content/analytics";
 import { Kyc } from "./content/kyc";
+import { BuyDomain } from "./content/buy-domain";
 import { RefundDispute } from "./content/refund-dispute";
 
 /**
@@ -42,5 +43,6 @@ export const HELP_CONTENT: Record<string, ComponentType> = {
   chat: Chat,
   analytics: Analytics,
   kyc: Kyc,
+  "buy-domain": BuyDomain,
   "refund-dispute": RefundDispute,
 };

@@ -29,7 +29,8 @@ export interface HelpTopic {
     | "ShieldCheck"
     | "BadgePercent"
     | "AlertCircle"
-    | "ChartBar";
+    | "ChartBar"
+    | "Globe";
   /** Topic category — used to group cards on the index page. */
   category: "start" | "products" | "orders" | "shipping" | "money" | "growth";
 }
@@ -153,6 +154,14 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
     teaser: "ส่งบัตรประชาชน + เอกสาร → ได้ป้ายร้านยืนยันแล้ว",
     minutes: 4,
     icon: "ShieldCheck",
+    category: "growth",
+  },
+  {
+    slug: "buy-domain",
+    title: "ซื้อโดเมนเอง — GoDaddy / Cloudflare / Namecheap",
+    teaser: "อยากใช้ mystore.com ไม่ใช่ salepage.in.th/s/... ซื้อโดเมนยังไง · ราคา · เลือก registrar ไหน",
+    minutes: 5,
+    icon: "Globe",
     category: "growth",
   },
   {

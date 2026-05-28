@@ -5,6 +5,7 @@ import {
   BookOpen,
   ChartBar,
   Download,
+  Globe,
   MessageCircle,
   Package,
   Package2,
@@ -45,6 +46,7 @@ const ICONS: Record<HelpTopic["icon"], LucideIcon> = {
   BadgePercent,
   AlertCircle,
   ChartBar,
+  Globe,
 };
 
 export default async function HelpIndexPage({
