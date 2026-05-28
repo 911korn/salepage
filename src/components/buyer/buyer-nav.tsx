@@ -7,6 +7,7 @@ import { signOut } from "next-auth/react";
 import { Link } from "@/i18n/navigation";
 import { LogoMark, Wordmark } from "@/components/ui/logo";
 import { cn } from "@/lib/cn";
+import { useClientMounted } from "@/lib/use-client-mounted";
 import { useCart, selectItemCount } from "@/lib/cart-store";
 
 interface Props {
@@ -44,8 +45,8 @@ export function BuyerNav({ user }: Props) {
           : "border-b border-[color:var(--color-border)]/50 bg-white",
       )}
     >
-      <div className="container-page flex h-16 items-center gap-3">
-        <Link href="/" className="flex items-center gap-2">
+      <div className="container-page flex h-16 min-w-0 items-center gap-2 sm:gap-3">
+        <Link href="/" className="flex shrink-0 items-center gap-2">
           <LogoMark glow />
           <Wordmark className="hidden sm:inline-flex" />
         </Link>
@@ -101,14 +102,14 @@ function SearchField() {
         if (!q.trim()) return;
         router.push(`/search?q=${encodeURIComponent(q.trim())}`);
       }}
-      className="ml-2 flex flex-1 items-center gap-2 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-soft)]/50 px-3 py-1.5 max-w-md focus-within:border-[color:var(--color-brand)]/40 focus-within:bg-white"
+      className="ml-1 flex min-w-0 flex-1 items-center gap-2 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-soft)]/50 px-3 py-1.5 focus-within:border-[color:var(--color-brand)]/40 focus-within:bg-white sm:ml-2 sm:max-w-md"
     >
       <Search size={16} className="text-zinc-400" />
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="ค้นหาสินค้าหรือร้าน"
-        className="flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
+        className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
       />
     </form>
   );
@@ -116,10 +117,9 @@ function SearchField() {
 
 function CartButton() {
   const itemCount = useCart(selectItemCount);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useClientMounted();
   // Avoid SSR hydration mismatch — the persisted cart only resolves
   // after the localStorage rehydrate fires on the client.
-  useEffect(() => setMounted(true), []);
   const showBadge = mounted && itemCount > 0;
   return (
     <Link
@@ -153,9 +153,11 @@ function AccountMenu({ user }: { user: Props["user"] }) {
     return (
       <Link
         href="/signin"
-        className="rounded-full bg-[color:var(--color-brand)] px-4 py-2 text-sm font-semibold text-white hover:bg-[color:var(--color-brand-700)]"
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand)] text-sm font-semibold text-white hover:bg-[color:var(--color-brand-700)] sm:size-auto sm:px-4 sm:py-2"
+        aria-label="เข้าสู่ระบบ"
       >
-        เข้าสู่ระบบ
+        <User2 size={18} className="sm:hidden" />
+        <span className="hidden sm:inline">เข้าสู่ระบบ</span>
       </Link>
     );
   }

@@ -29,11 +29,11 @@ export function LineSupportFab() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="LINE Support"
-      className="group fixed right-4 z-40 inline-flex items-center gap-2 rounded-full bg-[#06C755] py-2.5 pl-2.5 pr-4 text-white shadow-[0_10px_30px_-8px_rgb(6_199_85/0.55)] transition-transform hover:-translate-y-0.5 active:scale-95 sm:right-6 lg:!bottom-6"
-      style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
+      className="group fixed right-3 z-40 inline-flex size-12 items-center justify-center rounded-full bg-[#06C755] p-2.5 text-white shadow-[0_10px_30px_-8px_rgb(6_199_85/0.55)] transition-transform hover:-translate-y-0.5 active:scale-95 sm:right-6 sm:size-auto sm:gap-2 sm:py-2.5 sm:pl-2.5 sm:pr-4 lg:!bottom-6"
+      style={{ bottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
     >
       <LineIcon className="size-7 rounded-lg" />
-      <span className="text-[13px] font-semibold leading-none">
+      <span className="hidden text-[13px] font-semibold leading-none sm:inline">
         แชทกับเรา
       </span>
     </a>

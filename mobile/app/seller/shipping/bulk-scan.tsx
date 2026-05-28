@@ -309,7 +309,7 @@ export default function BulkScanScreen() {
           <View className="mt-3 flex-row items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3">
             <Sparkles size={14} color="#be123c" />
             <Text className="flex-1 text-[11.5px] leading-relaxed text-zinc-700">
-              <Text className="font-bold">เทคนิคไปรษณีย์ไทย / J&T eCo:</Text> ถ่ายใบเสร็จคู่กับ "ใบปะหน้า" ของเรา (มี QR + เลข Order) ในรูปเดียวกัน → AI pair อัตโนมัติแม้ใบเสร็จไม่มีชื่อ
+              <Text className="font-bold">เทคนิคไปรษณีย์ไทย / J&T eCo:</Text> ถ่ายใบเสร็จคู่กับ “ใบปะหน้า” ของเรา (มี QR + เลข Order) ในรูปเดียวกัน → AI pair อัตโนมัติแม้ใบเสร็จไม่มีชื่อ
             </Text>
           </View>
         </View>

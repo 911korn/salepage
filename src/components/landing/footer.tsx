@@ -77,6 +77,7 @@ export async function Footer() {
                     <li key={l.href}>
                       <Link
                         href={l.href}
+                        prefetch={false}
                         className="text-sm text-zinc-700 hover:text-[color:var(--color-brand-700)]"
                       >
                         {tRoot(l.labelKey)}

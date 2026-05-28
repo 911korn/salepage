@@ -297,7 +297,7 @@ export default function SellerShipScreen() {
         {/* Step 1: print label */}
         <StepCard step={1} title="พิมพ์ใบปะหน้า">
           <Text className="text-[12px] leading-relaxed text-muted">
-            เปิดในเบราว์เซอร์ → กด "พิมพ์" → ตัด-ติดที่กล่อง
+            เปิดในเบราว์เซอร์ → กด “พิมพ์” → ตัด-ติดที่กล่อง
           </Text>
           <Button
             className="mt-3"

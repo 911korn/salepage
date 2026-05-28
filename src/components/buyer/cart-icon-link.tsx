@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ShoppingBag } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { useClientMounted } from "@/lib/use-client-mounted";
 import { useCart, selectItemCount } from "@/lib/cart-store";
 
 /**
@@ -16,8 +16,7 @@ export function CartIconLink({
   className?: string;
 }) {
   const itemCount = useCart(selectItemCount);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useClientMounted();
   const showBadge = mounted && itemCount > 0;
   return (
     <Link

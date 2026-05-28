@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, ShoppingBag, Plus, Minus } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { useClientMounted } from "@/lib/use-client-mounted";
 import {
   useCart,
   shopsToList,
@@ -12,8 +13,7 @@ import {
 } from "@/lib/cart-store";
 
 export function CartView() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useClientMounted();
 
   const shops = useCart((s) => s.shops);
   const setQty = useCart((s) => s.setQty);

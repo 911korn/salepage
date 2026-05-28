@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import {
   ArrowRight,
   Check,
@@ -35,23 +32,13 @@ export function Hero() {
       <div className="container-page">
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
           <div className="text-center lg:text-left">
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="inline-flex items-center"
-            >
+            <div className="inline-flex items-center">
               <Badge tone="soft-brand" className="px-3 py-1.5">
                 <Sparkles className="size-3.5" /> {t("badge")}
               </Badge>
-            </motion.div>
+            </div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.05 }}
-              className="font-display mt-5 text-balance text-[40px] font-bold leading-[1.05] tracking-tight sm:text-[52px] lg:text-[64px]"
-            >
+            <h1 className="font-display mt-5 text-balance text-[40px] font-bold leading-[1.05] tracking-tight sm:text-[52px] lg:text-[64px]">
               {t("title1")}{" "}
               <span className="text-[color:var(--color-brand-600)]">
                 {t("titleHighlight")}
@@ -62,14 +49,9 @@ export function Hero() {
                 <span className="relative z-10">{t("titleStruck")}</span>
                 <span className="absolute inset-x-0 bottom-1 -z-0 h-3 bg-[color:var(--color-brand-100)]" />
               </span>
-            </motion.h1>
+            </h1>
 
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="mx-auto mt-5 max-w-xl text-balance text-[17px] leading-relaxed text-zinc-600 sm:text-lg lg:mx-0"
-            >
+            <p className="mx-auto mt-5 max-w-xl text-balance text-[17px] leading-relaxed text-zinc-600 sm:text-lg lg:mx-0">
               {t.rich("desc", {
                 qr: (chunks) => (
                   <strong className="text-[color:var(--color-brand-700)]">
@@ -82,14 +64,9 @@ export function Hero() {
                   </strong>
                 ),
               })}
-            </motion.p>
+            </p>
 
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.15 }}
-              className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start"
-            >
+            <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
               <Link
                 href="/signup"
                 className={cn(buttonStyles({ size: "xl" }), "w-full sm:w-auto")}
@@ -107,14 +84,9 @@ export function Hero() {
                 <ShoppingBag className="size-5" />{" "}
                 {tCommon("startShopping")}
               </Link>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.25 }}
-              className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-zinc-600 lg:justify-start"
-            >
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-zinc-600 lg:justify-start">
               <span className="inline-flex items-center gap-1.5">
                 <Check className="size-4 text-emerald-600" /> {t("trustFree")}
               </span>
@@ -125,7 +97,7 @@ export function Hero() {
                 <Check className="size-4 text-emerald-600" />{" "}
                 {t("trustDirect")}
               </span>
-            </motion.div>
+            </div>
           </div>
 
           <HeroVisual />
@@ -141,12 +113,7 @@ function HeroVisual() {
   const t = useTranslations("hero");
   const tCommon = useTranslations("common");
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.55, delay: 0.2 }}
-      className="relative mx-auto w-full max-w-md lg:max-w-none"
-    >
+    <div className="relative mx-auto w-full max-w-md lg:max-w-none">
       <div className="absolute -inset-4 -z-10 rounded-[36px] bg-gradient-to-br from-rose-100 via-white to-amber-100 blur-2xl" />
       <div className="relative rounded-[28px] border border-[color:var(--color-border)] bg-white p-2 shadow-xl shadow-rose-100/60 glow-brand">
         <div className="rounded-[22px] bg-gradient-to-br from-rose-50 via-white to-rose-50 p-5 sm:p-7">
@@ -205,7 +172,7 @@ function HeroVisual() {
       </div>
 
       <FloatingNotification />
-    </motion.div>
+    </div>
   );
 }
 
@@ -256,12 +223,7 @@ function ProductCard({
 function FloatingNotification() {
   const t = useTranslations("hero");
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.6 }}
-      className="absolute -bottom-3 -left-3 hidden w-[240px] rounded-2xl border border-[color:var(--color-border)] bg-white p-3 shadow-lg shadow-zinc-200 sm:block"
-    >
+    <div className="absolute -bottom-3 -left-3 hidden w-[240px] rounded-2xl border border-[color:var(--color-border)] bg-white p-3 shadow-lg shadow-zinc-200 sm:block">
       <div className="flex items-center gap-3">
         <span className="relative grid size-10 place-items-center rounded-full bg-emerald-50">
           <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400 opacity-30" />
@@ -272,7 +234,7 @@ function FloatingNotification() {
           <p className="text-[11px] text-zinc-500">{t("previewSlipMeta")}</p>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

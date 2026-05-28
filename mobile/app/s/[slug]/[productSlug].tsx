@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { View, Text, ScrollView, ActivityIndicator, Pressable, Dimensions } from "react-native";

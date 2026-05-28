@@ -35,23 +35,6 @@ export default function SellerProductsScreen() {
     enabled: Boolean(slug),
   });
 
-  if (!slug) {
-    return (
-      <Screen>
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-fg">{t("home.pickShopHint")}</Text>
-          <Button
-            variant="outline"
-            className="mt-4"
-            onPress={() => router.replace("/seller")}
-          >
-            {t("home.back")}
-          </Button>
-        </View>
-      </Screen>
-    );
-  }
-
   const products = shopQuery.data?.products ?? [];
 
   const renderItem: ListRenderItem<(typeof products)[number]> = useCallback(
@@ -79,6 +62,23 @@ export default function SellerProductsScreen() {
       </View>
     </View>
   );
+
+  if (!slug) {
+    return (
+      <Screen>
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-center text-fg">{t("home.pickShopHint")}</Text>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onPress={() => router.replace("/seller")}
+          >
+            {t("home.back")}
+          </Button>
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>

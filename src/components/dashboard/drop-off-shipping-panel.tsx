@@ -210,7 +210,7 @@ export function DropOffShippingPanel({
             <div className="flex-1">
               <p className="text-[13px] font-bold">พิมพ์ใบปะหน้า</p>
               <p className="mt-0.5 text-[11px] text-zinc-400">
-                เปิดในแท็บใหม่ → กดปุ่ม "พิมพ์" → ตัด-ติดที่กล่อง
+                เปิดในแท็บใหม่ → กดปุ่ม “พิมพ์” → ตัด-ติดที่กล่อง
               </p>
               <a
                 href={`/api/v1/orders/${token}/shipment/label`}

@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+/* eslint-disable react-hooks/immutability */
+import { useEffect, useMemo } from "react";
 import { View, StyleSheet, Dimensions } from "react-native";
 import Animated, {
   useSharedValue,
@@ -81,7 +82,37 @@ export function AnimatedSplash({ onDone }: { onDone: () => void }) {
   const ringOpacity = useSharedValue(0);
 
   // Confetti drivers — shared progress 0 → 1 per chip
-  const chipProgress = CHIPS.map(() => useSharedValue(0));
+  const chipProgress0 = useSharedValue(0);
+  const chipProgress1 = useSharedValue(0);
+  const chipProgress2 = useSharedValue(0);
+  const chipProgress3 = useSharedValue(0);
+  const chipProgress4 = useSharedValue(0);
+  const chipProgress5 = useSharedValue(0);
+  const chipProgress6 = useSharedValue(0);
+  const chipProgress7 = useSharedValue(0);
+  const chipProgress = useMemo(
+    () =>
+      [
+        chipProgress0,
+        chipProgress1,
+        chipProgress2,
+        chipProgress3,
+        chipProgress4,
+        chipProgress5,
+        chipProgress6,
+        chipProgress7,
+      ] as const,
+    [
+      chipProgress0,
+      chipProgress1,
+      chipProgress2,
+      chipProgress3,
+      chipProgress4,
+      chipProgress5,
+      chipProgress6,
+      chipProgress7,
+    ],
+  );
 
   // "OPEN!" sticker
   const stickerScale = useSharedValue(0);
@@ -221,7 +252,7 @@ export function AnimatedSplash({ onDone }: { onDone: () => void }) {
 
       {/* Confetti chips */}
       {CHIPS.map((chip, idx) => (
-        <ConfettiChip key={idx} chip={chip} progress={chipProgress[idx]} />
+        <ConfettiChip key={idx} chip={chip} progress={chipProgress[idx]!} />
       ))}
 
       {/* Pulse ring behind the logo */}

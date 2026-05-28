@@ -115,9 +115,8 @@ export default function ShopsScreen() {
       void getAuthToken().then((tok) => setAuthed(Boolean(tok)));
     }, []),
   );
-  useEffect(() => {
-    if (!authed && browseTab === "following") setBrowseTab("for-you");
-  }, [authed, browseTab]);
+  const effectiveBrowseTab =
+    !authed && browseTab === "following" ? "for-you" : browseTab;
 
   // Search query (search mode only)
   const searchQuery = useQuery({
@@ -153,11 +152,11 @@ export default function ShopsScreen() {
 
   // Browse query — paginated shops feed (only fires in browse mode)
   const shopsQuery = useInfiniteQuery({
-    queryKey: ["feed", browseTab, browseCategory, browseVerifiedOnly],
+    queryKey: ["feed", effectiveBrowseTab, browseCategory, browseVerifiedOnly],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       api.feed.list({
-        tab: browseTab,
+        tab: effectiveBrowseTab,
         category: browseCategory ?? undefined,
         verified: browseVerifiedOnly || undefined,
         cursor: pageParam,
@@ -273,7 +272,7 @@ export default function ShopsScreen() {
             onClearRecents={() => {
               void clearRecentSearches().then(() => setRecents([]));
             }}
-            browseTab={browseTab}
+            browseTab={effectiveBrowseTab}
             setBrowseTab={setBrowseTab}
             authed={authed}
             browseCategory={browseCategory}

@@ -92,6 +92,8 @@ export default async function AdminReportsPage({ searchParams }: Props) {
   const productById = new Map(products.map((p) => [p.id, p]));
   const reviewById = new Map(reviews.map((r) => [r.id, r]));
 
+  // Server-rendered moderation SLA age needs wall-clock time.
+  // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 

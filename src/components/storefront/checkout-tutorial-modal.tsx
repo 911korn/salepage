@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Camera, Smartphone, Upload, Sparkles, Truck, X } from "lucide-react";
 
 /**
@@ -14,21 +14,25 @@ import { Camera, Smartphone, Upload, Sparkles, Truck, X } from "lucide-react";
  * matches client-render).
  */
 const SEEN_KEY = "salepage:seen-checkout-tutorial";
+const subscribeSeen = (callback: () => void) => {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+};
+const getSeenSnapshot = () => {
+  try {
+    return window.localStorage.getItem(SEEN_KEY) === "1";
+  } catch {
+    return true;
+  }
+};
 
 export function CheckoutTutorialModal() {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    try {
-      const seen = window.localStorage.getItem(SEEN_KEY);
-      if (!seen) setOpen(true);
-    } catch {
-      /* private mode / sandboxed iframe — fail safe by not showing */
-    }
-  }, []);
+  const seen = useSyncExternalStore(subscribeSeen, getSeenSnapshot, () => true);
+  const [dismissed, setDismissed] = useState(false);
+  const open = !seen && !dismissed;
 
   function dismiss() {
-    setOpen(false);
+    setDismissed(true);
     try {
       window.localStorage.setItem(SEEN_KEY, "1");
     } catch {
@@ -94,7 +98,7 @@ export function CheckoutTutorialModal() {
               </p>
             </div>
             <p className="mt-1 text-[11px] leading-snug text-emerald-900">
-              ✓ AI ตรวจสลิป 3 วิ · ออเดอร์ขึ้น "ชำระแล้ว" · ร้านเตรียมส่งของ
+              ✓ AI ตรวจสลิป 3 วิ · ออเดอร์ขึ้น “ชำระแล้ว” · ร้านเตรียมส่งของ
             </p>
           </div>
 

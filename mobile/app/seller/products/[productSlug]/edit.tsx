@@ -84,31 +84,35 @@ export default function EditProductScreen() {
   // Prefill once the product row arrives from the cache/network.
   useEffect(() => {
     if (initialized || !product) return;
-    setName(product.name);
-    setDescription(product.description ?? "");
-    setPriceBaht(String(Math.round(product.priceSatang / 100)));
-    setStock(product.stock === null ? "" : String(product.stock));
-    setType(product.type);
-    setCategory(
-      product.category && PRODUCT_CATEGORIES.some((c) => c.key === product.category)
-        ? (product.category as CategoryKey)
-        : null,
-    );
-    setCondition(product.condition);
-    setDigitalContent(product.digitalContent ?? "");
-    setShippingFeeBaht(
-      product.shippingFeeSatang
-        ? String(Math.round(product.shippingFeeSatang / 100))
-        : "",
-    );
-    setImages(
-      (product.imageUrls ?? []).map((url) => ({
-        uri: url,
-        url,
-        status: "done" as const,
-      })),
-    );
-    setInitialized(true);
+    queueMicrotask(() => {
+      if (!product) return;
+      setName(product.name);
+      setDescription(product.description ?? "");
+      setPriceBaht(String(Math.round(product.priceSatang / 100)));
+      setStock(product.stock === null ? "" : String(product.stock));
+      setType(product.type);
+      setCategory(
+        product.category &&
+          PRODUCT_CATEGORIES.some((c) => c.key === product.category)
+          ? (product.category as CategoryKey)
+          : null,
+      );
+      setCondition(product.condition);
+      setDigitalContent(product.digitalContent ?? "");
+      setShippingFeeBaht(
+        product.shippingFeeSatang
+          ? String(Math.round(product.shippingFeeSatang / 100))
+          : "",
+      );
+      setImages(
+        (product.imageUrls ?? []).map((url) => ({
+          uri: url,
+          url,
+          status: "done" as const,
+        })),
+      );
+      setInitialized(true);
+    });
   }, [product, initialized]);
 
   async function handlePickFromGallery() {

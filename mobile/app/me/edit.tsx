@@ -44,9 +44,11 @@ export default function EditProfileScreen() {
 
   useEffect(() => {
     if (seeded || !profileQuery.data) return;
-    setName(profileQuery.data.name ?? "");
-    setImageUrl(profileQuery.data.image ?? null);
-    setSeeded(true);
+    queueMicrotask(() => {
+      setName(profileQuery.data?.name ?? "");
+      setImageUrl(profileQuery.data?.image ?? null);
+      setSeeded(true);
+    });
   }, [profileQuery.data, seeded]);
 
   async function pickAndUpload() {

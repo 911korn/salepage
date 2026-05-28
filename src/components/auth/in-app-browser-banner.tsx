@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Copy, ExternalLink, Info } from "lucide-react";
 import { toast } from "sonner";
+import { useClientMounted } from "@/lib/use-client-mounted";
 
 /**
  * In-app browser banner.
@@ -51,16 +51,10 @@ function getPlatform(ua: string): "ios" | "android" | "other" {
 }
 
 export function InAppBrowserBanner() {
-  const [show, setShow] = useState(false);
-  const [platform, setPlatform] = useState<"ios" | "android" | "other">("other");
-
-  useEffect(() => {
-    const ua = navigator.userAgent;
-    if (detectInAppBrowser(ua)) {
-      setShow(true);
-      setPlatform(getPlatform(ua));
-    }
-  }, []);
+  const mounted = useClientMounted();
+  const ua = mounted ? navigator.userAgent : "";
+  const show = mounted && detectInAppBrowser(ua);
+  const platform = show ? getPlatform(ua) : "other";
 
   if (!show) return null;
 

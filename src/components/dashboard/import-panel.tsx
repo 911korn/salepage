@@ -407,7 +407,7 @@ function ShopUrlImporter({ shopSlug, shopName }: Props) {
       <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-900">
         <p className="font-semibold">หมายเหตุสำหรับ Shopee</p>
         <p className="mt-0.5 leading-relaxed">
-          Shopee ป้องกัน import แบบลิงก์ — กรุณาใช้แท็บ <strong>"ไฟล์ Shopee/Lazada"</strong>
+          Shopee ป้องกัน import แบบลิงก์ — กรุณาใช้แท็บ <strong>“ไฟล์ Shopee/Lazada”</strong>
           แล้วส่งออกไฟล์ Excel จาก <a
             href="https://seller.shopee.co.th/portal/product/list/all"
             target="_blank"
@@ -567,7 +567,7 @@ function UrlImporter({ shopSlug, shopName }: Props) {
       <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-900">
         <p className="font-semibold">หมายเหตุสำหรับ Shopee</p>
         <p className="mt-0.5 leading-relaxed">
-          Shopee ป้องกัน import แบบลิงก์ — กรุณาใช้แท็บ <strong>"ไฟล์ Shopee/Lazada"</strong>
+          Shopee ป้องกัน import แบบลิงก์ — กรุณาใช้แท็บ <strong>“ไฟล์ Shopee/Lazada”</strong>
           ด้านบน แล้วส่งออกไฟล์ Excel จาก <a
             href="https://seller.shopee.co.th/portal/product/list/all"
             target="_blank"

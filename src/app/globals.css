@@ -17,6 +17,7 @@
   --color-brand-400: #fb7185;
   --color-brand-500: #f43f5e;
   --color-brand-600: #e11d48;
+  --color-brand: #e11d48;
   --color-brand-700: #be123c;
   --color-brand-800: #9f1239;
   --color-brand-900: #881337;
@@ -108,4 +109,24 @@
   );
   background-size: 200% 100%;
   animation: shimmer 2.5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .animate-ticker,
+  .shimmer {
+    animation: none !important;
+  }
 }

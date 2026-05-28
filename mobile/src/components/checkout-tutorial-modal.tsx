@@ -98,7 +98,7 @@ export function CheckoutTutorialModal() {
                 </Text>
               </View>
               <Text className="mt-1 text-[11px] leading-snug text-emerald-900">
-                ✓ AI ตรวจสลิป 3 วิ · ออเดอร์ขึ้น "ชำระแล้ว" · ร้านเตรียมส่งของ
+                ✓ AI ตรวจสลิป 3 วิ · ออเดอร์ขึ้น “ชำระแล้ว” · ร้านเตรียมส่งของ
               </Text>
             </View>
 
