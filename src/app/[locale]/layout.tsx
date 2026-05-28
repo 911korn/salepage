@@ -10,6 +10,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { routing, type Locale } from "@/i18n/routing";
 import { PlatformBanner } from "@/components/platform-banner";
 import { LineLiffBootstrap } from "@/components/storefront/line-liff-bootstrap";
+import { LineSupportFab } from "@/components/line-support-fab";
 import "../globals.css";
 
 const kanit = Kanit({
@@ -132,6 +133,7 @@ export default async function LocaleLayout({
           <LineLiffBootstrap />
           <PlatformBanner />
           {children}
+          <LineSupportFab />
           <Toaster
             richColors
             position="top-center"
