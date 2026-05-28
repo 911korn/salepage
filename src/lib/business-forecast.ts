@@ -83,6 +83,59 @@ export interface ForecastSnapshot {
   shopGrowthCmgr: number | null;
 }
 
+/** Returns a synthetic snapshot for "what if we had N shops?" scenario
+ *  planning. Keeps the real measured per-shop ratios (GMV/shop, slip
+ *  calls/shop) from the live data and only swaps in the hypothetical
+ *  shop count + scaled derived counts. Useful for the operator to plug
+ *  in 5K / 10K / 50K and see the financial picture. 911korn 2026-05-28
+ *  "ถ้า forecast มีสัก 5,000 ร้านค้า จะเป็นไง". */
+export async function getForecastSnapshotWithShopOverride(
+  shopCountOverride: number,
+): Promise<ForecastSnapshot> {
+  const real = await getForecastSnapshot();
+  if (real.totalShops === 0) {
+    // Live data empty — synthesise reasonable defaults so the page renders.
+    return {
+      ...real,
+      totalShops: shopCountOverride,
+      totalUsers: Math.round(shopCountOverride * 1.4),
+      liveShops: Math.round(shopCountOverride * 0.65),
+      newShops30d: Math.round(shopCountOverride * 0.18),
+      newShops7d: Math.round(shopCountOverride * 0.045),
+      gmv30dBaht: shopCountOverride * 2000,
+      gmv7dBaht: shopCountOverride * 460,
+      gmv1dBaht: shopCountOverride * 65,
+      slipCalls30d: Math.round(shopCountOverride * 5),
+      paidConversionPct: 5,
+    };
+  }
+  // Scale every per-shop ratio that we observe in the real snapshot to
+  // the hypothetical shop count.
+  const scale = shopCountOverride / real.totalShops;
+  return {
+    ...real,
+    totalShops: shopCountOverride,
+    totalUsers: Math.round(real.totalUsers * scale),
+    liveShops: Math.round(real.liveShops * scale),
+    newShops30d: Math.round(real.newShops30d * scale),
+    newShops7d: Math.round(real.newShops7d * scale),
+    gmv30dBaht: Math.round(real.gmv30dBaht * scale),
+    gmv7dBaht: Math.round(real.gmv7dBaht * scale),
+    gmv1dBaht: Math.round(real.gmv1dBaht * scale),
+    slipCalls30d: Math.round(real.slipCalls30d * scale),
+    // paidSubsByPlan scales with shop count under the assumption that the
+    // mix stays constant — useful as a "what if scale doubled" view.
+    paidSubsByPlan: {
+      FREE: Math.round(real.paidSubsByPlan.FREE * scale),
+      STARTER: Math.round(real.paidSubsByPlan.STARTER * scale),
+      PRO: Math.round(real.paidSubsByPlan.PRO * scale),
+      BUSINESS: Math.round(real.paidSubsByPlan.BUSINESS * scale),
+      AGENCY: Math.round(real.paidSubsByPlan.AGENCY * scale),
+    },
+    currentMrrBaht: Math.round(real.currentMrrBaht * scale),
+  };
+}
+
 export async function getForecastSnapshot(): Promise<ForecastSnapshot> {
   const now = new Date();
   const startOfDay = new Date(now);

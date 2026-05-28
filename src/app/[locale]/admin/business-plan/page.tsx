@@ -10,20 +10,31 @@ import {
   Users,
   Building2,
 } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { PageHeader } from "@/components/admin/page-header";
 import { requireAdmin } from "@/lib/admin";
 import {
   getForecastSnapshot,
+  getForecastSnapshotWithShopOverride,
   buildScenarios,
   project12Months,
   projectCosts,
   PLAN_PRICE_BAHT,
+  type ForecastSnapshot,
   type MonthlyProjection,
   type CostProjection,
   type ForecastScenario,
 } from "@/lib/business-forecast";
 
 export const dynamic = "force-dynamic";
+
+const SCENARIO_PRESETS = [
+  { label: "1K", value: 1000 },
+  { label: "5K", value: 5000 },
+  { label: "10K", value: 10_000 },
+  { label: "50K", value: 50_000 },
+  { label: "100K", value: 100_000 },
+];
 
 /**
  * /admin/business-plan — super-admin executive dashboard.
@@ -39,9 +50,22 @@ export const dynamic = "force-dynamic";
  * 911korn 2026-05-28 "ทำหน้าเมนู Business Plan ไว้ที่หลังบ้าน Super
  * Admin · forecast รายได้ และ แผนธุรกิจ ให้ทีว่าต้องทำไรบ้าง แผนยังไง".
  */
-export default async function BusinessPlanPage() {
+export default async function BusinessPlanPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ shops?: string | string[] }>;
+}) {
   await requireAdmin();
-  const snapshot = await getForecastSnapshot();
+  const { shops: shopsRaw } = await searchParams;
+  const shopsParam = Array.isArray(shopsRaw) ? shopsRaw[0] : shopsRaw;
+  const shopsOverride =
+    shopsParam && /^\d+$/.test(shopsParam) && Number(shopsParam) > 0
+      ? Math.min(1_000_000, Number(shopsParam))
+      : null;
+
+  const snapshot = shopsOverride
+    ? await getForecastSnapshotWithShopOverride(shopsOverride)
+    : await getForecastSnapshot();
   const scenarios = buildScenarios(snapshot);
   const projections = scenarios.map((s) => project12Months(snapshot, s));
   const costs = projections.map((p) => projectCosts(p, snapshot));
@@ -55,6 +79,10 @@ export default async function BusinessPlanPage() {
         title="Business Plan"
         description="Forecast รายได้ + แผนธุรกิจ — ภาพรวมที่ทีมและนักลงทุนใช้ตัดสินใจ"
       />
+
+      <ScenarioPicker shopsOverride={shopsOverride} />
+
+      {shopsOverride ? <OverrideBanner shopsOverride={shopsOverride} /> : null}
 
       <SnapshotSection snapshot={snapshot} />
 
@@ -78,10 +106,84 @@ export default async function BusinessPlanPage() {
   );
 }
 
+function ScenarioPicker({ shopsOverride }: { shopsOverride: number | null }) {
+  return (
+    <section className="rounded-2xl border border-zinc-200 bg-white p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10.5px] font-semibold uppercase tracking-wider text-zinc-500">
+            What-if scenario
+          </p>
+          <p className="font-display mt-1 text-sm font-bold text-zinc-900">
+            ลองดูภาพการเงินสมมุติว่ามีกี่ร้านในระบบ
+          </p>
+        </div>
+        {shopsOverride ? (
+          <Link
+            href="/admin/business-plan"
+            className="rounded-full border border-zinc-200 px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50"
+          >
+            ↻ กลับไปข้อมูลจริง
+          </Link>
+        ) : null}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {SCENARIO_PRESETS.map((p) => {
+          const active = shopsOverride === p.value;
+          return (
+            <Link
+              key={p.value}
+              href={`/admin/business-plan?shops=${p.value}`}
+              className={`rounded-full px-3 py-1.5 text-[12px] font-bold transition ${
+                active
+                  ? "bg-rose-600 text-white shadow-sm"
+                  : "border border-zinc-200 bg-white text-zinc-700 hover:border-rose-300"
+              }`}
+            >
+              {p.label} ร้าน
+            </Link>
+          );
+        })}
+        <form
+          action="/admin/business-plan"
+          method="get"
+          className="ml-1 flex items-center gap-1.5"
+        >
+          <input
+            name="shops"
+            type="number"
+            min={1}
+            max={1_000_000}
+            placeholder="custom (เช่น 7500)"
+            defaultValue={shopsOverride ?? ""}
+            className="w-40 rounded-full border border-zinc-200 px-3 py-1.5 text-[12px] focus:border-rose-400 focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded-full bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-zinc-700"
+          >
+            ใช้
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
+
+function OverrideBanner({ shopsOverride }: { shopsOverride: number }) {
+  return (
+    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-3.5 text-[12.5px] text-amber-900">
+      <strong>What-if mode:</strong> ตัวเลขทุกตัวในหน้านี้คำนวณจากสมมุติฐานว่ามี{" "}
+      <strong className="font-mono">{shopsOverride.toLocaleString()}</strong>{" "}
+      ร้านในระบบ — Per-shop ratios (GMV/ร้าน, slip calls/ร้าน, conversion mix) ใช้จากข้อมูลจริงที่ระบบเก็บไว้ × scale
+    </div>
+  );
+}
+
 function SnapshotSection({
   snapshot,
 }: {
-  snapshot: Awaited<ReturnType<typeof getForecastSnapshot>>;
+  snapshot: ForecastSnapshot;
 }) {
   const stats = [
     {
