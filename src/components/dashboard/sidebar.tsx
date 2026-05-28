@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Bell,
+  BookOpen,
   ChartBar,
   ChevronDown,
   Download,
@@ -73,6 +74,7 @@ const TOOL_LINKS = [
   { href: "/dashboard/customers", key: "customers", icon: Users },
   { href: "/dashboard/reviews", key: "reviews", icon: Star },
   { href: "/dashboard/announcements", key: "announcements", icon: Bell },
+  { href: "/dashboard/help", key: "help", icon: BookOpen },
 ] as const;
 
 export function DashboardSidebar({ shops, activeShopSlug, user }: Props) {
