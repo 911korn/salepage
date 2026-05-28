@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import {
   Bell,
   ChartBar,
+  Download,
   MessageCircle,
   Package,
   Plus,
@@ -43,46 +44,80 @@ export default async function DashboardOverviewPage({
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
-  const [todaySales, pendingCount, lowStockCount, recentOrders] = await Promise.all([
-    db.order.aggregate({
-      where: {
-        shopId: activeShop.id,
-        createdAt: { gte: startOfDay },
-        status: { in: [OrderStatus.PAID, OrderStatus.SHIPPING, OrderStatus.DELIVERED] },
-      },
-      _sum: { totalSatang: true },
-    }),
-    db.order.count({
-      where: { shopId: activeShop.id, status: OrderStatus.PENDING },
-    }),
-    db.product.count({
-      where: { shopId: activeShop.id, stock: { lte: 5, gt: 0 } },
-    }),
-    db.order.findMany({
-      where: { shopId: activeShop.id },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-      select: {
-        id: true,
-        publicToken: true,
-        customerName: true,
-        totalSatang: true,
-        status: true,
-        createdAt: true,
-      },
-    }),
-  ]);
+  const [todaySales, pendingCount, lowStockCount, productCount, recentOrders] =
+    await Promise.all([
+      db.order.aggregate({
+        where: {
+          shopId: activeShop.id,
+          createdAt: { gte: startOfDay },
+          status: { in: [OrderStatus.PAID, OrderStatus.SHIPPING, OrderStatus.DELIVERED] },
+        },
+        _sum: { totalSatang: true },
+      }),
+      db.order.count({
+        where: { shopId: activeShop.id, status: OrderStatus.PENDING },
+      }),
+      db.product.count({
+        where: { shopId: activeShop.id, stock: { lte: 5, gt: 0 } },
+      }),
+      db.product.count({
+        where: { shopId: activeShop.id },
+      }),
+      db.order.findMany({
+        where: { shopId: activeShop.id },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: {
+          id: true,
+          publicToken: true,
+          customerName: true,
+          totalSatang: true,
+          status: true,
+          createdAt: true,
+        },
+      }),
+    ]);
+  const isFirstTime = productCount === 0;
 
   const todayBaht = Math.round((todaySales._sum.totalSatang ?? 0) / 100);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-5">
       <div>
-        <p className="text-sm font-medium text-zinc-500">{t("greeting")}</p>
-        <h1 className="font-display mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-          {t("subtitle", { name: activeShop.name })}
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+          {t("greeting")}
+        </p>
+        <h1 className="font-display mt-1 truncate text-xl font-bold tracking-tight sm:text-2xl">
+          {activeShop.name}
         </h1>
       </div>
+
+      {/* Primary product actions — surfaced FIRST on mobile so first-time
+          sellers can start adding inventory in one tap. 911korn 2026-05-28
+          "เพื่อให้ UX ที่ดีกับ คนใช้ครั้งแรก". */}
+      <section>
+        {isFirstTime ? (
+          <p className="mb-2 text-[12.5px] leading-relaxed text-zinc-600">
+            {t("firstTimeBanner")}
+          </p>
+        ) : null}
+        <div className="grid grid-cols-2 gap-2.5">
+          <PrimaryAction
+            href={dashboardHref("/dashboard/products/new", activeShop.slug)}
+            icon={Plus}
+            label={t("addProduct")}
+            desc={t("addProductDesc")}
+            variant="filled"
+          />
+          <PrimaryAction
+            href={dashboardHref("/dashboard/import", activeShop.slug)}
+            icon={Download}
+            label={t("importProducts")}
+            desc={t("importProductsDesc")}
+            variant="outline"
+          />
+        </div>
+      </section>
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
@@ -109,12 +144,12 @@ export default async function DashboardOverviewPage({
         />
       </div>
 
-      {/* Quick tools */}
+      {/* Other tools */}
       <section>
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
           {t("quickTools")}
         </h2>
-        <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           <QuickTool
             href={dashboardHref("/dashboard/analytics", activeShop.slug)}
             icon={ChartBar}
@@ -270,9 +305,54 @@ function QuickTool({
   );
 }
 
+function PrimaryAction({
+  href,
+  icon: Icon,
+  label,
+  desc,
+  variant,
+}: {
+  href: string;
+  icon: typeof Plus;
+  label: string;
+  desc: string;
+  variant: "filled" | "outline";
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "group relative flex min-h-[88px] flex-col gap-1 rounded-2xl p-3.5 transition-all active:scale-[0.98]",
+        variant === "filled"
+          ? "bg-[color:var(--color-brand-600)] text-white shadow-[0_10px_24px_-12px_rgb(225_29_72/0.5)] hover:bg-[color:var(--color-brand-700)]"
+          : "border-2 border-[color:var(--color-brand-200)] bg-white text-[color:var(--color-brand-700)] hover:border-[color:var(--color-brand-400)] hover:bg-[color:var(--color-brand-50)]",
+      )}
+    >
+      <span
+        className={cn(
+          "grid size-7 place-items-center rounded-lg",
+          variant === "filled"
+            ? "bg-white/15 text-white"
+            : "bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]",
+        )}
+      >
+        <Icon className="size-4" strokeWidth={2.5} />
+      </span>
+      <span className="mt-auto text-[13.5px] font-semibold leading-tight">
+        {label}
+      </span>
+      <span
+        className={cn(
+          "text-[10.5px] leading-tight",
+          variant === "filled" ? "text-white/80" : "text-zinc-500",
+        )}
+      >
+        {desc}
+      </span>
+    </Link>
+  );
+}
+
 function formatStatus(status: string) {
   return status.charAt(0) + status.slice(1).toLowerCase();
 }
-
-// Suppress unused-var lint on `Plus` icon — kept for empty-state UI when adding sub-pages later.
-void Plus;

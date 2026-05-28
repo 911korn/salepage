@@ -100,14 +100,26 @@ export function CreateShopWizard() {
     if (step === 1) return name.trim().length >= 2 && effectiveSlug.length >= 3;
     if (step === 2) return Boolean(category);
     if (step === 3) {
-      const paymentOrPhone = Boolean(promptpayId.trim() || phone.trim());
-      // Pickup address optional at create time — seller can fill in
-      // /dashboard/settings later. If they DO type something, postcode
-      // must match 5-digit format.
-      return paymentOrPhone && isValidPostcode;
+      // 911korn 2026-05-28: both phone + sender address now required.
+      // Phone = how buyers reach the seller. Address = printed on every
+      // shipping label, so missing it would block the whole shipping flow.
+      const promptpayOk = promptpayId.trim().length > 0;
+      const phoneOk = phone.trim().length >= 9;
+      const addressOk = pickupAddress.trim().length >= 10;
+      const postcodeOk = /^\d{5}$/.test(pickupPostcode);
+      return promptpayOk && phoneOk && addressOk && postcodeOk;
     }
     return false;
-  }, [step, name, effectiveSlug, category, promptpayId, phone, isValidPostcode]);
+  }, [
+    step,
+    name,
+    effectiveSlug,
+    category,
+    promptpayId,
+    phone,
+    pickupAddress,
+    pickupPostcode,
+  ]);
 
   function next() {
     if (!canNext) return;
@@ -491,22 +503,23 @@ function Step3({
             className="h-12"
           />
         </div>
-        {/* V2.1 ที่อยู่ผู้ส่ง — printed on every shipping label by
-            default. Optional here; editable later in /dashboard/settings. */}
+        {/* V2.1 ที่อยู่ผู้ส่ง — printed on every shipping label by default.
+            911korn 2026-05-28: required at create time so no shop can be
+            opened without a valid sender address. */}
         <div className="mt-5 rounded-2xl border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-soft)] p-4">
-          <h3 className="text-[13px] font-bold">ที่อยู่ผู้ส่ง · ใส่ในใบปะหน้า</h3>
+          <h3 className="text-[13px] font-bold">{t("pickupTitle")}</h3>
           <p className="mt-0.5 text-[12px] leading-relaxed text-zinc-500">
-            จะถูกพิมพ์ที่ใบปะหน้าทุก order ตอน drop ที่ courier · ใส่ทีหลังในตั้งค่าได้
+            {t("pickupDesc")}
           </p>
           <div className="mt-3 space-y-3">
             <div>
               <label className="mb-1.5 block text-xs font-medium">
-                ที่อยู่ (บ้านเลขที่ ซอย ถนน ตำบล อำเภอ จังหวัด)
+                {t("pickupAddressLabel")}
               </label>
               <textarea
                 value={pickupAddress}
                 onChange={(e) => onPickupAddress(e.target.value)}
-                placeholder="999 ซอย XX ถนน YY แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพฯ"
+                placeholder={t("pickupAddressPlaceholder")}
                 rows={3}
                 maxLength={500}
                 className="w-full rounded-xl border border-[color:var(--color-border)] bg-white p-3 text-[14px] outline-none focus:border-[color:var(--color-brand-400)]"
@@ -514,7 +527,7 @@ function Step3({
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium">
-                รหัสไปรษณีย์
+                {t("pickupPostcodeLabel")}
               </label>
               <Input
                 value={pickupPostcode}
@@ -528,7 +541,7 @@ function Step3({
               />
               {pickupPostcode && !/^\d{5}$/.test(pickupPostcode) ? (
                 <p className="mt-1 text-[11px] text-rose-600">
-                  ต้องเป็น 5 หลัก
+                  {t("pickupPostcodeError")}
                 </p>
               ) : null}
             </div>
