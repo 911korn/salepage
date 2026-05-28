@@ -108,63 +108,87 @@ export default async function BusinessPlanPage({
 
 function ScenarioPicker({ shopsOverride }: { shopsOverride: number | null }) {
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-4">
-      <div className="flex items-center justify-between gap-3">
+    <section className="rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-50/40 to-amber-50/30 p-5">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10.5px] font-semibold uppercase tracking-wider text-zinc-500">
+          <p className="text-[10.5px] font-semibold uppercase tracking-wider text-rose-700">
             What-if scenario
           </p>
-          <p className="font-display mt-1 text-sm font-bold text-zinc-900">
+          <p className="font-display mt-1 text-base font-bold text-zinc-900">
             ลองดูภาพการเงินสมมุติว่ามีกี่ร้านในระบบ
           </p>
         </div>
         {shopsOverride ? (
           <Link
             href="/admin/business-plan"
-            className="rounded-full border border-zinc-200 px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50"
+            className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50"
           >
             ↻ กลับไปข้อมูลจริง
           </Link>
         ) : null}
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {SCENARIO_PRESETS.map((p) => {
-          const active = shopsOverride === p.value;
-          return (
-            <Link
-              key={p.value}
-              href={`/admin/business-plan?shops=${p.value}`}
-              className={`rounded-full px-3 py-1.5 text-[12px] font-bold transition ${
-                active
-                  ? "bg-rose-600 text-white shadow-sm"
-                  : "border border-zinc-200 bg-white text-zinc-700 hover:border-rose-300"
-              }`}
-            >
-              {p.label} ร้าน
-            </Link>
-          );
-        })}
+
+      {/* Preset row */}
+      <div className="mt-4">
+        <p className="text-[10.5px] font-semibold uppercase tracking-wider text-zinc-500">
+          เลือกขนาดที่ใช้บ่อย
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {SCENARIO_PRESETS.map((p) => {
+            const active = shopsOverride === p.value;
+            return (
+              <Link
+                key={p.value}
+                href={`/admin/business-plan?shops=${p.value}`}
+                className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition ${
+                  active
+                    ? "bg-rose-600 text-white shadow-sm"
+                    : "border border-zinc-200 bg-white text-zinc-700 hover:border-rose-300 hover:bg-rose-50"
+                }`}
+              >
+                {p.label} ร้าน
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Custom input — own row, prominent, labelled */}
+      <div className="mt-5">
+        <p className="text-[10.5px] font-semibold uppercase tracking-wider text-zinc-500">
+          หรือพิมพ์จำนวนร้านเอง
+        </p>
         <form
           action="/admin/business-plan"
           method="get"
-          className="ml-1 flex items-center gap-1.5"
+          className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center"
         >
-          <input
-            name="shops"
-            type="number"
-            min={1}
-            max={1_000_000}
-            placeholder="custom (เช่น 7500)"
-            defaultValue={shopsOverride ?? ""}
-            className="w-40 rounded-full border border-zinc-200 px-3 py-1.5 text-[12px] focus:border-rose-400 focus:outline-none"
-          />
+          <div className="relative flex-1 sm:max-w-xs">
+            <input
+              name="shops"
+              type="number"
+              min={1}
+              max={1_000_000}
+              placeholder="เช่น 7500"
+              defaultValue={shopsOverride ?? ""}
+              className="block w-full rounded-xl border-2 border-zinc-300 bg-white px-4 py-2.5 pr-12 text-[14px] font-semibold text-zinc-900 placeholder:text-zinc-400 focus:border-rose-500 focus:outline-none"
+              autoComplete="off"
+            />
+            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[11.5px] font-semibold text-zinc-400">
+              ร้าน
+            </span>
+          </div>
           <button
             type="submit"
-            className="rounded-full bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-zinc-700"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-5 py-2.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-rose-700 active:scale-[0.99]"
           >
-            ใช้
+            <Sparkles className="size-4" />
+            คำนวณ Forecast
           </button>
         </form>
+        <p className="mt-2 text-[11px] text-zinc-500">
+          ใส่ตัวเลข 1 ถึง 1,000,000 — ระบบจะ scale per-shop ratios จากข้อมูลจริงไปยังจำนวนที่กรอก แล้วคำนวณ MRR / margin ใหม่ทั้งหน้า
+        </p>
       </div>
     </section>
   );
