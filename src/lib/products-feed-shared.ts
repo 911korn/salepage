@@ -27,6 +27,41 @@ export type FeedSort =
   | "price-asc"
   | "price-desc";
 
+// "For you" (relevance) rotation — pull a pool of high-quality products,
+// then deterministically shuffle with a seed that rolls over every 15
+// minutes. Same seed within a 15-min window = stable order = cursor
+// pagination works. New seed every 15 min = the home feed feels alive
+// and every approved listing gets fair surface time (911korn 2026-05-28
+// "ทำไมสินค้าหน้าแรกมันไม่ Rotage เลย"). Pool capped so a single query
+// returns fast — fine while the active marketplace is in the low
+// thousands; revisit when catalog growth makes this constraining.
+const RELEVANCE_POOL_SIZE = 300;
+const ROTATION_WINDOW_MS = 15 * 60 * 1000;
+
+function currentRotationSeed(): number {
+  return Math.floor(Date.now() / ROTATION_WINDOW_MS);
+}
+
+// mulberry32 — small, fast, deterministic PRNG. Good enough for shuffling
+// a few hundred items; not cryptographic.
+function mulberry32(seed: number) {
+  let state = seed >>> 0;
+  return function next() {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleInPlace<T>(arr: T[], rng: () => number) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+  }
+}
+
 interface ProductsFeedQuery {
   cursor?: string;
   category?: string;
@@ -112,19 +147,6 @@ export async function getProductsFeed(
       }
     : undefined;
 
-  const orderBy: Prisma.ProductOrderByWithRelationInput[] =
-    sort === "sold"
-      ? [{ sold: "desc" }, { createdAt: "desc" }]
-      : sort === "newest"
-        ? [{ createdAt: "desc" }]
-        : sort === "price-asc"
-          ? [{ priceSatang: "asc" }]
-          : sort === "price-desc"
-            ? [{ priceSatang: "desc" }]
-            : // relevance — approx: sold then recency; featured-shop boost
-              // applied via shop filter ordering when catalog is small.
-              [{ sold: "desc" }, { createdAt: "desc" }];
-
   // SOLD_OUT listings stay in the feed for 4h after the last unit
   // sold — gives the marketplace a "fresh activity" signal (911korn
   // 2026-05-27 "มันจะได้ดูรู้สึกว่ามีการเคลื่อนไหว"). After 4h, the
@@ -137,62 +159,112 @@ export async function getProductsFeed(
   // below also derives `status="SOLD_OUT"` for those rows so the card
   // renders the ribbon correctly.
   const FOUR_HOURS_AGO = new Date(Date.now() - 4 * 60 * 60 * 1000);
-  const products = await db.product.findMany({
-    where: {
-      shop: shopFilter,
-      ...(categoryFilter ?? {}),
-      ...(q.condition ? { condition: q.condition } : {}),
-      OR: [
-        // Truly active — explicit ACTIVE + has stock (or unlimited)
-        {
-          status: ProductStatus.ACTIVE,
-          OR: [{ stock: null }, { stock: { gt: 0 } }],
-        },
-        // Explicit SOLD_OUT inside the 4h window
-        {
-          status: ProductStatus.SOLD_OUT,
-          soldOutAt: { gte: FOUR_HOURS_AGO },
-        },
-        // Drift safety net — ACTIVE w/ stock=0, surface for 4h
-        // after last update then auto-drop
-        {
-          status: ProductStatus.ACTIVE,
-          stock: 0,
-          updatedAt: { gte: FOUR_HOURS_AGO },
-        },
-      ],
+  const baseWhere: Prisma.ProductWhereInput = {
+    shop: shopFilter,
+    ...(categoryFilter ?? {}),
+    ...(q.condition ? { condition: q.condition } : {}),
+    OR: [
+      // Truly active — explicit ACTIVE + has stock (or unlimited)
+      {
+        status: ProductStatus.ACTIVE,
+        OR: [{ stock: null }, { stock: { gt: 0 } }],
+      },
+      // Explicit SOLD_OUT inside the 4h window
+      {
+        status: ProductStatus.SOLD_OUT,
+        soldOutAt: { gte: FOUR_HOURS_AGO },
+      },
+      // Drift safety net — ACTIVE w/ stock=0, surface for 4h
+      // after last update then auto-drop
+      {
+        status: ProductStatus.ACTIVE,
+        stock: 0,
+        updatedAt: { gte: FOUR_HOURS_AGO },
+      },
+    ],
+  };
+
+  const baseSelect = {
+    id: true,
+    slug: true,
+    name: true,
+    priceSatang: true,
+    compareAtSatang: true,
+    imageUrls: true,
+    badge: true,
+    sold: true,
+    category: true,
+    condition: true,
+    type: true,
+    status: true,
+    stock: true,
+    shop: {
+      select: {
+        slug: true,
+        name: true,
+        logoText: true,
+        logoUrl: true,
+        themeColor: true,
+        kycStatus: true,
+        trustScore: true,
+        rating: true,
+        category: true,
+      },
     },
+  } satisfies Prisma.ProductSelect;
+
+  // "For you" / relevance: fetch a quality-ranked pool, shuffle with a
+  // 15-min rotating seed, paginate by offset within the shuffled pool.
+  // Cursor format: `${seed}:${offset}` — different from the ID-based
+  // cursor used by deterministic sorts.
+  if (sort === "relevance") {
+    const cursorParts = q.cursor?.split(":") ?? [];
+    const cursorSeed =
+      cursorParts.length === 2 && Number.isFinite(Number(cursorParts[0]))
+        ? Number(cursorParts[0])
+        : null;
+    const cursorOffset =
+      cursorParts.length === 2 && Number.isFinite(Number(cursorParts[1]))
+        ? Math.max(0, Number(cursorParts[1]))
+        : 0;
+    const seed = cursorSeed ?? currentRotationSeed();
+
+    const pool = await db.product.findMany({
+      where: baseWhere,
+      orderBy: [{ sold: "desc" }, { createdAt: "desc" }],
+      take: RELEVANCE_POOL_SIZE,
+      select: baseSelect,
+    });
+    const filteredPool = pool.filter(
+      (p) => Array.isArray(p.imageUrls) && p.imageUrls.length > 0,
+    );
+    shuffleInPlace(filteredPool, mulberry32(seed));
+
+    const slice = filteredPool.slice(cursorOffset, cursorOffset + pageSize);
+    const nextOffset = cursorOffset + slice.length;
+    const hasMore = nextOffset < filteredPool.length;
+    return {
+      products: slice.map(mapRow),
+      nextCursor: hasMore ? `${seed}:${nextOffset}` : null,
+    };
+  }
+
+  // Deterministic sorts — keep ID-based cursor pagination.
+  const orderBy: Prisma.ProductOrderByWithRelationInput[] =
+    sort === "sold"
+      ? [{ sold: "desc" }, { createdAt: "desc" }]
+      : sort === "newest"
+        ? [{ createdAt: "desc" }]
+        : sort === "price-asc"
+          ? [{ priceSatang: "asc" }]
+          : /* sort === "price-desc" */ [{ priceSatang: "desc" }];
+
+  const products = await db.product.findMany({
+    where: baseWhere,
     orderBy,
     take: pageSize + 1,
     ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      priceSatang: true,
-      compareAtSatang: true,
-      imageUrls: true,
-      badge: true,
-      sold: true,
-      category: true,
-      condition: true,
-      type: true,
-      status: true,
-      stock: true,
-      shop: {
-        select: {
-          slug: true,
-          name: true,
-          logoText: true,
-          logoUrl: true,
-          themeColor: true,
-          kycStatus: true,
-          trustScore: true,
-          rating: true,
-          category: true,
-        },
-      },
-    },
+    select: baseSelect,
   });
 
   // Post-query filter — hide products without images from buyer surfaces.
@@ -207,37 +279,75 @@ export async function getProductsFeed(
   const hasMore = filtered.length > pageSize;
   const slice = hasMore ? filtered.slice(0, pageSize) : filtered;
   return {
-    products: slice.map((p) => ({
-      id: p.id,
-      slug: p.slug,
-      shopSlug: p.shop.slug,
-      shopName: p.shop.name,
-      shopLogoText: p.shop.logoText,
-      shopLogoUrl: p.shop.logoUrl,
-      shopThemeColor: p.shop.themeColor,
-      shopKycStatus: p.shop.kycStatus,
-      shopTrustScore: p.shop.trustScore,
-      shopRating: p.shop.rating,
-      name: p.name,
-      priceSatang: p.priceSatang,
-      compareAtSatang: p.compareAtSatang,
-      imageUrl: p.imageUrls[0] ?? null,
-      badge: p.badge,
-      sold: p.sold,
-      // Falls back to the shop-level category so legacy products still
-      // surface a category pill on the marketplace cards.
-      category: p.category ?? p.shop.category ?? null,
-      condition: p.condition,
-      type: p.type,
-      // Derive: stock=0 ALWAYS reads as SOLD_OUT regardless of the
-      // explicit status column. Belt-and-suspenders for legacy rows
-      // whose SOLD_OUT stamping pre-dates V2.1 (911korn 2026-05-27
-      // screenshot 08:20 — sold-out card was leaking through).
-      status:
-        p.stock === 0 || p.status === "SOLD_OUT"
-          ? ("SOLD_OUT" as const)
-          : ("ACTIVE" as const),
-    })),
+    products: slice.map(mapRow),
     nextCursor: hasMore ? slice[slice.length - 1]!.id : null,
+  };
+}
+
+type PoolRow = Prisma.ProductGetPayload<{
+  select: {
+    id: true;
+    slug: true;
+    name: true;
+    priceSatang: true;
+    compareAtSatang: true;
+    imageUrls: true;
+    badge: true;
+    sold: true;
+    category: true;
+    condition: true;
+    type: true;
+    status: true;
+    stock: true;
+    shop: {
+      select: {
+        slug: true;
+        name: true;
+        logoText: true;
+        logoUrl: true;
+        themeColor: true;
+        kycStatus: true;
+        trustScore: true;
+        rating: true;
+        category: true;
+      };
+    };
+  };
+}>;
+
+function mapRow(p: PoolRow): FeedProductRow {
+  return {
+    id: p.id,
+    slug: p.slug,
+    shopSlug: p.shop.slug,
+    shopName: p.shop.name,
+    shopLogoText: p.shop.logoText,
+    shopLogoUrl: p.shop.logoUrl,
+    shopThemeColor: p.shop.themeColor,
+    shopKycStatus: p.shop.kycStatus,
+    shopTrustScore: p.shop.trustScore,
+    shopRating: p.shop.rating,
+    name: p.name,
+    priceSatang: p.priceSatang,
+    compareAtSatang: p.compareAtSatang,
+    // imageUrls is a JSONB column typed as Prisma.JsonValue. Pool fetch +
+    // post-query filter above guarantees Array.isArray + length>0, so the
+    // first element is always present and string-shaped in practice.
+    imageUrl: Array.isArray(p.imageUrls) ? (p.imageUrls[0] as string) ?? null : null,
+    badge: p.badge,
+    sold: p.sold,
+    // Falls back to the shop-level category so legacy products still
+    // surface a category pill on the marketplace cards.
+    category: p.category ?? p.shop.category ?? null,
+    condition: p.condition,
+    type: p.type,
+    // Derive: stock=0 ALWAYS reads as SOLD_OUT regardless of the
+    // explicit status column. Belt-and-suspenders for legacy rows
+    // whose SOLD_OUT stamping pre-dates V2.1 (911korn 2026-05-27
+    // screenshot 08:20 — sold-out card was leaking through).
+    status:
+      p.stock === 0 || p.status === "SOLD_OUT"
+        ? ("SOLD_OUT" as const)
+        : ("ACTIVE" as const),
   };
 }
