@@ -31,14 +31,23 @@ export function LineSupportFab() {
 
   const oa = (process.env.NEXT_PUBLIC_SUPPORT_LINE_OA?.trim() || "@salepage").trim();
   const href = `https://line.me/R/ti/p/${oa.startsWith("@") ? "%40" + oa.slice(1) : oa}`;
+  // On the dashboard the mobile bottom-tab nav is fixed at the bottom
+  // with height `3.75rem + env(safe-area-inset-bottom)`, so the FAB
+  // must clear it by ~5rem total. On the home page there's no tab bar,
+  // so the smaller 1.25rem inset is enough. Desktop (lg+) drops the
+  // tab bar entirely → both surfaces collapse back to 1.5rem.
+  // 911korn 2026-05-28 "เอาขึ้นมานิดนึงอย่าให้มันบังปุ่ม ใน Mobile".
+  const bottomStyle = isDashboard
+    ? "calc(env(safe-area-inset-bottom) + 5rem)"
+    : "calc(env(safe-area-inset-bottom) + 1.25rem)";
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="LINE Support"
-      className="group fixed bottom-5 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-[#06C755] py-2.5 pl-2.5 pr-4 text-white shadow-[0_10px_30px_-8px_rgb(6_199_85/0.55)] transition-transform hover:-translate-y-0.5 active:scale-95 sm:bottom-6 sm:right-6"
-      style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
+      className="group fixed right-4 z-40 inline-flex items-center gap-2 rounded-full bg-[#06C755] py-2.5 pl-2.5 pr-4 text-white shadow-[0_10px_30px_-8px_rgb(6_199_85/0.55)] transition-transform hover:-translate-y-0.5 active:scale-95 sm:right-6 lg:!bottom-6"
+      style={{ bottom: bottomStyle }}
     >
       <LineIcon className="size-7 rounded-lg" />
       <span className="text-[13px] font-semibold leading-none">
