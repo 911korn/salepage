@@ -6,6 +6,7 @@ import { db, OrderStatus } from "@/lib/db";
 import { buildOrderRef } from "@/lib/orders";
 import { sendOrderShipped } from "@/lib/email";
 import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
+import { hasBusinessPlan } from "@/lib/plan";
 import {
   scanShippingReceipt,
   namesLooselyMatch,
@@ -81,6 +82,14 @@ export async function POST(request: Request, ctx: Ctx) {
   if (!order) return fail("not_found", "ไม่พบออเดอร์นี้", 404);
   if (order.shop.ownerId !== session.user.id) {
     return fail("forbidden", "ไม่มีสิทธิ์", 403);
+  }
+  // V2.1 Auto Tracking gate — Business+ only. 911korn 2026-05-28.
+  if (!(await hasBusinessPlan(session.user.id))) {
+    return fail(
+      "upgrade_required",
+      "AI Auto Tracking ใช้ได้กับแผน Business ขึ้นไป",
+      402,
+    );
   }
   if (
     order.status !== OrderStatus.PAID &&

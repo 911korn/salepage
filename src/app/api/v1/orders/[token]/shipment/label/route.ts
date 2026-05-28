@@ -1,6 +1,7 @@
 import { fail } from "@/lib/api";
 import { db } from "@/lib/db";
 import { buildOrderRef } from "@/lib/orders";
+import { hasBusinessPlan } from "@/lib/plan";
 import { renderShippingLabelHtml } from "@/lib/shipping-label-html";
 
 /**
@@ -52,6 +53,18 @@ export async function GET(
       "wrong_status",
       "พิมพ์ใบปะหน้าได้เฉพาะออเดอร์ที่ลูกค้าชำระเงินแล้ว",
       409,
+    );
+  }
+  // V2.1 Auto Tracking gate — Business+ only. 911korn 2026-05-28. The UI
+  // already shows an upgrade modal before this endpoint is hit, but we
+  // re-check server-side so the URL can't be opened directly on a Free /
+  // Starter / Pro tier.
+  const ownerHasBusiness = await hasBusinessPlan(order.shop.ownerId);
+  if (!ownerHasBusiness) {
+    return fail(
+      "upgrade_required",
+      "พิมพ์ใบปะหน้า Auto Tracking ใช้ได้กับแผน Business ขึ้นไป",
+      402,
     );
   }
 

@@ -12,7 +12,7 @@ import { db, OrderStatus } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
 import { dashboardHref } from "@/lib/dashboard-routing";
 import { buildOrderRef } from "@/lib/orders";
-import { hasProPlan } from "@/lib/plan";
+import { hasBusinessPlan, hasProPlan } from "@/lib/plan";
 import { buttonStyles } from "@/components/ui/button";
 import type { Locale } from "@/i18n/routing";
 
@@ -41,6 +41,10 @@ export default async function OrderDetailPage({
   const t = await getTranslations("dashboard.orders.detail");
   const ref = buildOrderRef(order.createdAt, order.id);
   const shippingEligible = await hasProPlan(user.id);
+  // V2.1 Auto Tracking (print label + AI receipt OCR auto-fills tracking)
+  // is Business+ only. 911korn 2026-05-28 "ปรับให้การพิมพ์ใบปะหน้า Auto
+  // Tracking ใช้ได้กับ Business ขึ้นไป".
+  const isBusinessPlus = await hasBusinessPlan(user.id);
   const items = order.items as Array<{
     productSlug: string;
     productName: string;
@@ -224,6 +228,7 @@ export default async function OrderDetailPage({
                   : null
               }
               shopSlug={order.shop.slug}
+              isBusinessPlus={isBusinessPlus}
             />
           ) : null}
 

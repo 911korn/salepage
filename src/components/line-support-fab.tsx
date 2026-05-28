@@ -26,10 +26,8 @@ export function LineSupportFab() {
     pathname.includes("/admin/");
   if (onSellerSurface) return null;
 
-  const oa = process.env.NEXT_PUBLIC_SUPPORT_LINE_OA?.trim();
-  const href = oa
-    ? `https://line.me/R/ti/p/${oa.startsWith("@") ? "%40" + oa.slice(1) : oa}`
-    : "mailto:hello@salepage.in.th";
+  const oa = (process.env.NEXT_PUBLIC_SUPPORT_LINE_OA?.trim() || "@salepage").trim();
+  const href = `https://line.me/R/ti/p/${oa.startsWith("@") ? "%40" + oa.slice(1) : oa}`;
   return (
     <a
       href={href}
