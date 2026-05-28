@@ -169,9 +169,9 @@ export function SlipCreditsCard({ shopSlug, capacity }: Props) {
                 <p className="font-display mt-1 text-sm font-bold text-[color:var(--color-brand-700)]">
                   ฿{meta.priceBaht.toLocaleString()}
                 </p>
-                <p className="text-[10px] text-zinc-500">
-                  ฿{meta.perSlipBaht.toFixed(2)}/สลิป
-                </p>
+                {/* Per-slip price intentionally hidden — let the seller
+                    do the math themselves. 911korn 2026-05-28 "ไม่ต้อง
+                    เขียน ราคาต่อสลิป · ให้คนคิดเอง". */}
                 {loading ? (
                   <p className="mt-1 text-[10px] text-zinc-400">กำลังเปิด…</p>
                 ) : null}
