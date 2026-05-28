@@ -142,10 +142,6 @@ export async function getProductsFeed(
       shop: shopFilter,
       ...(categoryFilter ?? {}),
       ...(q.condition ? { condition: q.condition } : {}),
-      // Hide products without images from the buyer feed entirely.
-      // 911korn 2026-05-28 "ต้องมีรูปทุกสินค้า · ถ้า item ไม่มีรูป
-      // ห้ามขึ้น เลย". Seller dashboard still sees them (different query).
-      NOT: [{ imageUrls: { equals: [] } }],
       OR: [
         // Truly active — explicit ACTIVE + has stock (or unlimited)
         {
@@ -199,8 +195,17 @@ export async function getProductsFeed(
     },
   });
 
-  const hasMore = products.length > pageSize;
-  const slice = hasMore ? products.slice(0, pageSize) : products;
+  // Post-query filter — hide products without images from buyer surfaces.
+  // 911korn 2026-05-28 "ถ้า item ไม่มีรูป ห้ามขึ้น เลย". Tried this as a
+  // Prisma JSON `NOT: [{ imageUrls: { equals: [] } }]` filter first but
+  // it returned zero rows on the JSONB column — the JSON equals operator
+  // is unreliable for array shape comparison. Filtering in JS is simpler
+  // and accurate; cursor pagination tolerates the slight skew.
+  const filtered = products.filter(
+    (p) => Array.isArray(p.imageUrls) && p.imageUrls.length > 0,
+  );
+  const hasMore = filtered.length > pageSize;
+  const slice = hasMore ? filtered.slice(0, pageSize) : filtered;
   return {
     products: slice.map((p) => ({
       id: p.id,

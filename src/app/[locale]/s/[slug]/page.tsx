@@ -166,13 +166,10 @@ export default async function StorefrontPage({ params }: PageProps) {
     where: { slug },
     include: {
       products: {
-        // Storefront shop page — hide products that have no image and
-        // any hidden/draft state. 911korn 2026-05-28 "ถ้า item ไม่มีรูป
-        // ห้ามขึ้น เลย · ต้องมีรูปทุกสินค้า".
-        where: {
-          status: { not: ProductStatus.HIDDEN },
-          NOT: [{ imageUrls: { equals: [] } }],
-        },
+        // Image-less filter happens post-query below (Prisma JSON
+        // equals on JSONB arrays returns 0 rows unreliably). 911korn
+        // 2026-05-28 "ถ้า item ไม่มีรูป ห้ามขึ้น เลย".
+        where: { status: { not: ProductStatus.HIDDEN } },
         orderBy: [{ sold: "desc" }, { createdAt: "desc" }],
       },
     },
@@ -234,7 +231,9 @@ export default async function StorefrontPage({ params }: PageProps) {
       bannerUrl: dbShop.bannerUrls?.[0] ?? null,
       announcement: dbShop.announcement?.trim() || null,
       contact: (dbShop.contact as ShopView["contact"] | null) ?? {},
-      products: dbShop.products.map((p) => ({
+      products: dbShop.products
+        .filter((p) => Array.isArray(p.imageUrls) && p.imageUrls.length > 0)
+        .map((p) => ({
         slug: p.slug,
         name: p.name,
         priceBaht: Math.round(p.priceSatang / 100),

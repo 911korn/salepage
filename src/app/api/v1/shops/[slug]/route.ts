@@ -121,12 +121,10 @@ export async function GET(
       // and as the checkout toggle gate.
       acceptsEscrow: true,
       products: {
-        // Buyer-facing shop page — hide products without images.
-        // 911korn 2026-05-28 "ถ้า item ไม่มีรูป ห้ามขึ้น เลย".
-        where: {
-          status: "ACTIVE",
-          NOT: [{ imageUrls: { equals: [] } }],
-        },
+        // Buyer-facing shop page — hide image-less products via
+        // post-query filter below (Prisma JSON equals on JSONB array
+        // was unreliable). 911korn 2026-05-28.
+        where: { status: "ACTIVE" },
         orderBy: [{ sold: "desc" }, { createdAt: "desc" }],
         take: 60,
         select: {
@@ -250,7 +248,11 @@ export async function GET(
         followerCount,
         isFollowing,
       },
-      products: shop.products,
+      // Filter out products with no image. 911korn 2026-05-28 "ถ้า
+      // item ไม่มีรูป ห้ามขึ้น เลย".
+      products: shop.products.filter(
+        (p) => Array.isArray(p.imageUrls) && p.imageUrls.length > 0,
+      ),
       productCount: shop._count.products,
       createdAt: shop.createdAt,
     });

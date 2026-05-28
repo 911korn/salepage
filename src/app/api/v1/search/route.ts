@@ -97,9 +97,6 @@ export async function GET(request: Request) {
     db.product.findMany({
       where: {
         status: ProductStatus.ACTIVE,
-        // Search results — hide products without images. 911korn
-        // 2026-05-28 "ถ้า item ไม่มีรูป ห้ามขึ้น เลย".
-        NOT: [{ imageUrls: { equals: [] } }],
         shop: {
           status: ShopStatus.ACTIVE,
           suspended: false,
@@ -144,8 +141,13 @@ export async function GET(request: Request) {
     }),
   ]);
 
-  const hasMore = products.length > PAGE_SIZE;
-  const productSlice = hasMore ? products.slice(0, PAGE_SIZE) : products;
+  // Filter out products with no image — buyer-only rule, see
+  // /lib/products-feed-shared.ts for the same approach.
+  const withImages = products.filter(
+    (p) => Array.isArray(p.imageUrls) && p.imageUrls.length > 0,
+  );
+  const hasMore = withImages.length > PAGE_SIZE;
+  const productSlice = hasMore ? withImages.slice(0, PAGE_SIZE) : withImages;
 
   return ok({
     shops,
