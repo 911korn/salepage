@@ -3,6 +3,11 @@
 dist/
 web-build/
 
+# Secrets — Apple ASC AuthKey *.p8 + Play Store service account JSON.
+# Never commit; provide via EAS secrets / Vercel env / local-only files.
+credentials/
+*.p8
+
 # Native
 ios/
 android/
