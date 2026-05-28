@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { PageHeader } from "@/components/admin/page-header";
+import { BusinessPlanCalculator } from "@/components/admin/business-plan-calculator";
 import { requireAdmin } from "@/lib/admin";
 import {
   getForecastSnapshot,
@@ -78,6 +79,28 @@ export default async function BusinessPlanPage({
       <PageHeader
         title="Business Plan"
         description="Forecast รายได้ + แผนธุรกิจ — ภาพรวมที่ทีมและนักลงทุนใช้ตัดสินใจ"
+      />
+
+      <BusinessPlanCalculator
+        defaults={{
+          shops: snapshot.totalShops || 1000,
+          paidConversionPct: snapshot.paidConversionPct || 5,
+          arpuBaht:
+            0.7 * PLAN_PRICE_BAHT.PRO +
+            0.25 * PLAN_PRICE_BAHT.BUSINESS +
+            0.05 * PLAN_PRICE_BAHT.AGENCY,
+          gmvPerShopBaht: Math.max(
+            500,
+            Math.round(
+              snapshot.gmv30dBaht / Math.max(1, snapshot.totalShops),
+            ),
+          ),
+          slipCallsPerShop: Math.max(
+            1,
+            Math.round(snapshot.slipCalls30d / Math.max(1, snapshot.totalShops)),
+          ),
+          monthlyGrowth: snapshot.shopGrowthCmgr ?? 0.15,
+        }}
       />
 
       <ScenarioPicker shopsOverride={shopsOverride} />
