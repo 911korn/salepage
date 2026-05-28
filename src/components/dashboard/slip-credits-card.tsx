@@ -77,7 +77,10 @@ export function SlipCreditsCard({ shopSlug, capacity }: Props) {
       : 0;
 
   return (
-    <section className="rounded-2xl border border-[color:var(--color-border)] bg-white p-5">
+    <section
+      id="slip-credits"
+      className="scroll-mt-24 rounded-2xl border border-[color:var(--color-border)] bg-white p-5"
+    >
       <header className="flex items-center justify-between gap-2">
         <div>
           <h2 className="font-display flex items-center gap-2 text-base font-semibold">

@@ -7,6 +7,8 @@ import {
   MessageCircle,
   Package,
   Plus,
+  ReceiptText,
+  Rocket,
   ShoppingBag,
   Star,
   Ticket,
@@ -101,7 +103,7 @@ export default async function DashboardOverviewPage({
             {t("firstTimeBanner")}
           </p>
         ) : null}
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <PrimaryAction
             href={dashboardHref("/dashboard/products/new", activeShop.slug)}
             icon={Plus}
@@ -114,6 +116,20 @@ export default async function DashboardOverviewPage({
             icon={Download}
             label={t("importProducts")}
             desc={t("importProductsDesc")}
+            variant="outline"
+          />
+          <PrimaryAction
+            href="/#pricing"
+            icon={Rocket}
+            label={t("upgradePlan")}
+            desc={t("upgradePlanDesc")}
+            variant="outline"
+          />
+          <PrimaryAction
+            href={dashboardHref("/dashboard/settings", activeShop.slug) + "#slip-credits"}
+            icon={ReceiptText}
+            label={t("buySlipCredits")}
+            desc={t("buySlipCreditsDesc")}
             variant="outline"
           />
         </div>
