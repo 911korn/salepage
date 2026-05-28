@@ -25,6 +25,9 @@ export {
   ContentReportKind,
   ContentReportReason,
   ContentReportStatus,
+  PaymentGatewayProvider,
+  PaymentGatewayMode,
+  PaymentGatewayTestStatus,
 } from "@/generated/prisma";
 
 function makeClient() {

@@ -259,6 +259,7 @@ model Shop {
   stories           ShopStory[]
   liveBroadcasts    LiveBroadcast[]
   groupBuys         GroupBuy[]
+  paymentGateways   ShopPaymentGateway[]
 
   @@index([ownerId])
   @@index([featured, status])
@@ -1398,4 +1399,84 @@ model UserBlock {
 
   @@unique([blockerId, blockeeId])
   @@index([blockerId])
+}
+
+// V2.3 — Bring-your-own payment gateway, Business+ only.
+//
+// Sellers on Business+ plug in their Omise / Stripe / 2C2P / GBPrimePay
+// / PayPal etc. API keys. We store the keys encrypted at rest (AES-256-GCM
+// with PAYMENT_GATEWAY_ENCRYPTION_KEY) and use them server-side when the
+// shop's buyers checkout via the gateway-backed flow. PromptPay stays
+// the default for every shop — gateways are an add-on for shops that
+// want credit-card support or alt-pay-methods their bank-direct QR
+// doesn't cover.
+//
+// One row = one (shopId, provider) — a shop can only have one Omise
+// config at a time, but can have multiple providers active in parallel.
+model ShopPaymentGateway {
+  id                 String                    @id @default(cuid())
+  shopId             String
+  shop               Shop                      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  provider           PaymentGatewayProvider
+  // Public-side identifiers (e.g. Omise public key, Stripe publishable
+  // key, 2C2P merchant ID) — these are technically not secret but we
+  // store them alongside so the dashboard UI can mask + display them
+  // consistently.
+  publicKey          String
+  // AES-256-GCM ciphertext of the secret API key. Format produced by
+  // src/lib/payment-gateways/crypto.ts → "v1:<iv-hex>:<tag-hex>:<ciphertext-hex>".
+  secretKeyEncrypted String                    @db.Text
+  // For gateways that need a webhook signing secret (Stripe, Omise) — also
+  // encrypted. Optional because not every provider requires one.
+  webhookSecretEncrypted String?               @db.Text
+  // "test" → seller's testing/sandbox keys · "live" → production keys.
+  // Both can be stored simultaneously? No — one row is one mode. Seller
+  // toggles between in dashboard.
+  mode               PaymentGatewayMode        @default(TEST)
+  // When false, server treats this row as "saved but disabled" — won't
+  // surface to buyers, won't accept webhooks. Seller can flip on after
+  // testing.
+  enabled            Boolean                   @default(false)
+  // Last time we called the provider's "validate keys" endpoint. Lets
+  // the UI badge keys as "verified at <ts>" or "needs re-test".
+  lastTestedAt       DateTime?
+  lastTestStatus     PaymentGatewayTestStatus?
+  // Free-text from the last test — provider error message if FAILED,
+  // account display name if OK.
+  lastTestMessage    String?                   @db.Text
+  // Optional display label so a shop with multiple Omise accounts (rare)
+  // can tell them apart.
+  label              String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@unique([shopId, provider])
+  @@index([shopId])
+  @@index([provider])
+}
+
+enum PaymentGatewayProvider {
+  OMISE        // opn.co (formerly Omise) — most popular Thai SME PSP
+  STRIPE       // global, supports THB since 2023
+  KSHER        // cross-border CN↔TH, popular with shops selling to Chinese
+  C2P          // 2C2P — Asian payments hub, popular Thai ecom
+  GBPRIMEPAY   // GBPrimePay — Bangkok Bank backed
+  PAYSOLUTIONS // PaySolutions — Thai local
+  KBANK        // K-Payment Gateway (Kasikornbank)
+  SCB          // SCB Easy Pay / SCB Connect
+  KRUNGSRI     // Krungsri Bay Online / KrungsriPay
+  TRUEMONEY    // TrueMoney Wallet
+  RABBIT_LINEPAY // Rabbit LINE Pay
+  PAYPAL       // global cross-border
+}
+
+enum PaymentGatewayMode {
+  TEST
+  LIVE
+}
+
+enum PaymentGatewayTestStatus {
+  OK
+  FAILED
+  PENDING
 }

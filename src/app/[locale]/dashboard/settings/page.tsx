@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { CreditCard, ChevronRight } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { SettingsForm } from "@/components/dashboard/settings-form";
 import { SlipCreditsCard } from "@/components/dashboard/slip-credits-card";
 import { db } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
-import { resolveDashboardShop } from "@/lib/dashboard-routing";
+import { resolveDashboardShop, dashboardHref } from "@/lib/dashboard-routing";
 import { getShopSlipCapacity } from "@/lib/slip-credits";
 import type { Locale } from "@/i18n/routing";
 
@@ -43,6 +45,30 @@ export default async function SettingsPage({
       </header>
 
       <SlipCreditsCard shopSlug={shop.slug} capacity={capacity} />
+
+      <Link
+        href={dashboardHref(
+          "/dashboard/settings/payment-gateways",
+          shop.slug,
+        )}
+        className="group flex items-center gap-3 rounded-2xl border border-[color:var(--color-border)] bg-white p-4 transition hover:border-[color:var(--color-brand-300)] hover:shadow-md"
+      >
+        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]">
+          <CreditCard className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[14px] font-bold text-zinc-900 group-hover:text-[color:var(--color-brand-700)]">
+            Payment Gateways
+            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-rose-600 to-amber-500 px-1.5 py-0.5 align-middle text-[9px] font-bold uppercase tracking-wider text-white">
+              Business+
+            </span>
+          </p>
+          <p className="mt-0.5 text-[12px] text-zinc-500">
+            Stripe · Omise · Ksher · 2C2P · GBPrimePay — รับบัตรเครดิต + alt-pay เพิ่มจาก PromptPay
+          </p>
+        </div>
+        <ChevronRight className="size-4 text-zinc-400 group-hover:text-[color:var(--color-brand-700)]" />
+      </Link>
 
       <SettingsForm
         shop={{
