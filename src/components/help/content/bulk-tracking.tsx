@@ -21,7 +21,7 @@ export function BulkTracking() {
       />
 
       <Note>
-        <strong>Business+ เท่านั้น</strong> · ดูคู่มือ <em>"แผน Free / Pro / Business / Agency"</em> ถ้ายังไม่อัปเกรด
+        <strong>ฟรีทุกแผน</strong> — AI Bulk Tracking ใช้ได้ตั้งแต่ Free ขึ้นไป ไม่ต้องอัปเกรด
       </Note>
 
       <Steps>

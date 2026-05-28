@@ -9,9 +9,6 @@ import {
   CheckCircle2,
   Loader2,
   AlertCircle,
-  Rocket,
-  Sparkles,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -40,11 +37,6 @@ interface Props {
    *  successful scan so the seller doesn't get stranded on the same
    *  page (911korn 2026-05-27 "กดยืนยันแล้วมันควรมี Success page").  */
   shopSlug: string;
-  /** Server-side computed: is the shop owner on Business or Agency tier?
-   *  V2.1 Auto Tracking (print label + AI OCR receipt) is gated to
-   *  Business+ — sub-Business clicks get an upgrade modal instead of
-   *  the print/upload flow. 911korn 2026-05-28 directive. */
-  isBusinessPlus: boolean;
 }
 
 export function DropOffShippingPanel({
@@ -54,7 +46,6 @@ export function DropOffShippingPanel({
   initialReceiptUrl,
   initialLabelGeneratedAt,
   shopSlug,
-  isBusinessPlus,
 }: Props) {
   const router = useRouter();
   const [scanning, setScanning] = useState(false);
@@ -63,7 +54,6 @@ export function DropOffShippingPanel({
   const [labelGeneratedAt, setLabelGeneratedAt] = useState(
     initialLabelGeneratedAt,
   );
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [pendingScan, setPendingScan] = useState<{
     receiverName: string | null;
     trackingNumber: string;
@@ -222,33 +212,19 @@ export function DropOffShippingPanel({
               <p className="mt-0.5 text-[11px] text-zinc-400">
                 เปิดในแท็บใหม่ → กดปุ่ม "พิมพ์" → ตัด-ติดที่กล่อง
               </p>
-              {isBusinessPlus ? (
-                <a
-                  href={`/api/v1/orders/${token}/shipment/label`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => {
-                    if (!labelGeneratedAt)
-                      setLabelGeneratedAt(new Date().toISOString());
-                  }}
-                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-[13px] font-semibold text-zinc-900 hover:bg-zinc-100"
-                >
-                  <Printer className="size-4" />
-                  เปิดใบปะหน้า
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setUpgradeOpen(true)}
-                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-[13px] font-semibold text-zinc-900 hover:bg-zinc-100"
-                >
-                  <Printer className="size-4" />
-                  เปิดใบปะหน้า
-                  <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9.5px] font-bold text-amber-700">
-                    Business+
-                  </span>
-                </button>
-              )}
+              <a
+                href={`/api/v1/orders/${token}/shipment/label`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  if (!labelGeneratedAt)
+                    setLabelGeneratedAt(new Date().toISOString());
+                }}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-[13px] font-semibold text-zinc-900 hover:bg-zinc-100"
+              >
+                <Printer className="size-4" />
+                เปิดใบปะหน้า
+              </a>
               {labelGeneratedAt ? (
                 <p className="mt-2 text-[10px] text-emerald-400">
                   ✓ เปิดแล้วเมื่อ {new Date(labelGeneratedAt).toLocaleString()}
@@ -272,43 +248,29 @@ export function DropOffShippingPanel({
                 Flash / Kerry / J&T / Thai Post — ค่าส่งที่เก็บจากลูกค้าก็ใช้จ่ายตรงนี้
               </p>
 
-              {isBusinessPlus ? (
-                <label
-                  className={`mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-white px-3 py-2 text-[13px] font-semibold text-zinc-900 hover:bg-zinc-100 ${
-                    scanning ? "opacity-60" : ""
-                  }`}
-                >
-                  {scanning ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Camera className="size-4" />
-                  )}
-                  {scanning ? "กำลังให้ AI อ่าน..." : "อัปโหลดรูปใบเสร็จ"}
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="sr-only"
-                    disabled={scanning || orderStatus !== "PAID"}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      e.target.value = "";
-                      if (f) void uploadReceipt(f);
-                    }}
-                  />
-                </label>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setUpgradeOpen(true)}
-                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-[13px] font-semibold text-zinc-900 hover:bg-zinc-100"
-                >
+              <label
+                className={`mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-white px-3 py-2 text-[13px] font-semibold text-zinc-900 hover:bg-zinc-100 ${
+                  scanning ? "opacity-60" : ""
+                }`}
+              >
+                {scanning ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
                   <Camera className="size-4" />
-                  อัปโหลดรูปใบเสร็จ
-                  <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9.5px] font-bold text-amber-700">
-                    Business+
-                  </span>
-                </button>
-              )}
+                )}
+                {scanning ? "กำลังให้ AI อ่าน..." : "อัปโหลดรูปใบเสร็จ"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  disabled={scanning || orderStatus !== "PAID"}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) void uploadReceipt(f);
+                  }}
+                />
+              </label>
               {orderStatus !== "PAID" && orderStatus !== "SHIPPING" ? (
                 <p className="mt-2 text-[10px] text-amber-300">
                   รอลูกค้าจ่ายเงินก่อน
@@ -391,87 +353,7 @@ export function DropOffShippingPanel({
         </div>
       ) : null}
 
-      {upgradeOpen ? (
-        <UpgradeAutoTrackingModal onClose={() => setUpgradeOpen(false)} />
-      ) : null}
     </section>
-  );
-}
-
-function UpgradeAutoTrackingModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/55 p-0 sm:items-center sm:p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="w-full max-w-md overflow-hidden rounded-t-3xl bg-white text-zinc-900 shadow-2xl sm:rounded-3xl">
-        <div className="relative bg-gradient-to-br from-rose-600 via-rose-500 to-amber-500 px-5 py-6 text-white">
-          <button
-            type="button"
-            aria-label="ปิด"
-            onClick={onClose}
-            className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
-          >
-            <X className="size-4" />
-          </button>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider">
-            <Sparkles className="size-3.5" />
-            Auto Tracking
-          </span>
-          <h3 className="font-display mt-3 text-xl font-bold leading-tight">
-            พิมพ์ใบปะหน้า + AI ดึงเลข tracking
-            <br />
-            ปลดล็อกที่แผน Business
-          </h3>
-          <p className="mt-2 text-[13px] leading-relaxed text-white/90">
-            ปริ๊นใบปะหน้าเอง · drop ที่ courier ไหนก็ได้ · ถ่ายใบเสร็จกลับมา AI กรอกเลขให้ทันที — ไม่ต้องพิมพ์เลข tracking เอง
-          </p>
-        </div>
-
-        <ul className="space-y-3 px-5 py-5 text-[13.5px]">
-          <Bullet>พิมพ์ใบปะหน้าสำเร็จรูปทุก order — ไม่ต้องเขียนมือ</Bullet>
-          <Bullet>AI สแกนใบเสร็จ courier 1 รูป → กรอกเลข tracking ทันที</Bullet>
-          <Bullet>ส่ง email + LINE แจ้งลูกค้าเลขพัสดุอัตโนมัติ</Bullet>
-          <Bullet>ใช้ได้กับขนส่งทุกเจ้า — Flash / Kerry / J&T / Thai Post</Bullet>
-        </ul>
-
-        <div className="border-t border-zinc-200 bg-zinc-50 px-5 py-4">
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12px] text-zinc-500">แผน Business</span>
-            <span className="font-display text-[18px] font-bold text-zinc-900">
-              ฿790<span className="text-[12px] font-medium text-zinc-500">/เดือน</span>
-            </span>
-          </div>
-          <a
-            href="/#pricing"
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-[14px] font-semibold text-white shadow-[0_10px_24px_-12px_rgb(225_29_72/0.6)] hover:bg-rose-700"
-          >
-            <Rocket className="size-4" />
-            อัปเกรดเป็น Business
-          </a>
-          <button
-            type="button"
-            onClick={onClose}
-            className="mt-2 w-full rounded-2xl px-4 py-2 text-center text-[12.5px] font-medium text-zinc-500 hover:text-zinc-700"
-          >
-            ไว้ทีหลัง
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Bullet({ children }: { children: React.ReactNode }) {
-  return (
-    <li className="flex items-start gap-2.5">
-      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-      <span className="text-zinc-800">{children}</span>
-    </li>
   );
 }
 

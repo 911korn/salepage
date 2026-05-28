@@ -39,9 +39,8 @@ const SUGGESTED_PER_PHOTO = 5;
  * endpoints that the web dashboard uses.
  *
  * 911korn 2026-05-28 "ทำมาเลยให้ครบเลย" — Phase 2 mobile counterpart
- * to the web Phase 1 MVP. Business+ gated server-side; the screen still
- * loads on FREE tier so we can show the upgrade prompt inline if scan
- * comes back 402.
+ * to the web Phase 1 MVP. Free for every tier (911korn 2026-05-29
+ * "ปล่อย Free ก่อนเลย ให้คนใช้เยอะๆ").
  */
 
 type Status = "auto" | "review" | "unmatched";
@@ -131,13 +130,6 @@ export default function BulkScanScreen() {
     },
     onError: (err) => {
       Sentry.captureException(err);
-      if (err instanceof ApiClientError && err.code === "upgrade_required") {
-        Alert.alert(
-          "ต้องอัปเกรดเป็น Business",
-          "AI Bulk Tracking ใช้ได้กับแผน Business ขึ้นไป",
-        );
-        return;
-      }
       Alert.alert(
         "สแกนไม่สำเร็จ",
         err instanceof ApiClientError ? err.message : "ลองอีกครั้ง",
@@ -304,9 +296,9 @@ export default function BulkScanScreen() {
             <Text className="text-[24px] font-bold text-fg">
               AI Bulk Tracking
             </Text>
-            <View className="rounded-full bg-rose-600 px-2 py-0.5">
-              <Text className="text-[9.5px] font-bold uppercase text-white">
-                Business+
+            <View className="rounded-full bg-emerald-500/15 px-2 py-0.5">
+              <Text className="text-[9.5px] font-bold uppercase text-emerald-700">
+                Free
               </Text>
             </View>
           </View>

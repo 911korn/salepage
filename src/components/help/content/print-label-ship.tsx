@@ -22,7 +22,7 @@ export function PrintLabelShip() {
       />
 
       <Note>
-        <strong>Business+ เท่านั้น</strong> สำหรับฟีเจอร์พิมพ์ใบปะหน้า + AI tracking — แผนอื่นใส่เลข tracking ด้วยมือได้ปกติ
+        <strong>ฟรีทุกแผน</strong> — พิมพ์ใบปะหน้า + AI tracking ใช้ได้กับทุก seller ตั้งแต่ Free ขึ้นไป ไม่ต้องอัปเกรด
       </Note>
 
       <Steps>

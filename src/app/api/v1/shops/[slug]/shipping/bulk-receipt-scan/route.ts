@@ -2,7 +2,6 @@ import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { resolveSession } from "@/lib/api-auth";
 import { db, OrderStatus } from "@/lib/db";
-import { hasBusinessPlan } from "@/lib/plan";
 import { scanBulkShippingReceipt } from "@/lib/ocr-bulk-receipt";
 import {
   matchBulkReceipts,
@@ -67,15 +66,9 @@ export async function POST(request: Request, ctx: Ctx) {
   if (shop.ownerId !== session.user.id) {
     return fail("forbidden", "ไม่ใช่เจ้าของร้านนี้", 403);
   }
-  // V2.1 Auto Tracking gate — Business+ only.
-  if (!(await hasBusinessPlan(session.user.id))) {
-    return fail(
-      "upgrade_required",
-      "AI Bulk Tracking ใช้ได้กับแผน Business ขึ้นไป",
-      402,
-    );
-  }
-
+  // Free for every tier — see comment in shipment/label/route.ts (911korn
+  // 2026-05-29 reverted the 2026-05-28 Business+ gate so AI Bulk Tracking
+  // is the platform's marketing edge, not a paywall).
   const parsed = await parseJson(request, Body);
   if (!parsed.ok) return parsed.response;
   const photos = parsed.data.photos;
