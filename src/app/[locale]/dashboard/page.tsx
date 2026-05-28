@@ -6,6 +6,7 @@ import {
   Download,
   MessageCircle,
   Package,
+  Package2,
   Plus,
   ReceiptText,
   Rocket,
@@ -165,7 +166,15 @@ export default async function DashboardOverviewPage({
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
           {t("quickTools")}
         </h2>
-        <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-3 lg:grid-cols-7">
+          <QuickTool
+            href={dashboardHref(
+              "/dashboard/shipping/bulk-scan",
+              activeShop.slug,
+            )}
+            icon={Package2}
+            label="Bulk Tracking"
+          />
           <QuickTool
             href={dashboardHref("/dashboard/analytics", activeShop.slug)}
             icon={ChartBar}
