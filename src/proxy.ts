@@ -5,7 +5,89 @@ import { ensureLiffReturnParam, resolveLiffStateTarget } from "@/lib/liff-url";
 
 const intlMiddleware = createMiddleware(routing);
 
-export function proxy(request: NextRequest) {
+// Custom-domain rewrite (formerly src/middleware.ts). Merged into the
+// single proxy file because Next.js 16 forbids `middleware.ts` and
+// `proxy.ts` coexisting — that combo broke every prod build on
+// 2026-05-28 afternoon.
+
+const PRIMARY_HOSTS = new Set([
+  "salepage.in.th",
+  "www.salepage.in.th",
+]);
+
+const DOMAIN_CACHE = new Map<string, { slug: string | null; expiresAt: number }>();
+const TTL_OK_MS = 5 * 60 * 1000;
+const TTL_MISS_MS = 30 * 1000;
+
+async function resolveCustomHost(host: string, origin: string): Promise<string | null> {
+  const cached = DOMAIN_CACHE.get(host);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.slug;
+  }
+  try {
+    const res = await fetch(
+      `${origin}/api/v1/internal/resolve-domain?host=${encodeURIComponent(host)}`,
+      {
+        headers: {
+          "x-internal-secret": process.env.INTERNAL_RESOLVE_SECRET ?? "",
+        },
+        cache: "no-store",
+      },
+    );
+    if (res.ok) {
+      const json = (await res.json()) as { slug: string | null };
+      const slug = json.slug ?? null;
+      DOMAIN_CACHE.set(host, {
+        slug,
+        expiresAt: Date.now() + (slug ? TTL_OK_MS : TTL_MISS_MS),
+      });
+      return slug;
+    }
+  } catch {
+    // Network blip — short-cache as miss; browsers will retry.
+  }
+  DOMAIN_CACHE.set(host, { slug: null, expiresAt: Date.now() + TTL_MISS_MS });
+  return null;
+}
+
+function isPrimaryHost(host: string) {
+  return (
+    PRIMARY_HOSTS.has(host) ||
+    host.endsWith(".vercel.app") ||
+    host === "localhost" ||
+    host.endsWith(".vercel.sh") ||
+    host.startsWith("127.0.0.")
+  );
+}
+
+export async function proxy(request: NextRequest) {
+  const host = (request.headers.get("host") ?? "").split(":")[0].toLowerCase();
+
+  // Custom-domain branch: resolve host → shop slug → rewrite to the
+  // locale-prefixed storefront route. We prepend the locale ourselves
+  // (default `/th`, respect `/en` if buyer manually navigated) because
+  // we return here before next-intl gets a chance to add it.
+  if (!isPrimaryHost(host)) {
+    const stripped = host.replace(/^www\./, "");
+    const origin = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : request.nextUrl.origin;
+    const slug = await resolveCustomHost(stripped, origin);
+    if (slug) {
+      const url = request.nextUrl.clone();
+      const incoming = url.pathname;
+      const localeMatch = incoming.match(/^\/(en|th)(?=\/|$)/);
+      const localePrefix = localeMatch ? localeMatch[0] : "/th";
+      const rest = localeMatch ? incoming.slice(localeMatch[0].length) : incoming;
+      const shopPath =
+        rest === "" || rest === "/" ? `/s/${slug}` : `/s/${slug}${rest}`;
+      url.pathname = `${localePrefix}${shopPath}`;
+      return NextResponse.rewrite(url);
+    }
+    // Unknown custom host → fall through; Next renders its default 404.
+  }
+
+  // Primary-host branch: LIFF state redirect first, then locale routing.
   const liffStateRedirect = redirectLiffState(request);
   if (liffStateRedirect) return liffStateRedirect;
 
