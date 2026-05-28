@@ -21,8 +21,22 @@ export async function rehostImage(
 ): Promise<string | null> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return sourceUrl;
   try {
+    // Build the request with both Chrome UA AND a same-origin Referer —
+    // some CDNs (Shopify, Lazada Asia CDN) hot-link-block requests that
+    // come in without a Referer matching the image's own origin.
+    const origin = (() => {
+      try {
+        return new URL(sourceUrl).origin;
+      } catch {
+        return null;
+      }
+    })();
     const res = await fetch(sourceUrl, {
-      headers: REAL_CHROME_HEADERS,
+      headers: {
+        ...REAL_CHROME_HEADERS,
+        Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        ...(origin ? { Referer: origin + "/" } : {}),
+      },
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -46,16 +60,27 @@ export async function rehostImage(
 export async function rehostImages(
   urls: string[],
   shopId: string,
-  opts: { concurrency?: number } = {},
+  opts: { concurrency?: number; fallbackToSource?: boolean } = {},
 ): Promise<string[]> {
   if (!urls.length) return [];
   const concurrency = opts.concurrency ?? 4;
+  // Default: keep the original source URL when rehost fails. Hot-linking
+  // to Shopee/Lazada CDN isn't ideal long-term (they can break it later)
+  // but it's vastly better than saving the product with no images at all.
+  // 911korn 2026-05-28 spotted /loopwear with 11/12 products imageUrls:[]
+  // because Shopify image CDN 403'd our Vercel SIN1 IPs. From now on the
+  // product at least renders WITH source images while ops backfills via
+  // a retry cron. Caller can opt out for cases where hot-linking is
+  // disallowed by setting fallbackToSource: false.
+  const fallback = opts.fallbackToSource !== false;
   const out: (string | null)[] = new Array(urls.length).fill(null);
   let cursor = 0;
   const workers = Array.from({ length: Math.min(concurrency, urls.length) }, async () => {
     while (cursor < urls.length) {
       const i = cursor++;
-      out[i] = await rehostImage(urls[i]!, shopId);
+      const sourceUrl = urls[i]!;
+      const rehosted = await rehostImage(sourceUrl, shopId);
+      out[i] = rehosted ?? (fallback ? sourceUrl : null);
     }
   });
   await Promise.all(workers);
