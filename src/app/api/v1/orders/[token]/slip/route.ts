@@ -8,6 +8,7 @@ import { applyPaidOrderInventory, buildOrderRef } from "@/lib/orders";
 import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
 import { tryConsumeSlip } from "@/lib/slip-credits";
 import { extractSlipQrPayloadFromBase64 } from "@/lib/slip-qr";
+import { preflightSlipImage } from "@/lib/ocr-slip-preflight";
 import {
   notifyOrderPaid,
   notifyShopNewOrder,
@@ -83,6 +84,39 @@ export async function POST(request: Request, ctx: Ctx) {
     shopId: order.shop.id,
     orderId: order.id,
   });
+
+  // Claude vision pre-flight — reject obviously-non-slip images BEFORE
+  // paying for a SlipOK call. Critical for FREE/STARTER shops that have
+  // zero SlipOK quota — without this, the route below skips SlipOK
+  // entirely and the buyer never learns their selfie/screenshot was
+  // the actual problem. 911korn 2026-05-28 "ทดลองส่งรูปที่ไม่ใช่สลิป
+  // แต่มันขึ้นแบบนี้ ถ้าถูกต้องที่สุดมันต้องแจ้งให้อัพใหม่ สิ".
+  //
+  // Skip the pre-flight when the customer submitted a qrPayload directly
+  // (LIFF QR scanner, the QR is the data, no image to misinterpret).
+  if (parsed.data.imageBase64 && !parsed.data.qrPayload) {
+    const mediaType = sniffMediaTypeFromBase64(parsed.data.imageBase64);
+    const cleanBase64 = parsed.data.imageBase64.replace(
+      /^data:image\/[a-z0-9.+-]+;base64,/i,
+      "",
+    );
+    const preflight = await preflightSlipImage(cleanBase64, mediaType);
+    // Only block on high/medium confidence non-slip — keep "low confidence
+    // not a slip" as benefit-of-the-doubt → let SlipOK decide. We never
+    // want pre-flight to be the reason a legit slip gets blocked.
+    if (!preflight.isSlip && preflight.confidence !== "low") {
+      return ok({
+        verified: false,
+        manualReview: false,
+        status: order.status,
+        reason: "not_a_slip",
+        message:
+          "รูปนี้ไม่ใช่สลิปการโอนเงิน · กรุณาถ่ายสลิปจริงจากแอปธนาคารหลังโอนเสร็จ ให้เห็นยอดเงิน ผู้รับ และเวลา ชัดเจน แล้วลองอัปโหลดใหม่",
+        slipImageUrl: null,
+        provider: "preflight",
+      });
+    }
+  }
 
   // Reserve a slip-verify call against the shop's plan quota / credit wallet
   // BEFORE hitting the SlipOK API (SlipOK charges per call regardless of
@@ -367,6 +401,32 @@ async function storeSlipImage({
   } catch {
     return null;
   }
+}
+
+/** Lightweight content-type sniff from a base64 payload (or data: URL).
+ *  Decodes only the first 16 bytes — enough to read the magic-number
+ *  prefix. Used by the Claude vision pre-flight which needs the MIME
+ *  type up-front. */
+function sniffMediaTypeFromBase64(
+  data: string,
+): "image/jpeg" | "image/png" | "image/webp" {
+  const clean = data.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "");
+  let head: Buffer;
+  try {
+    head = Buffer.from(clean.slice(0, 24), "base64");
+  } catch {
+    return "image/jpeg";
+  }
+  if (head.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex"))) {
+    return "image/png";
+  }
+  if (
+    head.subarray(0, 4).toString("ascii") === "RIFF" &&
+    head.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  return "image/jpeg";
 }
 
 function sniffImageType(bytes: Buffer) {
