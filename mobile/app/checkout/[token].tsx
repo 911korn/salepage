@@ -98,15 +98,27 @@ export default function CheckoutPayScreen() {
         ]);
         return;
       }
-      // Free-tier shops don't have auto-verify — server stored the slip
-      // and flipped the order into manual-review. Tell the buyer that
-      // it's been received (not failed) so they don't keep retrying
-      // (911korn 2026-05-27 "ร้านที่ไม่ได้ซื้อตรวจสลิป ควรผ่าน แต่
-      // ขึ้นแจ้งลูกค้าทราบว่าร้านนี้ไม่ได้ใช้ระบบตรวจ Slip Auto").
+      // SlipOK rejected the image as "not a Thai transfer slip" (selfie,
+      // wrong photo, etc.). Tell the buyer to retry — do NOT route to
+      // manual review. 911korn 2026-05-28 "ถ้าส่งรูปอื่นที่ไม่ใช่ สลิป
+      // ระบบมันควรจะต้องแจ้งกลับมาด้วยว่า ไม่ใช่รูปสลิป กรุณาอัพใหม่".
+      if (res.reason === "not_a_slip") {
+        Alert.alert(
+          "รูปนี้ไม่ใช่สลิปการโอนเงิน",
+          "AI อ่านรูปนี้แล้วไม่พบข้อมูลการโอนเงิน · กรุณาถ่ายสลิปจริงจากแอปธนาคารหลังโอนเสร็จ ให้เห็นยอดเงิน ผู้รับ และเวลา ชัดเจน แล้วลองอัปโหลดใหม่",
+          [{ text: "อัปโหลดสลิปใหม่" }],
+        );
+        return;
+      }
+      // Genuine manual review — shop is out of auto-verify capacity or
+      // the slip looks legit but couldn't be auto-parsed (network blip).
+      // Use neutral wording — don't expose the seller's plan to the
+      // buyer. 911korn 2026-05-28 "ทดลองซื้อร้านนี้มันแจ้งว่าร้านไม่ได้
+      // ใช้ระบบ Verify Slip ทั้งๆ ที่ร้านนี้มีระบบ".
       if (res.manualReview) {
         Alert.alert(
-          "รับสลิปแล้ว · รอร้านตรวจสอบ",
-          "ร้านนี้ไม่ได้ใช้ระบบตรวจสลิปอัตโนมัติ ระบบรับสลิปของคุณไว้แล้ว · กรุณาแจ้งเจ้าของร้านให้ตรวจสอบและยืนยันคำสั่งซื้อ อาจใช้เวลานานกว่าปกติ",
+          "รับสลิปของคุณแล้ว",
+          "ทางร้านจะตรวจสอบและยืนยันสถานะให้ภายในไม่กี่นาที · สามารถติดต่อร้านได้ทันทีหากต้องการ",
           [
             {
               text: "ดูสถานะออเดอร์",

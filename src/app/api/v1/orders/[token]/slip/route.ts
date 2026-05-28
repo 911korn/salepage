@@ -115,8 +115,11 @@ export async function POST(request: Request, ctx: Ctx) {
       manualReview: true,
       status: order.status,
       reason: manualReason,
+      // Neutral wording — don't expose the seller's plan / credit state
+      // to the buyer. 911korn 2026-05-28 "ทดลองซื้อร้านนี้มันแจ้งว่า
+      // ร้านไม่ได้ใช้ระบบ Verify Slip ทั้งๆ ที่ร้านนี้มีระบบ".
       message:
-        "ร้านนี้ไม่ได้เปิดตรวจสลิปอัตโนมัติ ระบบรับสลิปไว้แล้วและรอร้านตรวจสอบด้วยมือ",
+        "รับสลิปของคุณแล้ว · ทางร้านจะตรวจสอบและยืนยันสถานะให้ภายในไม่กี่นาที",
       slipImageUrl: uploadedSlipUrl ?? order.slipImageUrl,
       shopContact: buildShopContact(order.shop.contact),
       remaining: consume.remaining,
@@ -134,25 +137,42 @@ export async function POST(request: Request, ctx: Ctx) {
   });
 
   if (!result.verified) {
-    // Auto-verify failed AFTER we consumed quota — could be a SlipOK
-    // service blip, an unusual slip format, or a real mismatch (wrong
-    // amount / wrong receiver). We persist the slip image either way so
-    // the seller can manually review in the dashboard, and we tell the
-    // buyer that the slip is on file (911korn 2026-05-27 "ร้านฟรี ยัง
-    // ขึ้นแบบเดิม" — bulletproof every failure path, not just the
-    // pre-consume one). When the mismatch IS clearly the buyer's fault
-    // (wrong amount or wrong receiver), we still surface that so they
-    // can retry with the correct slip.
+    // Auto-verify failed AFTER we consumed quota. Three distinct cases —
+    // each gets a different UX so the buyer knows what to do next:
+    //
+    //  (a) `not_a_slip` — SlipOK rejected the image as unreadable / not a
+    //      Thai transfer slip (e.g. buyer uploaded a selfie or wrong photo).
+    //      Tell the buyer clearly to re-upload. Do NOT route to manual
+    //      review — there's nothing for the seller to verify. 911korn
+    //      2026-05-28 "ถ้าส่งรูปอื่นที่ไม่ใช่ สลิป ระบบมันควรจะต้องแจ้ง
+    //      กลับมาด้วยว่า ไม่ใช่รูปสลิป กรุณาอัพใหม่".
+    //
+    //  (b) Explicit mismatch[] — slip is valid but the amount or receiver
+    //      doesn't match this order. Show the red "rejected" banner so
+    //      the buyer can retry with the right slip.
+    //
+    //  (c) Anything else (network blip, weird slip format) — route to
+    //      manual review so the seller can sanity-check it manually.
+    //      911korn 2026-05-27 "ร้านฟรี ยังขึ้นแบบเดิม".
+    const isNotASlip = result.errorCode === "not_a_slip";
     const hasExplicitMismatch =
       Array.isArray(result.mismatch) && result.mismatch.length > 0;
     await db.order.update({
       where: { id: order.id },
       data: {
-        slipImageUrl: uploadedSlipUrl ?? order.slipImageUrl,
+        // Don't persist obviously-not-a-slip images on the order — the
+        // seller's dashboard would just be cluttered with selfies. The
+        // buyer can retry and we'll keep the LATEST attempt that looks
+        // slip-shaped. The blob is still uploaded for audit logs (we
+        // wrote it pre-OCR above) — it just isn't surfaced on the order.
+        ...(isNotASlip
+          ? {}
+          : { slipImageUrl: uploadedSlipUrl ?? order.slipImageUrl }),
         slipProvider: result.provider,
         slipRaw: toJson({
           autoVerifyFailed: true,
           reason: result.errorCode ?? "verification_failed",
+          providerCode: result.providerCode,
           mismatch: result.mismatch ?? [],
           submittedAt: new Date().toISOString(),
         }),
@@ -160,17 +180,17 @@ export async function POST(request: Request, ctx: Ctx) {
     });
     return ok({
       verified: false,
-      // Soft-route to manual review when we can't pin the failure on the
-      // buyer (no explicit amount/receiver mismatch). The mobile + web
-      // checkout panels show a friendly "shop will review" message
-      // instead of a "verification failed" alert.
-      manualReview: !hasExplicitMismatch,
+      // Manual-review path is reserved for genuine ambiguity — NOT for
+      // user error (wrong image) or explicit mismatches.
+      manualReview: !isNotASlip && !hasExplicitMismatch,
       status: order.status,
       mismatch: result.mismatch ?? [],
       reason: result.errorCode ?? "verification_failed",
       message: result.errorMessage,
       provider: result.provider,
-      slipImageUrl: uploadedSlipUrl ?? order.slipImageUrl,
+      slipImageUrl: isNotASlip
+        ? null
+        : uploadedSlipUrl ?? order.slipImageUrl,
     });
   }
 

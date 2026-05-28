@@ -36,10 +36,22 @@ export interface SlipVerifyResult {
   receiver?: { name?: string; bank?: string; account?: string };
   /** Any mismatch we detected vs. expected values. */
   mismatch?: { field: "amount" | "receiver"; expected: unknown; got: unknown }[];
-  /** Machine-readable failure reason when the provider could not verify/parse. */
-  errorCode?: "provider_rejected" | "provider_error" | "receiver_unreadable";
+  /** Machine-readable failure reason when the provider could not verify/parse.
+   *  `not_a_slip` = SlipOK rejected the image as unreadable / not a Thai
+   *  transfer slip — buyer should retry with a real slip photo (911korn
+   *  2026-05-28 "ถ้าส่งรูปอื่นที่ไม่ใช่ สลิป ระบบมันควรจะต้องแจ้งกลับมาด้วยว่า
+   *  ไม่ใช่รูปสลิป กรุณาอัพใหม่").
+   */
+  errorCode?:
+    | "provider_rejected"
+    | "provider_error"
+    | "receiver_unreadable"
+    | "not_a_slip";
   /** Provider-facing failure text for debugging/support UI. */
   errorMessage?: string;
+  /** Provider-specific numeric error code (SlipOK only). Helps the
+   *  route classify rejections without re-parsing the Thai message. */
+  providerCode?: number;
   /** Provider used. */
   provider: SlipProvider;
   /** Raw provider response for debugging (only in non-production). */
@@ -124,11 +136,40 @@ async function verifyViaSlipOk(input: SlipVerifyInput): Promise<SlipVerifyResult
     message?: string;
   };
   if (!res.ok || !json.success) {
+    const message = json.message ?? `SlipOK HTTP ${res.status}`;
+    // SlipOK error codes that mean "the image you sent isn't a valid Thai
+    // transfer slip" — the buyer should retry with a real slip, NOT route
+    // to manual review. Codes per SlipOK docs:
+    //   1009 = ไม่สามารถอ่านสลิปได้
+    //   1010 = รูปภาพไม่ใช่สลิปการโอนเงิน
+    //   1011 = QR code ไม่รองรับ
+    //   1012 = สลิปหมดอายุ / เก่าเกินไป
+    //   1013 = Cannot decode slip
+    // We also fall back to message-content matching for codes we don't
+    // recognise — SlipOK sometimes shifts code numbers between API tiers.
+    const code = typeof json.code === "number" ? json.code : undefined;
+    const lowerMsg = message.toLowerCase();
+    const looksLikeNotASlip =
+      code === 1009 ||
+      code === 1010 ||
+      code === 1011 ||
+      code === 1012 ||
+      code === 1013 ||
+      message.includes("ไม่ใช่สลิป") ||
+      message.includes("อ่านสลิป") ||
+      message.includes("อ่านไม่ได้") ||
+      message.includes("ไม่ใช่ใบ") ||
+      message.includes("ไม่พบข้อมูล") ||
+      lowerMsg.includes("not a slip") ||
+      lowerMsg.includes("cannot read") ||
+      lowerMsg.includes("unable to read") ||
+      lowerMsg.includes("invalid image");
     return {
       verified: false,
       provider: "slipok",
-      errorCode: "provider_rejected",
-      errorMessage: json.message ?? `SlipOK HTTP ${res.status}`,
+      errorCode: looksLikeNotASlip ? "not_a_slip" : "provider_rejected",
+      errorMessage: message,
+      providerCode: code,
       raw: process.env.NODE_ENV === "production" ? undefined : json,
     };
   }

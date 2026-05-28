@@ -271,13 +271,20 @@ export interface SlipVerifyResponse {
   verified: boolean;
   ref?: string;
   amount?: number;
-  errorCode?: "provider_rejected" | "provider_error" | "receiver_unreadable";
+  errorCode?:
+    | "provider_rejected"
+    | "provider_error"
+    | "receiver_unreadable"
+    | "not_a_slip";
   errorMessage?: string;
   /** When the shop hasn't bought an auto-verify plan we still ACCEPT the
    *  slip — the order sits at PENDING with `slipImageUrl` saved, the
    *  seller approves manually. UI should show a friendly "waiting for
    *  shop to review" message instead of a hard fail. */
   manualReview?: boolean;
+  /** `not_a_slip` = SlipOK rejected the image as unreadable / not a Thai
+   *  transfer slip. Buyer should retry with a real slip photo — do NOT
+   *  route this into manual-review purgatory. */
   reason?: string;
   message?: string;
   slipImageUrl?: string | null;

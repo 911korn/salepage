@@ -72,6 +72,11 @@ export function TrackingPanel({
   const manualReview = Boolean(
     result?.manualReview || (!result && initialManualReview),
   );
+  // 911korn 2026-05-28: if SlipOK rejects the image as "not a slip"
+  // (selfie, screenshot of something else), tell the buyer plainly to
+  // re-upload — don't shove it into manual-review purgatory or blame
+  // the shop's plan.
+  const notASlip = result?.reason === "not_a_slip";
   const manualContact = result?.shopContact ?? shopContact;
 
   function onFile(file: File) {
@@ -102,7 +107,11 @@ export function TrackingPanel({
             return;
           }
           setResult(json.data as SlipResult);
-          if (json.data.manualReview) {
+          if (json.data.reason === "not_a_slip") {
+            // Don't refresh — the inline banner below tells the buyer to
+            // re-upload. Toasting in addition would just be noise.
+            toast.error(t("notASlipTitle"));
+          } else if (json.data.manualReview) {
             toast.success(t("manualReviewToast"));
             setTimeout(() => router.refresh(), 1000);
           } else if (json.data.verified) {
@@ -220,7 +229,30 @@ export function TrackingPanel({
           />
         ) : null}
 
-        {result && !result.verified && !result.manualReview ? (
+        {notASlip ? (
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-900">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <div className="min-w-0">
+                <p className="font-bold">{t("notASlipTitle")}</p>
+                <p className="mt-1 leading-relaxed">{t("notASlipDesc")}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setResult(null);
+                fileRef.current?.click();
+              }}
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[color:var(--color-brand-600)] px-4 text-sm font-bold text-white shadow-sm transition active:scale-[0.99] sm:w-auto"
+            >
+              <Upload className="size-4" />
+              {t("notASlipRetry")}
+            </button>
+          </div>
+        ) : null}
+
+        {result && !result.verified && !result.manualReview && !notASlip ? (
           <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <AlertCircle className="mt-0.5 size-4 shrink-0" />
             <div className="min-w-0">
