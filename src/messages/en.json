@@ -389,6 +389,7 @@
       "manageShop": "Manage shop",
       "menuMain": "Main",
       "menuTools": "Tools",
+      "menuSupport": "Support",
       "signOut": "Sign out",
       "switchShop": "Switch shop",
       "createShop": "Create new shop",
@@ -407,7 +408,8 @@
       "customers": "Customers",
       "reviews": "Reviews",
       "announcements": "Announcements",
-      "help": "User Guide"
+      "help": "User Guide",
+      "lineSupport": "Chat with us (LINE)"
     },
     "overview": {
       "greeting": "Overview",

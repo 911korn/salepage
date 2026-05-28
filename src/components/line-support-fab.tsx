@@ -4,16 +4,13 @@ import { usePathname } from "next/navigation";
 import { LineIcon } from "@/components/ui/line-icon";
 
 /**
- * Floating LINE Support button — pinned bottom-right of seller-facing
- * surfaces only (home page + dashboard). It exists so a prospective
- * seller browsing the landing page or a signed-in seller in their
- * dashboard can tap and chat with the SalePage team.
- *
- * 911korn 2026-05-28 "เอาปุ่ม LINE Support ออกจากหน้า Shop หน่อย คับ
- * เอาไว้แค่หลังบ้าน กับ Home Page พอ ไว้ให้ Seller ติดต่อเรา" — on a
- * shop storefront / order / cart / buyer page, this button competes
- * with the shop's own LINE OA (the buyer should chat with the SHOP,
- * not with SalePage support).
+ * Floating LINE Support button — pinned bottom-right of the public
+ * landing page only. Sellers signed into the dashboard reach the same
+ * OA from a permanent entry in the sidebar (see `DashboardSidebar`),
+ * because on mobile dashboard pages the FAB kept overlapping form
+ * action rows (Cancel / Save) — 911korn 2026-05-28 screenshot of the
+ * product-create form, where the green pill covered the right half of
+ * the row.
  *
  * The destination is taken from `NEXT_PUBLIC_SUPPORT_LINE_OA` so we
  * can change the OA target without a re-deploy. Falls back to
@@ -21,25 +18,11 @@ import { LineIcon } from "@/components/ui/line-icon";
  */
 export function LineSupportFab() {
   const rawPath = usePathname() ?? "";
-  // Strip the optional `/en` locale prefix so the route match below
-  // doesn't need to be repeated for each locale.
   const pathname = rawPath.replace(/^\/(en)(?=\/|$)/, "") || "/";
-  const isHome = pathname === "/";
-  const isDashboard =
-    pathname === "/dashboard" || pathname.startsWith("/dashboard/");
-  if (!isHome && !isDashboard) return null;
+  if (pathname !== "/") return null;
 
   const oa = (process.env.NEXT_PUBLIC_SUPPORT_LINE_OA?.trim() || "@salepage").trim();
   const href = `https://line.me/R/ti/p/${oa.startsWith("@") ? "%40" + oa.slice(1) : oa}`;
-  // On the dashboard the mobile bottom-tab nav is fixed at the bottom
-  // with height `3.75rem + env(safe-area-inset-bottom)`, so the FAB
-  // must clear it by ~5rem total. On the home page there's no tab bar,
-  // so the smaller 1.25rem inset is enough. Desktop (lg+) drops the
-  // tab bar entirely → both surfaces collapse back to 1.5rem.
-  // 911korn 2026-05-28 "เอาขึ้นมานิดนึงอย่าให้มันบังปุ่ม ใน Mobile".
-  const bottomStyle = isDashboard
-    ? "calc(env(safe-area-inset-bottom) + 5rem)"
-    : "calc(env(safe-area-inset-bottom) + 1.25rem)";
   return (
     <a
       href={href}
@@ -47,7 +30,7 @@ export function LineSupportFab() {
       rel="noopener noreferrer"
       aria-label="LINE Support"
       className="group fixed right-4 z-40 inline-flex items-center gap-2 rounded-full bg-[#06C755] py-2.5 pl-2.5 pr-4 text-white shadow-[0_10px_30px_-8px_rgb(6_199_85/0.55)] transition-transform hover:-translate-y-0.5 active:scale-95 sm:right-6 lg:!bottom-6"
-      style={{ bottom: bottomStyle }}
+      style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
     >
       <LineIcon className="size-7 rounded-lg" />
       <span className="text-[13px] font-semibold leading-none">

@@ -25,9 +25,15 @@ import { useTranslations } from "next-intl";
 import { signOut } from "next-auth/react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { LogoMark, Wordmark } from "@/components/ui/logo";
+import { LineIcon } from "@/components/ui/line-icon";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { dashboardHref, resolveDashboardShop } from "@/lib/dashboard-routing";
+
+function lineSupportHref(): string {
+  const oa = (process.env.NEXT_PUBLIC_SUPPORT_LINE_OA?.trim() || "@salepage").trim();
+  return `https://line.me/R/ti/p/${oa.startsWith("@") ? "%40" + oa.slice(1) : oa}`;
+}
 
 export interface DashboardShopOption {
   id: string;
@@ -294,6 +300,21 @@ function DashboardSidebarInner({
               onClick={onClose}
             />
           ))}
+        </NavSection>
+
+        <NavSection label={t("common.menuSupport")} className="mt-6">
+          <li>
+            <a
+              href={lineSupportHref()}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="flex min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm text-zinc-700 transition-colors hover:bg-[color:var(--color-soft)]"
+            >
+              <LineIcon className="size-5 shrink-0 rounded-md" />
+              <span>{t("nav.lineSupport")}</span>
+            </a>
+          </li>
         </NavSection>
       </nav>
 

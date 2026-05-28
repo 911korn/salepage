@@ -389,6 +389,7 @@
       "manageShop": "จัดการร้าน",
       "menuMain": "หลัก",
       "menuTools": "เครื่องมือ",
+      "menuSupport": "ช่วยเหลือ",
       "signOut": "ออกจากระบบ",
       "switchShop": "สลับร้าน",
       "createShop": "สร้างร้านใหม่",
@@ -407,7 +408,8 @@
       "customers": "สมาชิก",
       "reviews": "รีวิวลูกค้า",
       "announcements": "ประกาศ",
-      "help": "คู่มือใช้งาน"
+      "help": "คู่มือใช้งาน",
+      "lineSupport": "แชทกับเรา (LINE)"
     },
     "overview": {
       "greeting": "ภาพรวม",
