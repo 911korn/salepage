@@ -19,6 +19,7 @@ import { useSellerMode } from "@/store/seller-mode";
 import { useTranslation } from "react-i18next";
 import {
   Package,
+  Package2,
   ShoppingBag,
   // Stories/Live/Group Buy icons kept in case we un-hide before TestFlight 2.
   // Camera, Radio, Users,
@@ -310,6 +311,12 @@ export default function SellerHomeScreen() {
               title={t("home.actions.products")}
               subtitle={t("home.actions.productsSub")}
               onPress={() => router.push("/seller/products")}
+            />
+            <ActionRow
+              Icon={Package2}
+              title="Bulk Tracking"
+              subtitle="ถ่ายใบเสร็จเป็นกอง · AI กรอกเลขให้ทุกออเดอร์"
+              onPress={() => router.push("/seller/shipping/bulk-scan")}
             />
             {/* 911korn 2026-05-27 "ตัดฟีเจอพวกนี้ออกก่อน Hide ไว้ก่อน
                 อนาคตค่อยทำ" — Stories / Live / Group Buy เก็บโค้ดไว้

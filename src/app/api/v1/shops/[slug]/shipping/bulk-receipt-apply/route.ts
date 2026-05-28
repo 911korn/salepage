@@ -57,7 +57,7 @@ export async function POST(request: Request, ctx: Ctx) {
   const { slug } = await ctx.params;
   const shop = await db.shop.findUnique({
     where: { slug },
-    select: { id: true, ownerId: true, name: true, contact: true },
+    select: { id: true, slug: true, ownerId: true, name: true, contact: true },
   });
   if (!shop) return fail("not_found", "ไม่พบร้าน", 404);
   if (shop.ownerId !== session.user.id) {
@@ -210,6 +210,7 @@ export async function POST(request: Request, ctx: Ctx) {
         ...order,
         status: OrderStatus.SHIPPING,
         trackingNumber: a.trackingNumber,
+        shop: { name: shop.name, slug: shop.slug },
       });
     } catch (err) {
       console.error("[bulk-apply] failed for order", order.id, err);

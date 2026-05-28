@@ -48,6 +48,7 @@ interface MatchedReceipt {
   indexInPhoto: number;
   bbox: [number, number, number, number] | null;
   status: "auto" | "review" | "unmatched";
+  labelPaired: boolean;
   candidates: Array<{ orderId: string; publicToken: string; score: number }>;
 }
 
@@ -264,6 +265,12 @@ export function BulkScanPanel({ shopSlug }: { shopSlug: string }) {
         <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">
           ถ่ายแยกได้หลายรูป — แนะนำ <strong>~{SUGGESTED_RECEIPTS_PER_PHOTO} ใบเสร็จต่อรูป</strong> เพื่อให้ AI อ่านได้ชัดที่สุด · เพิ่มได้สูงสุด {MAX_PHOTOS} รูปต่อรอบ
         </p>
+        <div className="mt-3 flex items-start gap-2 rounded-2xl border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-3 text-[12px] text-zinc-700">
+          <Sparkles className="mt-0.5 size-3.5 shrink-0 text-[color:var(--color-brand-700)]" />
+          <p className="leading-relaxed">
+            <strong>เทคนิคสำหรับไปรษณีย์ไทย / J&amp;T eCo:</strong> ถ่ายใบเสร็จคู่กับ &ldquo;ใบปะหน้า&rdquo; ของเรา (ที่มี QR + เลข Order) ในรูปเดียวกัน → AI จะ pair กับออเดอร์ที่ถูกต้องอัตโนมัติ 100% แม้ใบเสร็จไม่มีชื่อผู้รับ
+          </p>
+        </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {photos.map((p, i) => (
@@ -589,6 +596,12 @@ function ReceiptRow({
           {match.courier ? (
             <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10.5px] font-semibold text-zinc-700">
               {courierLabel(match.courier)}
+            </span>
+          ) : null}
+          {match.labelPaired ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-rose-100 to-amber-100 px-2 py-0.5 text-[10.5px] font-bold text-rose-800">
+              <Sparkles className="size-3" />
+              Paired by label
             </span>
           ) : null}
           {match.confidence === "low" ? (

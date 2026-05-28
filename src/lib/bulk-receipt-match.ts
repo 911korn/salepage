@@ -1,5 +1,6 @@
 import "server-only";
 import { namesLooselyMatch } from "@/lib/ocr-shipping-receipt";
+import { buildOrderRef } from "@/lib/orders";
 import type { BulkReceiptEntry } from "@/lib/ocr-bulk-receipt";
 
 /**
@@ -49,6 +50,10 @@ export interface MatchedReceipt {
   bbox: [number, number, number, number] | null;
   /** "auto" matches can be applied without seller confirm. */
   status: "auto" | "review" | "unmatched";
+  /** True when the receipt was photographed next to a SalePage label
+   *  and the orderRef / publicToken on the label resolved to a valid
+   *  candidate order. UI can show a "💎 Paired by label" badge. */
+  labelPaired: boolean;
   /** Ranked candidate orders. For "auto" the [0] is the chosen one.
    *  For "review" up to 3 are returned so the seller can disambiguate.
    *  For "unmatched" this is empty and the seller picks from a full
@@ -73,6 +78,31 @@ export function matchBulkReceipts({
   // match so we never auto-bind the same order to two trackings.
   const claimed = new Set<string>();
 
+  // Pass 0 (label-pair fast-path) — if the seller photographed the
+  // receipt next to our printed SalePage label, Claude returned the
+  // label's publicToken or orderRef. That's a deliberate human signal:
+  // pin the binding 100% and skip the scoring step entirely. We pre-
+  // compute the orderRef for each candidate so the OCR'd ref string
+  // can be matched without a DB round-trip.
+  const tokenIndex = new Map(candidates.map((c) => [c.publicToken, c]));
+  const refIndex = new Map(
+    candidates.map((c) => [buildOrderRef(c.createdAt, c.id), c]),
+  );
+  const labelPaired = new Map<string, MatchCandidateOrder>();
+  for (const r of receipts) {
+    let paired: MatchCandidateOrder | undefined;
+    if (r.salepagePublicToken) {
+      paired = tokenIndex.get(r.salepagePublicToken);
+    }
+    if (!paired && r.salepageOrderRef) {
+      paired = refIndex.get(r.salepageOrderRef);
+    }
+    if (paired && !claimed.has(paired.id)) {
+      labelPaired.set(r.trackingNumber, paired);
+      claimed.add(paired.id);
+    }
+  }
+
   // Pass 1: score every receipt against every still-available candidate,
   // sorted by best-match-first so higher-confidence wins the claim.
   const scored = receipts.map((r) => ({
@@ -83,25 +113,42 @@ export function matchBulkReceipts({
 
   const out: MatchedReceipt[] = [];
   for (const { receipt, ranking } of scored) {
-    // Drop already-claimed orders from the ranking.
-    const available = ranking.filter((c) => !claimed.has(c.orderId));
-    const top = available[0];
+    const pairedOrder = labelPaired.get(receipt.trackingNumber);
 
-    // Force a manual review when the OCR didn't extract a recipient name
-    // — we never want to silently bind tracking without a positive signal.
-    const looksUnreadable = !receipt.receiverName;
+    // Drop already-claimed orders from the ranking.
+    const available = ranking.filter(
+      (c) => !claimed.has(c.orderId) || c.orderId === pairedOrder?.id,
+    );
 
     let status: MatchedReceipt["status"];
-    let claimedOrderId: string | undefined;
-    if (top && top.score >= THRESHOLD_AUTO && !looksUnreadable) {
+    let candidates: MatchedReceipt["candidates"];
+
+    if (pairedOrder) {
+      // Label-pair fast path: force auto, score 100, ignore name guard.
       status = "auto";
-      claimedOrderId = top.orderId;
-    } else if (top && top.score >= THRESHOLD_REVIEW) {
-      status = "review";
+      candidates = [
+        {
+          orderId: pairedOrder.id,
+          publicToken: pairedOrder.publicToken,
+          score: 100,
+        },
+      ];
     } else {
-      status = "unmatched";
+      const top = available[0];
+      // Force a manual review when the OCR didn't extract a recipient
+      // name — never silently bind tracking without a positive signal.
+      const looksUnreadable = !receipt.receiverName;
+
+      if (top && top.score >= THRESHOLD_AUTO && !looksUnreadable) {
+        status = "auto";
+        claimed.add(top.orderId);
+      } else if (top && top.score >= THRESHOLD_REVIEW) {
+        status = "review";
+      } else {
+        status = "unmatched";
+      }
+      candidates = available.slice(0, 3);
     }
-    if (claimedOrderId) claimed.add(claimedOrderId);
 
     out.push({
       trackingNumber: receipt.trackingNumber,
@@ -114,7 +161,8 @@ export function matchBulkReceipts({
       indexInPhoto: receipt.indexInPhoto,
       bbox: receipt.bbox,
       status,
-      candidates: available.slice(0, 3),
+      labelPaired: Boolean(pairedOrder),
+      candidates,
     });
   }
 

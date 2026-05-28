@@ -50,6 +50,14 @@ export interface BulkReceiptEntry {
    *  bbox accuracy is uneven, so the UI should still pad ~10% on each side
    *  when cropping. Null means "couldn't get coords; show the whole photo." */
   bbox: [number, number, number, number] | null;
+  /** When the seller photographs the receipt next to OUR printed shipping
+   *  label, Claude OCRs the SalePage `orderRef` (e.g. "#20260527-AB1Y2")
+   *  or the public token URL ("salepage.in.th/o/<token>") from the label
+   *  in the same frame. Either field gives us a 100% confident pairing
+   *  that bypasses the name/postcode scoring entirely. Phase 2b for
+   *  Thailand Post receipts that don't print recipient names. */
+  salepageOrderRef: string | null;
+  salepagePublicToken: string | null;
 }
 
 export interface BulkReceiptScanResult {
@@ -70,17 +78,42 @@ For EVERY visible receipt in the image, extract:
   - indexInPhoto: 1-indexed reading order (top-to-bottom, left-to-right)
   - bbox: approximate normalised bounding box [x1, y1, x2, y2] in 0..1 of the receipt's region on the image — best-effort, the caller pads for safety
 
+ALSO look for a SalePage shipping label printed by the seller in the SAME image — sellers sometimes photograph receipt + label together so the AI can pair them. A SalePage label has:
+  - The SalePage wordmark at the top.
+  - An "Order" code in the format "#YYYYMMDD-AAAAA" (e.g. "#20260527-AB1Y2"). The 5-character suffix is uppercase letters/digits.
+  - A QR code with text underneath reading "salepage.in.th/o/<token>" where the token is ~22 random alphanumeric characters.
+
+If you find a SalePage label, attach its orderRef and publicToken to the receipt(s) it visually belongs to (typically the closest receipt). Use:
+  - salepageOrderRef: the literal "#YYYYMMDD-AAAAA" string if visible
+  - salepagePublicToken: the literal token string after "salepage.in.th/o/" if readable
+If no SalePage label is in the image, set both fields to null on every receipt.
+
 Return ONLY strict JSON — no markdown fence, no prose:
 {
-  "receipts": [ { "trackingNumber": "...", "receiverName": "...", "postcode": "...", "phoneTail": "...", "courier": "...", "confidence": "...", "indexInPhoto": 1, "bbox": [0.05, 0.10, 0.95, 0.40] }, ... ],
+  "receipts": [
+    {
+      "trackingNumber": "...",
+      "receiverName": "...",
+      "postcode": "...",
+      "phoneTail": "...",
+      "courier": "...",
+      "confidence": "...",
+      "indexInPhoto": 1,
+      "bbox": [0.05, 0.10, 0.95, 0.40],
+      "salepageOrderRef": "#20260527-AB1Y2" or null,
+      "salepagePublicToken": "zMsbJ3o7452nePa3vmlYyQ" or null
+    },
+    ...
+  ],
   "note": null
 }
 
 Rules:
-- If the image is not a courier receipt at all, return receipts:[] with confidence n/a and a one-sentence note.
+- If the image is not a courier receipt at all, return receipts:[] with a one-sentence note.
 - Never duplicate the same tracking number — if a receipt repeats text inside its own area, dedupe.
 - Sort by indexInPhoto (top-to-bottom).
-- If you genuinely cannot read a tracking number on a receipt, omit that receipt — do not return a placeholder.`;
+- If you genuinely cannot read a tracking number on a receipt, omit that receipt — do not return a placeholder.
+- A SalePage label without its companion receipt should NOT generate a receipt entry — labels alone aren't shipping events.`;
 
 /** Run the OCR on a single base64 photo. Never throws — on transport
  *  failure returns receipts:[] + a note so the caller can show the
@@ -154,6 +187,10 @@ export async function scanBulkShippingReceipt(
             ? Math.floor(raw.indexInPhoto)
             : receipts.length + 1,
         bbox: bboxOrNull(raw.bbox),
+        salepageOrderRef: salepageOrderRefOrNull(raw.salepageOrderRef),
+        salepagePublicToken: salepagePublicTokenOrNull(
+          raw.salepagePublicToken,
+        ),
       });
     }
     receipts.sort((a, b) => a.indexInPhoto - b.indexInPhoto);
@@ -233,6 +270,29 @@ function courierOrNull(v: unknown): BulkReceiptEntry["courier"] {
 
 function confidenceOrLow(v: unknown): "high" | "medium" | "low" {
   return v === "high" || v === "medium" || v === "low" ? v : "low";
+}
+
+/** "#YYYYMMDD-AAAAA" — 8 digit date + dash + 5 uppercase alphanum. */
+function salepageOrderRefOrNull(v: unknown): string | null {
+  const s = stringOrNull(v);
+  if (!s) return null;
+  const m = s.match(/#\d{8}-[A-Z0-9]{5}/i);
+  return m ? m[0].toUpperCase() : null;
+}
+
+/** 18–32 chars of [A-Za-z0-9_-], matching the slug-style publicToken
+ *  generator in lib/orders.ts. We accept either bare token or the full
+ *  "salepage.in.th/o/<token>" URL. */
+function salepagePublicTokenOrNull(v: unknown): string | null {
+  const s = stringOrNull(v);
+  if (!s) return null;
+  const urlMatch = s.match(/salepage\.in\.th\/o\/([A-Za-z0-9_-]{16,40})/);
+  if (urlMatch) return urlMatch[1];
+  // Bare token form — only accept when the string is exactly the token
+  // shape (no spaces, no extra chars) so we don't accidentally match a
+  // random word that happens to look tokenish.
+  if (/^[A-Za-z0-9_-]{16,40}$/.test(s)) return s;
+  return null;
 }
 
 function bboxOrNull(

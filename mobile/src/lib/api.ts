@@ -1665,6 +1665,95 @@ export const api = {
         }>;
         nextCursor: string | null;
       }>(`/api/v1/shops/${slug}/orders`, { query: params }),
+
+    /**
+     * AI Bulk Tracking — Phase 2 mobile counterpart of the web flow at
+     * /dashboard/shipping/bulk-scan. Seller takes multiple receipt photos
+     * via expo-camera; server runs Claude vision on each, scores against
+     * PAID orders with no tracking, returns match plan with bbox crop
+     * coordinates. Business+ only. 911korn 2026-05-28.
+     */
+    bulkScanReceipts: (
+      slug: string,
+      input: {
+        photos: Array<{
+          dataBase64: string;
+          contentType: "image/jpeg" | "image/png" | "image/webp";
+        }>;
+      },
+    ) =>
+      apiFetch<{
+        photos: Array<{
+          photoIndex: number;
+          note: string | null;
+          receiptsFound: number;
+        }>;
+        matches: Array<{
+          trackingNumber: string;
+          receiverName: string | null;
+          postcode: string | null;
+          phoneTail: string | null;
+          courier: string | null;
+          confidence: "high" | "medium" | "low";
+          photoIndex: number;
+          indexInPhoto: number;
+          bbox: [number, number, number, number] | null;
+          status: "auto" | "review" | "unmatched";
+          labelPaired: boolean;
+          candidates: Array<{
+            orderId: string;
+            publicToken: string;
+            score: number;
+          }>;
+        }>;
+        duplicates: Array<{
+          trackingNumber: string;
+          photoIndex: number;
+          indexInPhoto: number;
+          assignedToOrderToken: string;
+        }>;
+        candidatePool: Array<{
+          orderId: string;
+          publicToken: string;
+          customerName: string;
+          customerPhone: string | null;
+          customerAddress: string | null;
+          totalSatang: number;
+          createdAt: string;
+          labelPrintedAt: string | null;
+        }>;
+        thresholds: { auto: number; review: number };
+        message?: string;
+      }>(`/api/v1/shops/${slug}/shipping/bulk-receipt-scan`, {
+        method: "POST",
+        body: input,
+      }),
+
+    bulkApplyReceipts: (
+      slug: string,
+      input: {
+        applies: Array<{
+          orderId: string;
+          trackingNumber: string;
+          courier: string | null;
+        }>;
+      },
+    ) =>
+      apiFetch<{
+        applied: Array<{ orderId: string; trackingNumber: string }>;
+        skipped: Array<{
+          orderId: string;
+          trackingNumber: string;
+          reason:
+            | "order_not_in_shop"
+            | "already_set"
+            | "wrong_status"
+            | "tracking_collision";
+        }>;
+      }>(`/api/v1/shops/${slug}/shipping/bulk-receipt-apply`, {
+        method: "POST",
+        body: input,
+      }),
   },
 
   /**
