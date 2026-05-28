@@ -13,15 +13,20 @@ export function tempIdFor(seed: string): string {
 
 /**
  * Slugify a product name to URL-safe ASCII + Thai. Lowercase, spaces and
- * symbols become `-`. Preserves Thai characters as-is — the storefront URL
- * spec keeps them URL-encoded for SEO.
+ * symbols become `-`. Preserves Thai characters as-is.
+ *
+ * MUST include \p{Mark} alongside \p{Letter}. Thai vowels + tone marks
+ * (ื ู ี ิ ้ ่ ๊ ๋ etc.) are Unicode "combining marks", not letters — so
+ * a naive [^\p{Letter}\p{Number}] strip turns "เสื้อเชิ้ต" into "เสอเชต".
+ * 911korn 2026-05-28 spotted on /loopwear, every Thai product had a
+ * mangled URL ending.
  */
 export function slugify(input: string): string {
   return input
     .trim()
     .toLowerCase()
     .replace(/[\s_]+/g, "-")
-    .replace(/[^\p{Letter}\p{Number}\-]/gu, "")
+    .replace(/[^\p{Letter}\p{Number}\p{Mark}\-]/gu, "")
     .replace(/-{2,}/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
