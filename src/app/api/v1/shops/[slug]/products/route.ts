@@ -82,7 +82,10 @@ const Body = z.object({
   /** THB price (will be stored as satang). Use whole baht — fractional THB rare. */
   priceBaht: z.number().int().positive().max(9_999_999),
   compareAtBaht: z.number().int().positive().max(9_999_999).optional(),
-  imageUrls: z.array(z.string().url()).max(10).optional(),
+  // At least 1 image required — 911korn 2026-05-28 "ต้องมีรูปทุกสินค้า".
+  // Sellers who try to save without images get a 400 + Thai error message.
+  // The product form disables the save button when imageUrls is empty.
+  imageUrls: z.array(z.string().url()).min(1, "อัปรูปสินค้าอย่างน้อย 1 ใบ").max(10),
   badge: z.enum(["HOT", "NEW", "SALE"]).optional().nullable(),
   type: z.enum(["PHYSICAL", "DIGITAL"]).default("PHYSICAL"),
   /// Optional per-product category override (one of the 10 platform

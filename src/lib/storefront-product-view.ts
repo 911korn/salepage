@@ -56,7 +56,13 @@ export const getStorefrontProductView = cache(
         where: { shopId_slug: { shopId: shop.id, slug: productSlug } },
       });
 
-      if (p && p.status !== ProductStatus.HIDDEN) {
+      // 404 the PDP for products with no image — same buyer rule as the
+       // listing query. 911korn 2026-05-28 "ถ้า item ไม่มีรูป ห้ามขึ้น
+       // เลย". The seller's own dashboard /dashboard/products/[slug]/edit
+       // still resolves the product so they can fix it.
+      const hasImage =
+        Array.isArray(p?.imageUrls) && p.imageUrls.length > 0;
+      if (p && p.status !== ProductStatus.HIDDEN && hasImage) {
         return {
           product: {
             slug: p.slug,

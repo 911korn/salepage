@@ -166,7 +166,13 @@ export default async function StorefrontPage({ params }: PageProps) {
     where: { slug },
     include: {
       products: {
-        where: { status: { not: ProductStatus.HIDDEN } },
+        // Storefront shop page — hide products that have no image and
+        // any hidden/draft state. 911korn 2026-05-28 "ถ้า item ไม่มีรูป
+        // ห้ามขึ้น เลย · ต้องมีรูปทุกสินค้า".
+        where: {
+          status: { not: ProductStatus.HIDDEN },
+          NOT: [{ imageUrls: { equals: [] } }],
+        },
         orderBy: [{ sold: "desc" }, { createdAt: "desc" }],
       },
     },

@@ -48,7 +48,13 @@ const PatchBody = z.object({
   description: z.string().max(2000).optional().nullable(),
   priceBaht: z.number().int().positive().max(9_999_999).optional(),
   compareAtBaht: z.number().int().positive().max(9_999_999).optional().nullable(),
-  imageUrls: z.array(z.string().url()).max(10).optional(),
+  // Update path: optional, but if present, must have at least 1 image.
+  // 911korn 2026-05-28 "ต้องมีรูปทุกสินค้า".
+  imageUrls: z
+    .array(z.string().url())
+    .min(1, "อัปรูปสินค้าอย่างน้อย 1 ใบ")
+    .max(10)
+    .optional(),
   badge: z.enum(["HOT", "NEW", "SALE"]).optional().nullable(),
   type: z.enum(["PHYSICAL", "DIGITAL"]).optional(),
   category: z.string().min(1).max(40).optional().nullable(),

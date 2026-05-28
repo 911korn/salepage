@@ -612,6 +612,11 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
         </div>
       </div>
 
+      {images.length === 0 ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-[13px] text-rose-900">
+          <strong>⚠ ต้องอัปโหลดรูปสินค้าก่อนบันทึก</strong> · เลื่อนขึ้นไปที่ &ldquo;รูปสินค้า&rdquo; → กดเพิ่มรูปอย่างน้อย 1 ใบ
+        </div>
+      ) : null}
       <div className="flex items-center justify-between gap-3">
         {mode === "edit" ? (
           <Button
@@ -636,7 +641,16 @@ export function ProductForm({ mode, shopSlug, productSlug, initialValues }: Prop
           >
             {t("cancel")}
           </Link>
-          <Button type="submit" loading={pending} disabled={pending}>
+          <Button
+            type="submit"
+            loading={pending}
+            disabled={pending || images.length === 0}
+            title={
+              images.length === 0
+                ? "อัปรูปสินค้าอย่างน้อย 1 ใบก่อนบันทึก"
+                : undefined
+            }
+          >
             <Save className="size-4" />
             {mode === "create" ? t("submitNew") : t("submit")}
           </Button>

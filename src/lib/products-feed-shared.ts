@@ -142,6 +142,10 @@ export async function getProductsFeed(
       shop: shopFilter,
       ...(categoryFilter ?? {}),
       ...(q.condition ? { condition: q.condition } : {}),
+      // Hide products without images from the buyer feed entirely.
+      // 911korn 2026-05-28 "ต้องมีรูปทุกสินค้า · ถ้า item ไม่มีรูป
+      // ห้ามขึ้น เลย". Seller dashboard still sees them (different query).
+      NOT: [{ imageUrls: { equals: [] } }],
       OR: [
         // Truly active — explicit ACTIVE + has stock (or unlimited)
         {

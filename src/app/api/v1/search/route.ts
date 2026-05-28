@@ -97,6 +97,9 @@ export async function GET(request: Request) {
     db.product.findMany({
       where: {
         status: ProductStatus.ACTIVE,
+        // Search results — hide products without images. 911korn
+        // 2026-05-28 "ถ้า item ไม่มีรูป ห้ามขึ้น เลย".
+        NOT: [{ imageUrls: { equals: [] } }],
         shop: {
           status: ShopStatus.ACTIVE,
           suspended: false,

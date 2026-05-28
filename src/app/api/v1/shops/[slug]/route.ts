@@ -121,7 +121,12 @@ export async function GET(
       // and as the checkout toggle gate.
       acceptsEscrow: true,
       products: {
-        where: { status: "ACTIVE" },
+        // Buyer-facing shop page — hide products without images.
+        // 911korn 2026-05-28 "ถ้า item ไม่มีรูป ห้ามขึ้น เลย".
+        where: {
+          status: "ACTIVE",
+          NOT: [{ imageUrls: { equals: [] } }],
+        },
         orderBy: [{ sold: "desc" }, { createdAt: "desc" }],
         take: 60,
         select: {
