@@ -60,6 +60,12 @@ const MAIN_LINKS = [
   { href: "/dashboard/settings", key: "settings", icon: Settings },
 ] as const;
 
+// Mobile bottom nav shows only the 4 highest-traffic destinations.
+// Settings is reachable from the hamburger drawer instead; including it
+// here previously caused the 5th item to wrap under "ภาพรวม" and made the
+// row look broken (911korn 2026-05-28 screenshot of the misaligned gear).
+const BOTTOM_LINKS = MAIN_LINKS.filter((l) => l.key !== "settings");
+
 const TOOL_LINKS = [
   { href: "/dashboard/analytics", key: "analytics", icon: ChartBar },
   { href: "/dashboard/chat", key: "chat", icon: MessageCircle },
@@ -351,9 +357,9 @@ export function DashboardBottomNav({
   return (
     <nav
       aria-label={t("common.mobileNav")}
-      className="fixed inset-x-0 bottom-0 z-30 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-4 border-t border-[color:var(--color-border)] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(15_23_42/0.08)] backdrop-blur print:hidden lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 grid h-[calc(3.75rem+env(safe-area-inset-bottom))] grid-cols-4 border-t border-[color:var(--color-border)] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(15_23_42/0.08)] backdrop-blur print:hidden lg:hidden"
     >
-      {MAIN_LINKS.map((link) => {
+      {BOTTOM_LINKS.map((link) => {
         const Icon = link.icon;
         const active = isActive(link.href);
         return (
@@ -362,7 +368,7 @@ export function DashboardBottomNav({
             href={dashboardHref(link.href, currentShopSlug)}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-medium",
+              "flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10.5px] font-medium",
               active
                 ? "text-[color:var(--color-brand-700)]"
                 : "text-zinc-500 active:bg-[color:var(--color-soft)]",
@@ -370,13 +376,14 @@ export function DashboardBottomNav({
           >
             <Icon
               className={cn(
-                "size-5",
-                active &&
-                  "rounded-lg bg-[color:var(--color-brand-50)] p-0.5 text-[color:var(--color-brand-700)]",
+                "size-5 shrink-0",
+                active && "text-[color:var(--color-brand-700)]",
               )}
-              strokeWidth={2.35}
+              strokeWidth={active ? 2.6 : 2.2}
             />
-            <span className="w-full truncate text-center">{t(`nav.${link.key}`)}</span>
+            <span className="w-full truncate text-center leading-tight">
+              {t(`nav.${link.key}`)}
+            </span>
           </Link>
         );
       })}
