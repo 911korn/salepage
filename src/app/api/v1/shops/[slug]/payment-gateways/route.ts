@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { resolveSession } from "@/lib/api-auth";
 import { db, PaymentGatewayProvider, PaymentGatewayMode } from "@/lib/db";
-import { hasBusinessPlan } from "@/lib/plan";
+import { hasProPlan } from "@/lib/plan";
 import { encryptSecret, maskKey, decryptSecret } from "@/lib/payment-gateways/crypto";
 import { getProvider } from "@/lib/payment-gateways/registry";
 import { testConnection } from "@/lib/payment-gateways/adapters";
@@ -21,7 +21,7 @@ export const runtime = "nodejs";
  *     the keys are wrong; on success the row is saved with `enabled:
  *     true` + `lastTestStatus: OK`.
  *
- * Business+ gated for both verbs.
+ * Pro+ gated for both verbs.
  */
 
 const BodySchema = z.object({
@@ -50,10 +50,10 @@ export async function GET(request: Request, ctx: Ctx) {
   if (shop.ownerId !== session.user.id) {
     return fail("forbidden", "ไม่ใช่เจ้าของร้านนี้", 403);
   }
-  if (!(await hasBusinessPlan(session.user.id))) {
+  if (!(await hasProPlan(session.user.id))) {
     return fail(
       "upgrade_required",
-      "Payment gateways ใช้ได้กับแผน Business ขึ้นไป",
+      "Payment gateways ใช้ได้กับแผน Pro ขึ้นไป",
       402,
     );
   }
@@ -96,10 +96,10 @@ export async function POST(request: Request, ctx: Ctx) {
   if (shop.ownerId !== session.user.id) {
     return fail("forbidden", "ไม่ใช่เจ้าของร้านนี้", 403);
   }
-  if (!(await hasBusinessPlan(session.user.id))) {
+  if (!(await hasProPlan(session.user.id))) {
     return fail(
       "upgrade_required",
-      "Payment gateways ใช้ได้กับแผน Business ขึ้นไป",
+      "Payment gateways ใช้ได้กับแผน Pro ขึ้นไป",
       402,
     );
   }

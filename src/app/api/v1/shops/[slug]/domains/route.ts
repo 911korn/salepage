@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { resolveSession } from "@/lib/api-auth";
 import { db, ShopDomainStatus } from "@/lib/db";
-import { hasBusinessPlan } from "@/lib/plan";
+import { hasProPlan } from "@/lib/plan";
 import {
   createZone,
   findZoneByName,
@@ -22,7 +22,7 @@ export const runtime = "nodejs";
  *  3. Attach the hostname to our Vercel project so 76.76.21.21 routes to us
  *  4. Persist the row with ns1+ns2 — seller pastes those at registrar
  *
- * Business+ gated.
+ * Pro+ gated.
  */
 
 const BodySchema = z.object({
@@ -54,10 +54,10 @@ export async function GET(request: Request, ctx: Ctx) {
   if (shop.ownerId !== session.user.id) {
     return fail("forbidden", "ไม่ใช่เจ้าของร้านนี้", 403);
   }
-  if (!(await hasBusinessPlan(session.user.id))) {
+  if (!(await hasProPlan(session.user.id))) {
     return fail(
       "upgrade_required",
-      "Custom domain ใช้ได้กับแผน Business ขึ้นไป",
+      "Custom domain ใช้ได้กับแผน Pro ขึ้นไป",
       402,
     );
   }
@@ -92,10 +92,10 @@ export async function POST(request: Request, ctx: Ctx) {
   if (shop.ownerId !== session.user.id) {
     return fail("forbidden", "ไม่ใช่เจ้าของร้านนี้", 403);
   }
-  if (!(await hasBusinessPlan(session.user.id))) {
+  if (!(await hasProPlan(session.user.id))) {
     return fail(
       "upgrade_required",
-      "Custom domain ใช้ได้กับแผน Business ขึ้นไป",
+      "Custom domain ใช้ได้กับแผน Pro ขึ้นไป",
       402,
     );
   }

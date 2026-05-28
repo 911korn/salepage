@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ok, fail } from "@/lib/api";
 import { resolveSession } from "@/lib/api-auth";
-import { hasBusinessPlan } from "@/lib/plan";
+import { hasProPlan } from "@/lib/plan";
 import { isAvailable, priceFor, buyUrl } from "@/lib/porkbun";
 import { db } from "@/lib/db";
 
@@ -55,10 +55,10 @@ const Query = z.object({
 export async function GET(request: Request) {
   const session = await resolveSession(request);
   if (!session.ok) return session.response;
-  // Business+ optional for search — we WANT non-Pro sellers to discover
+  // Pro+ optional for search — we WANT non-Pro sellers to discover
   // they can buy a custom domain → encourages upgrade. We just flag
-  // hasBusinessPlan in the response so the UI can show an upgrade nudge.
-  const hasBusiness = await hasBusinessPlan(session.user.id);
+  // hasProPlan in the response so the UI can show an upgrade nudge.
+  const hasPro = await hasProPlan(session.user.id);
 
   const url = new URL(request.url);
   const parsed = Query.safeParse({ q: url.searchParams.get("q") });
@@ -136,7 +136,7 @@ export async function GET(request: Request) {
   return ok({
     term,
     rows,
-    hasBusinessPlan: hasBusiness,
+    hasProPlan: hasPro,
     // FX rate for THB display. Pulled from a constant — Porkbun prices
     // are in USD and we just want a rough THB equivalent in the UI.
     usdToThb: 36.5,

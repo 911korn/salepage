@@ -4,14 +4,14 @@ import { Globe, Sparkles } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { requireDashboardSession } from "@/lib/dashboard";
 import { resolveDashboardShop, dashboardHref } from "@/lib/dashboard-routing";
-import { hasBusinessPlan } from "@/lib/plan";
+import { hasProPlan } from "@/lib/plan";
 import { DomainsPanel } from "@/components/dashboard/domains-panel";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import type { Locale } from "@/i18n/routing";
 
 /**
- * /dashboard/settings/domains — Business+ only.
+ * /dashboard/settings/domains — Pro+ only.
  *
  * Seller goes to a registrar (any one — they keep ownership of the
  * domain), buys their name, then comes back here. We provision a CF
@@ -34,7 +34,7 @@ export default async function DomainsPage({
   if (shops.length === 0) redirect("/dashboard/create-shop");
   const activeShop = resolveDashboardShop(shops, shopParam);
   if (!activeShop) redirect("/dashboard/create-shop");
-  const isBusinessPlus = await hasBusinessPlan(user.id);
+  const isProPlus = await hasProPlan(user.id);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -48,7 +48,7 @@ export default async function DomainsPage({
               Custom Domain
             </h1>
             <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-rose-600 to-amber-500 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
-              <Sparkles className="size-3" /> Business+
+              <Sparkles className="size-3" /> Pro+
             </span>
           </div>
           <p className="mt-1 text-sm leading-relaxed text-zinc-500">
@@ -58,7 +58,7 @@ export default async function DomainsPage({
         </div>
       </header>
 
-      {isBusinessPlus ? (
+      {isProPlus ? (
         <DomainsPanel shopSlug={activeShop.slug} />
       ) : (
         <UpgradeNotice />
@@ -72,7 +72,7 @@ function UpgradeNotice() {
     <section className="mt-6 overflow-hidden rounded-3xl border border-[color:var(--color-border)] bg-white">
       <div className="bg-gradient-to-br from-rose-600 via-rose-500 to-amber-500 px-6 py-8 text-white">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider">
-          <Sparkles className="size-3.5" /> Business+ Feature
+          <Sparkles className="size-3.5" /> Pro+ Feature
         </span>
         <h2 className="font-display mt-3 text-2xl font-bold leading-tight">
           ใช้โดเมนของคุณเอง
@@ -86,15 +86,15 @@ function UpgradeNotice() {
       <div className="px-6 py-6">
         <div className="flex items-baseline gap-2">
           <span className="font-display text-3xl font-bold text-zinc-900">
-            ฿790
+            ฿399
           </span>
-          <span className="text-sm text-zinc-500">/ เดือน — แผน Business</span>
+          <span className="text-sm text-zinc-500">/ เดือน — แผน Pro</span>
         </div>
         <Link
           href={dashboardHref("/", undefined) + "#pricing"}
           className={cn(buttonStyles({ size: "lg" }), "mt-4 w-full sm:w-auto")}
         >
-          อัปเกรดเป็น Business
+          อัปเกรดเป็น Pro
         </Link>
       </div>
     </section>

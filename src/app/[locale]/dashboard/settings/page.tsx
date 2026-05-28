@@ -60,7 +60,7 @@ export default async function SettingsPage({
           <p className="font-display text-[14px] font-bold text-zinc-900 group-hover:text-[color:var(--color-brand-700)]">
             Payment Gateways
             <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-rose-600 to-amber-500 px-1.5 py-0.5 align-middle text-[9px] font-bold uppercase tracking-wider text-white">
-              Business+
+              Pro+
             </span>
           </p>
           <p className="mt-0.5 text-[12px] text-zinc-500">
@@ -81,7 +81,7 @@ export default async function SettingsPage({
           <p className="font-display text-[14px] font-bold text-zinc-900 group-hover:text-[color:var(--color-brand-700)]">
             Custom Domain
             <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-rose-600 to-amber-500 px-1.5 py-0.5 align-middle text-[9px] font-bold uppercase tracking-wider text-white">
-              Business+
+              Pro+
             </span>
           </p>
           <p className="mt-0.5 text-[12px] text-zinc-500">
