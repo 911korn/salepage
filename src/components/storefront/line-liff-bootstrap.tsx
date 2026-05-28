@@ -23,6 +23,32 @@ export function LineLiffBootstrap() {
     const shouldInit = params.has("liff.state") || returnedFromLiff || lineBrowser;
     if (!shouldInit) return;
 
+    // Only auto-redirect to LIFF for routes our LIFF endpoint URL is
+    // configured to handle (/o/[token] order tracking, /s/[slug] shop
+    // pages, /line/* LIFF flows). The home page + marketing pages have
+    // no LIFF endpoint so redirecting causes a LINE "Missing bridge id"
+    // error — bail and let the page render normally in the in-app
+    // browser. 911korn 2026-05-28 "salepage.in.th หน้าแรก เวลากดเข้า
+    // ผ่านไลน์ให้มันเข้าได้เลย".
+    const path = window.location.pathname;
+    const liffEnabledPath =
+      path.startsWith("/o/") ||
+      path === "/o" ||
+      path.startsWith("/s/") ||
+      path === "/s" ||
+      path.startsWith("/line/") ||
+      path === "/line" ||
+      // English-locale equivalents
+      path.startsWith("/en/o/") ||
+      path === "/en/o" ||
+      path.startsWith("/en/s/") ||
+      path === "/en/s" ||
+      path.startsWith("/en/line/") ||
+      path === "/en/line";
+    if (lineBrowser && !returnedFromLiff && !liffEnabledPath) {
+      return;
+    }
+
     if (returnedFromLiff) {
       markLiffActive();
       cleanLiffReturnParam();
