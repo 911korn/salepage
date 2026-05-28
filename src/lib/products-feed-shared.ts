@@ -159,10 +159,12 @@ export async function getProductsFeed(
   // below also derives `status="SOLD_OUT"` for those rows so the card
   // renders the ribbon correctly.
   const FOUR_HOURS_AGO = new Date(Date.now() - 4 * 60 * 60 * 1000);
-  const baseWhere: Prisma.ProductWhereInput = {
-    shop: shopFilter,
-    ...(categoryFilter ?? {}),
-    ...(q.condition ? { condition: q.condition } : {}),
+  // Status filter — ACTIVE-with-stock OR SOLD_OUT-within-4h OR
+  // drift-safety-net. Wrapped in its own object so we can combine it
+  // with categoryFilter (also OR-shaped) under AND without one clobbering
+  // the other — JS spread on duplicate `OR` keys takes the LAST value,
+  // which silently broke the category filter for months.
+  const statusFilter: Prisma.ProductWhereInput = {
     OR: [
       // Truly active — explicit ACTIVE + has stock (or unlimited)
       {
@@ -182,6 +184,11 @@ export async function getProductsFeed(
         updatedAt: { gte: FOUR_HOURS_AGO },
       },
     ],
+  };
+  const baseWhere: Prisma.ProductWhereInput = {
+    shop: shopFilter,
+    ...(q.condition ? { condition: q.condition } : {}),
+    AND: [statusFilter, ...(categoryFilter ? [categoryFilter] : [])],
   };
 
   const baseSelect = {
