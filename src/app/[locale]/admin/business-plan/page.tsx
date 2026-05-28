@@ -300,15 +300,23 @@ function SnapshotSection({
         })}
       </div>
 
-      <SubsByPlanBar paidSubsByPlan={snapshot.paidSubsByPlan} />
+      <SubsByPlanBar
+        paidSubsByPlan={snapshot.paidSubsByPlan}
+        label={snapshot.subsByPlanLabel}
+        totalShops={snapshot.totalShops}
+      />
     </section>
   );
 }
 
 function SubsByPlanBar({
   paidSubsByPlan,
+  label,
+  totalShops,
 }: {
   paidSubsByPlan: Record<string, number>;
+  label: "live" | "projected";
+  totalShops: number;
 }) {
   const tiers = [
     {
@@ -331,11 +339,35 @@ function SubsByPlanBar({
     },
   ];
 
+  const projected = label === "projected";
+
   return (
-    <div className="mt-3 rounded-2xl border border-zinc-200 bg-white p-4">
-      <p className="text-[10.5px] font-semibold uppercase tracking-wider text-zinc-500">
-        Active subscriptions by tier
-      </p>
+    <div
+      className={`mt-3 rounded-2xl border p-4 ${
+        projected ? "border-amber-200 bg-amber-50/40" : "border-zinc-200 bg-white"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[10.5px] font-semibold uppercase tracking-wider text-zinc-500">
+          {projected
+            ? `Subscriptions by tier — ประมาณการที่ ${totalShops.toLocaleString()} ร้าน`
+            : "Active subscriptions by tier"}
+        </p>
+        {projected ? (
+          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-white">
+            projection
+          </span>
+        ) : (
+          <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-white">
+            live
+          </span>
+        )}
+      </div>
+      {projected ? (
+        <p className="mt-1 text-[10.5px] leading-relaxed text-amber-800">
+          คิดที่ Paid conversion 8% · Plan mix 70% Pro / 25% Business / 5% Agency — เป็นค่าฐาน (base case) ที่ใช้ใน projection ตรงนี้
+        </p>
+      ) : null}
       <div className="mt-3 space-y-2">
         {tiers.map((t) => (
           <div key={t.plan} className="flex items-center gap-3">

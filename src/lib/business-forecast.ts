@@ -58,8 +58,15 @@ export interface ForecastSnapshot {
   unconsumedCreditFloat: number;
 
   /** Active subscriptions broken down by plan tier. Free/Starter omitted —
-   *  they don't pay so don't contribute to MRR. */
+   *  they don't pay so don't contribute to MRR. In what-if mode this is
+   *  a projected mix from `projectSubsByPlanFromShops` instead of live
+   *  Stripe data — `subsByPlanLabel` tells the UI which it is. */
   paidSubsByPlan: Record<PlanKey, number>;
+
+  /** "live" = real Stripe data · "projected" = computed from shops count
+   *  × realistic conversion + plan mix. The dashboard renders a different
+   *  card title + helper text depending on this. */
+  subsByPlanLabel: "live" | "projected";
 
   /** MRR in THB based on current paid subs only. Doesn't include slip-credit
    *  pack revenue (which is one-time, not recurring). */
@@ -83,6 +90,42 @@ export interface ForecastSnapshot {
   shopGrowthCmgr: number | null;
 }
 
+/** Projected subscription mix at a given shop count. Plan-mix
+ *  assumptions are anchored to the same 70/25/5 split used by
+ *  `buildScenarios()` and the interactive calculator's defaults —
+ *  keep these constants in sync if you tweak one.
+ *
+ *  This is what the "Active subscriptions by tier" card uses in
+ *  what-if mode so the operator sees a sensible projection ("ที่ 5K
+ *  ร้าน คาดจะมี 280 Pro / 100 Business / 20 Agency") instead of the
+ *  raw live data being scaled into nonsense like "417 Agency". */
+export function projectSubsByPlanFromShops(
+  shopCount: number,
+  projectedConversionPct: number = 8,
+): {
+  paidSubsByPlan: Record<PlanKey, number>;
+  projectedMrrBaht: number;
+} {
+  const totalPaid = Math.round(shopCount * (projectedConversionPct / 100));
+  const pro = Math.round(totalPaid * 0.7);
+  const business = Math.round(totalPaid * 0.25);
+  const agency = Math.max(0, totalPaid - pro - business);
+  const projectedMrrBaht =
+    pro * PLAN_PRICE_BAHT.PRO +
+    business * PLAN_PRICE_BAHT.BUSINESS +
+    agency * PLAN_PRICE_BAHT.AGENCY;
+  return {
+    paidSubsByPlan: {
+      FREE: 0,
+      STARTER: 0,
+      PRO: pro,
+      BUSINESS: business,
+      AGENCY: agency,
+    },
+    projectedMrrBaht,
+  };
+}
+
 /** Returns a synthetic snapshot for "what if we had N shops?" scenario
  *  planning. Keeps the real measured per-shop ratios (GMV/shop, slip
  *  calls/shop) from the live data and only swaps in the hypothetical
@@ -93,6 +136,7 @@ export async function getForecastSnapshotWithShopOverride(
   shopCountOverride: number,
 ): Promise<ForecastSnapshot> {
   const real = await getForecastSnapshot();
+  const projected = projectSubsByPlanFromShops(shopCountOverride, 8);
   if (real.totalShops === 0) {
     // Live data empty — synthesise reasonable defaults so the page renders.
     return {
@@ -106,11 +150,19 @@ export async function getForecastSnapshotWithShopOverride(
       gmv7dBaht: shopCountOverride * 460,
       gmv1dBaht: shopCountOverride * 65,
       slipCalls30d: Math.round(shopCountOverride * 5),
-      paidConversionPct: 5,
+      paidConversionPct: 8,
+      paidSubsByPlan: projected.paidSubsByPlan,
+      currentMrrBaht: projected.projectedMrrBaht,
+      subsByPlanLabel: "projected",
     };
   }
-  // Scale every per-shop ratio that we observe in the real snapshot to
-  // the hypothetical shop count.
+  // Scale per-shop ratios (GMV/shop, slip calls/shop, user-to-shop ratio)
+  // to the hypothetical shop count. For paidSubsByPlan + MRR we use the
+  // projected mix (8 % conversion · 70/25/5 plan split) instead of scaling
+  // the raw live count — scaling 1 Agency test-sub × 5000-fold produces
+  // nonsense like "417 Agency"; the projection gives a realistic estimate
+  // matching what we'd expect to see at that scale. 911korn 2026-05-28
+  // "อยากให้ตรงนี้ เป็นการประมาณการที่เป็นไปได้".
   const scale = shopCountOverride / real.totalShops;
   return {
     ...real,
@@ -123,16 +175,9 @@ export async function getForecastSnapshotWithShopOverride(
     gmv7dBaht: Math.round(real.gmv7dBaht * scale),
     gmv1dBaht: Math.round(real.gmv1dBaht * scale),
     slipCalls30d: Math.round(real.slipCalls30d * scale),
-    // paidSubsByPlan scales with shop count under the assumption that the
-    // mix stays constant — useful as a "what if scale doubled" view.
-    paidSubsByPlan: {
-      FREE: Math.round(real.paidSubsByPlan.FREE * scale),
-      STARTER: Math.round(real.paidSubsByPlan.STARTER * scale),
-      PRO: Math.round(real.paidSubsByPlan.PRO * scale),
-      BUSINESS: Math.round(real.paidSubsByPlan.BUSINESS * scale),
-      AGENCY: Math.round(real.paidSubsByPlan.AGENCY * scale),
-    },
-    currentMrrBaht: Math.round(real.currentMrrBaht * scale),
+    paidSubsByPlan: projected.paidSubsByPlan,
+    currentMrrBaht: projected.projectedMrrBaht,
+    subsByPlanLabel: "projected",
   };
 }
 
@@ -235,6 +280,7 @@ export async function getForecastSnapshot(): Promise<ForecastSnapshot> {
     newShops7d,
     unconsumedCreditFloat: creditAggregate._sum.slipCredits ?? 0,
     paidSubsByPlan,
+    subsByPlanLabel: "live",
     currentMrrBaht,
     gmv30dBaht: ((gmv30d._sum.totalSatang ?? 0) as number) / 100,
     gmv7dBaht: ((gmv7d._sum.totalSatang ?? 0) as number) / 100,
