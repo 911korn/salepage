@@ -42,7 +42,15 @@ export async function generateMetadata({
     locale === routing.defaultLocale
       ? "https://salepage.in.th"
       : `https://salepage.in.th/${locale}`;
-  const ogImageUrl = `https://salepage.in.th/api/v1/og/home?locale=${locale === "en" ? "en" : "th"}&v=20260527b`;
+  // Static OG image — pre-rendered from /api/v1/og/home and committed under
+  // public/og/. Why static + not the dynamic endpoint: Facebook + LINE +
+  // Slack scrapers have aggressive fetch timeouts (1–5s), and the dynamic
+  // endpoint's first ImageResponse render on a cold Vercel function is
+  // ~3.2s — borderline. Static PNG served from Vercel's edge is <100ms.
+  // 911korn 2026-05-28 "แก้เรื่อง OG ไม่มาให้หน่อย" — share to FB group
+  // showed no image, root cause was FB cache + timeout. Bumping ?v= forces
+  // FB / LINE / Slack to re-scrape next time someone shares the URL.
+  const ogImageUrl = `https://salepage.in.th/og/home-${locale === "en" ? "en" : "th"}.png?v=20260528a`;
   const ogTitle = t("ogTitle");
   const ogDescription = t("ogDescription");
 
