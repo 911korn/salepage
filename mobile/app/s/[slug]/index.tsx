@@ -330,9 +330,21 @@ const ProductCard = memo(function ProductCard({
               contentFit="cover"
               cachePolicy="memory-disk"
               transition={150}
-              recyclingKey={`${shopSlug}-${product.slug}`}
+              recyclingKey={`${shopSlug}-${product.slug}-${product.imageUrls.length}`}
             />
-          ) : null}
+          ) : (
+            // No image uploaded — show product-name initial centered on
+            // the brand wash so the card reads as "intentional placeholder"
+            // not "broken image cached". 911korn 2026-05-28 "ในแอพภาพที่
+            // เสียค้างเต็มเลย".
+            <View className="size-full items-center justify-center px-3">
+              <View className="size-12 items-center justify-center rounded-2xl bg-white">
+                <Text className="text-[20px] font-bold text-brand-700">
+                  {(product.name || "?").slice(0, 1).toUpperCase()}
+                </Text>
+              </View>
+            </View>
+          )}
           {discount ? (
             <View className="absolute left-2 top-2 rounded-md bg-black/80 px-1.5 py-0.5">
               <Text className="text-[10px] font-bold text-white">-{discount}%</Text>

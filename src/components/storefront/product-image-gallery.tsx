@@ -62,13 +62,25 @@ export function ProductImageGallery({
             ))}
           </div>
         ) : (
+          // No image uploaded — show a branded placeholder + the product
+          // name centred so the storefront looks intentional instead of
+          // broken. 911korn 2026-05-28 spotted /s/trexshop/gmail with
+          // empty imageUrls (digital seller skipped image upload).
           <div
-            className="size-full"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--color-brand-100), var(--color-brand-300))",
-            }}
-          />
+            className="flex size-full items-center justify-center bg-gradient-to-br from-rose-50 via-amber-50 to-rose-100 p-6 text-center"
+          >
+            <div>
+              <span className="grid size-14 mx-auto place-items-center rounded-2xl bg-white text-2xl font-bold text-[color:var(--color-brand-600)] shadow-sm">
+                {productName.slice(0, 1).toUpperCase()}
+              </span>
+              <p className="mt-3 line-clamp-3 text-[13px] font-semibold text-zinc-700">
+                {productName}
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-wider text-zinc-400">
+                no image
+              </p>
+            </div>
+          </div>
         )}
 
         {badge ? (

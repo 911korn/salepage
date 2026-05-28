@@ -150,11 +150,24 @@ const ProductCard = memo(function ProductCard({
             contentFit="cover"
             cachePolicy="memory-disk"
             transition={150}
-            recyclingKey={product.id}
+            recyclingKey={`${product.id}-${product.imageUrls.length}`}
           />
         ) : (
-          <View className="size-full items-center justify-center">
-            <Text className="text-[28px]">🛍</Text>
+          // Empty-state placeholder — branded card showing the product
+          // name initial + "ใส่รูป" CTA so the seller is nudged to fix
+          // it instead of seeing an inscrutable shopping-bag emoji.
+          // 911korn 2026-05-28 "ในแอพภาพที่เสียค้างเต็มเลย".
+          <View className="size-full items-center justify-center px-3">
+            <View className="size-12 items-center justify-center rounded-2xl bg-white">
+              <Text className="text-[20px] font-bold text-brand-700">
+                {(product.name || "?").slice(0, 1).toUpperCase()}
+              </Text>
+            </View>
+            <Text
+              className="mt-2 text-center text-[10px] font-semibold uppercase tracking-wider text-rose-600"
+            >
+              ⚠ ใส่รูปสินค้า
+            </Text>
           </View>
         )}
       </View>

@@ -329,8 +329,16 @@ const ProductCard = memo(function ProductCard({
             recyclingKey={product.id}
           />
         ) : (
-          <View className="size-full items-center justify-center">
-            <Text className="text-[40px]">🛍</Text>
+          // No image — branded placeholder with product-name initial so
+          // the home feed reads as "intentional empty slot" instead of
+          // "broken image cached". 911korn 2026-05-28 "ในแอพภาพที่
+          // เสียค้างเต็มเลย" — emoji-only placeholder felt unbranded.
+          <View className="size-full items-center justify-center px-3">
+            <View className="size-12 items-center justify-center rounded-2xl bg-white">
+              <Text className="text-[20px] font-bold text-brand-700">
+                {(product.name || "?").slice(0, 1).toUpperCase()}
+              </Text>
+            </View>
           </View>
         )}
         {/* Badge overlay (HOT / NEW / SALE / discount %) */}

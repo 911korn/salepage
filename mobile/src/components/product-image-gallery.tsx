@@ -38,12 +38,20 @@ export function ProductImageGallery({ images, aspectRatio = 1 }: Props) {
   const listRef = useRef<FlatList<string>>(null);
 
   if (images.length === 0) {
+    // No images — branded placeholder card. 911korn 2026-05-28
+    // "ในแอพภาพที่เสียค้างเต็มเลย" — bare "ไม่มีรูปภาพ" text alone
+    // reads as a broken image, not an intentional empty state.
     return (
       <View
         style={{ aspectRatio, width: "100%" }}
         className="items-center justify-center bg-brand-50"
       >
-        <Text className="text-[12px] text-muted">ไม่มีรูปภาพ</Text>
+        <View className="size-16 items-center justify-center rounded-3xl bg-white shadow-sm">
+          <Text className="text-[28px] font-bold text-brand-700">S</Text>
+        </View>
+        <Text className="mt-3 text-[11px] uppercase tracking-wider text-muted">
+          ยังไม่มีรูปสินค้า
+        </Text>
       </View>
     );
   }
