@@ -4,27 +4,30 @@ import { usePathname } from "next/navigation";
 import { LineIcon } from "@/components/ui/line-icon";
 
 /**
- * Floating LINE Support button — pinned bottom-right on every public page
- * so a buyer/visitor can tap and start a chat with the SalePage team on
- * our official LINE OA.
+ * Floating LINE Support button — pinned bottom-right of seller-facing
+ * surfaces only (home page + dashboard). It exists so a prospective
+ * seller browsing the landing page or a signed-in seller in their
+ * dashboard can tap and chat with the SalePage team.
  *
- * Skipped on /dashboard/* and /admin/* — those are seller/operator
- * consoles where the bottom-right space is taken by the mobile tab bar
- * and the user is already authenticated into the support flow.
+ * 911korn 2026-05-28 "เอาปุ่ม LINE Support ออกจากหน้า Shop หน่อย คับ
+ * เอาไว้แค่หลังบ้าน กับ Home Page พอ ไว้ให้ Seller ติดต่อเรา" — on a
+ * shop storefront / order / cart / buyer page, this button competes
+ * with the shop's own LINE OA (the buyer should chat with the SHOP,
+ * not with SalePage support).
  *
- * The destination is taken from `NEXT_PUBLIC_SUPPORT_LINE_OA` so we can
- * change the OA target without a re-deploy. Falls back to the documented
- * support email if the env var isn't set, so the button still does
- * something useful in dev/preview environments.
+ * The destination is taken from `NEXT_PUBLIC_SUPPORT_LINE_OA` so we
+ * can change the OA target without a re-deploy. Falls back to
+ * @salepage if unset.
  */
 export function LineSupportFab() {
-  const pathname = usePathname() ?? "";
-  const onSellerSurface =
-    pathname.startsWith("/dashboard") ||
-    pathname.includes("/dashboard/") ||
-    pathname.startsWith("/admin") ||
-    pathname.includes("/admin/");
-  if (onSellerSurface) return null;
+  const rawPath = usePathname() ?? "";
+  // Strip the optional `/en` locale prefix so the route match below
+  // doesn't need to be repeated for each locale.
+  const pathname = rawPath.replace(/^\/(en)(?=\/|$)/, "") || "/";
+  const isHome = pathname === "/";
+  const isDashboard =
+    pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+  if (!isHome && !isDashboard) return null;
 
   const oa = (process.env.NEXT_PUBLIC_SUPPORT_LINE_OA?.trim() || "@salepage").trim();
   const href = `https://line.me/R/ti/p/${oa.startsWith("@") ? "%40" + oa.slice(1) : oa}`;
