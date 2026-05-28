@@ -260,6 +260,7 @@ model Shop {
   liveBroadcasts    LiveBroadcast[]
   groupBuys         GroupBuy[]
   paymentGateways   ShopPaymentGateway[]
+  domains           ShopDomain[]
 
   @@index([ownerId])
   @@index([featured, status])
@@ -1479,4 +1480,52 @@ enum PaymentGatewayTestStatus {
   OK
   FAILED
   PENDING
+}
+
+// V2.3 — Custom domain mapping per shop. Business+ feature.
+//
+// Workflow: seller types a domain they own (or just bought) into the
+// dashboard. We register it on our Vercel project via Vercel API.
+// Vercel returns the nameservers they need to set at their registrar
+// (ns1.vercel-dns.com / ns2.vercel-dns.com). Seller pastes those into
+// their registrar. Once DNS propagates Vercel auto-issues SSL and
+// auto-routes — middleware reads the Host header at request time and
+// rewrites the URL to /s/<slug>/... so the shop renders under the
+// custom domain.
+//
+// 911korn 2026-05-28 "ลูกค้าไปสมัคร Domain ที่อื่นได้เลย เราแค่ออก NS1
+// NS2 มาให้เอาไปใส่ จบ".
+model ShopDomain {
+  id        String              @id @default(cuid())
+  shopId    String
+  shop      Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  // Lower-cased domain — e.g. "siamsnack.com" (apex) or "shop.siamsnack.com".
+  // Apex domains imply we also serve www → the middleware redirects
+  // www.siamsnack.com → siamsnack.com when this row's domain is the apex.
+  domain    String              @unique
+  // The two nameservers we tell the seller to paste at their registrar.
+  // Populated when we created the CF zone for them. Each new zone gets
+  // a different (deterministic) pair from CF's pool — e.g. romina + yoxall.
+  ns1       String?
+  ns2       String?
+  status    ShopDomainStatus    @default(PENDING_DNS)
+  // Last reason if status == FAILED.
+  failedReason String?          @db.Text
+  // CF zone id so we can manage records + delete via API later.
+  cfZoneId  String?
+  verifiedAt DateTime?
+  // Stamp of the last verify-poll so we don't spam the Vercel API.
+  lastCheckedAt DateTime?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([shopId])
+  @@index([status, lastCheckedAt])
+}
+
+enum ShopDomainStatus {
+  PENDING_DNS  // waiting for seller to set NS at registrar
+  VERIFYING    // DNS detected, Vercel issuing cert
+  VERIFIED     // live + serving
+  FAILED       // verification failed — see failedReason
 }

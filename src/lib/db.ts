@@ -28,6 +28,7 @@ export {
   PaymentGatewayProvider,
   PaymentGatewayMode,
   PaymentGatewayTestStatus,
+  ShopDomainStatus,
 } from "@/generated/prisma";
 
 function makeClient() {
