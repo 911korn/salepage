@@ -11,6 +11,9 @@ import {
   AlertCircle,
   Globe,
   ExternalLink,
+  Search,
+  ShoppingCart,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -85,10 +88,12 @@ export function DomainsPanel({ shopSlug }: { shopSlug: string }) {
 
   return (
     <div className="mt-6 space-y-6">
+      <DomainSearchSection />
+
       <section className="rounded-2xl border border-[color:var(--color-border)] bg-white p-5">
-        <h2 className="font-display text-base font-bold">เพิ่มโดเมนใหม่</h2>
+        <h2 className="font-display text-base font-bold">ผูกโดเมนที่ซื้อแล้ว</h2>
         <p className="mt-1 text-[12px] text-zinc-500">
-          ซื้อโดเมนจากที่ไหนก็ได้ (GoDaddy / Cloudflare / NameCheap / GMO ฯลฯ) → พิมพ์ชื่อด้านล่าง → เราจะออก NS1/NS2 ให้
+          มีโดเมนอยู่แล้ว? พิมพ์ชื่อด้านล่าง → เราจะออก NS1/NS2 ให้เอาไปใส่ที่ registrar ของคุณ
         </p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
@@ -305,6 +310,173 @@ function DomainCard({
             ⚠ การเปลี่ยน NS = DNS records ทั้งหมดของโดเมนนี้ (รวม email/MX) จะย้ายมา Cloudflare — ถ้าใช้ email @{domain.domain} ติดต่อทีมเราก่อนเพื่อ migrate
           </p>
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+interface SearchRow {
+  domain: string;
+  available: boolean | null;
+  takenOnPlatform: boolean;
+  tld: string;
+  registrationUsd: number | null;
+  renewalUsd: number | null;
+  buyUrl: string | null;
+  error: string | null;
+}
+
+function DomainSearchSection() {
+  const [term, setTerm] = useState("");
+  const [rows, setRows] = useState<SearchRow[] | null>(null);
+  const [usdToThb, setUsdToThb] = useState(36.5);
+  const [searching, setSearching] = useState(false);
+
+  async function run() {
+    const q = term.trim().toLowerCase();
+    if (q.length < 2) {
+      toast.error("พิมพ์อย่างน้อย 2 ตัวอักษร");
+      return;
+    }
+    setSearching(true);
+    setRows(null);
+    try {
+      const res = await fetch(
+        `/api/v1/domains/search?q=${encodeURIComponent(q)}`,
+      );
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        toast.error(json.error?.message ?? "ค้นหาไม่สำเร็จ");
+        return;
+      }
+      setRows(json.data.rows as SearchRow[]);
+      setUsdToThb(Number(json.data.usdToThb) || 36.5);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  return (
+    <section className="rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-50/40 to-amber-50/30 p-5">
+      <h2 className="font-display flex items-center gap-2 text-base font-bold text-zinc-900">
+        <ShoppingCart className="size-4 text-rose-600" />
+        ยังไม่มีโดเมน? ค้นหาและซื้อใหม่ได้เลย
+      </h2>
+      <p className="mt-1 text-[12px] text-zinc-600">
+        พิมพ์ชื่อที่อยากได้ — ระบบเช็คว่ายังว่างไหม + ราคาในแต่ละ TLD พร้อมลิงก์ไป Porkbun (ลงทะเบียน 30 วินาทีเสร็จ)
+      </p>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+          <input
+            type="text"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !searching) void run();
+            }}
+            placeholder="พิมพ์ชื่อโดเมนที่อยากได้ เช่น mystore"
+            autoComplete="off"
+            className="block w-full rounded-xl border-2 border-zinc-300 bg-white pl-9 pr-3 py-2.5 text-[13px] focus:border-rose-400 focus:outline-none"
+          />
+        </div>
+        <Button onClick={run} disabled={searching || term.trim().length < 2}>
+          {searching ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <>
+              <Search className="size-4" />
+              ค้นหา
+            </>
+          )}
+        </Button>
+      </div>
+
+      {rows ? (
+        <div className="mt-4 space-y-1.5">
+          {rows.map((r) => (
+            <SearchRow key={r.domain} row={r} usdToThb={usdToThb} />
+          ))}
+          <p className="mt-2 text-[10.5px] text-zinc-500">
+            ราคาประมาณ — Porkbun อาจมีโปร/ส่วนลดในตอน checkout · หลังซื้อแล้วกลับมาที่หน้านี้ พิมพ์โดเมนในช่อง &ldquo;ผูกโดเมนที่ซื้อแล้ว&rdquo; ด้านล่าง
+          </p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function SearchRow({ row, usdToThb }: { row: SearchRow; usdToThb: number }) {
+  const priceThb =
+    row.registrationUsd !== null
+      ? Math.round(row.registrationUsd * usdToThb)
+      : null;
+
+  if (row.takenOnPlatform) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+        <XCircle className="size-4 shrink-0 text-zinc-400" />
+        <p className="font-mono text-[12.5px] text-zinc-500">
+          {row.domain}
+        </p>
+        <span className="ml-auto text-[10.5px] text-zinc-500">
+          ใช้บน SalePage แล้ว
+        </span>
+      </div>
+    );
+  }
+  if (row.available === null) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2">
+        <AlertCircle className="size-4 shrink-0 text-amber-600" />
+        <p className="font-mono text-[12.5px] text-zinc-700">{row.domain}</p>
+        <span className="ml-auto text-[10.5px] text-amber-700">
+          เช็คไม่ได้ — ลองโดเมนอื่น
+        </span>
+      </div>
+    );
+  }
+  if (!row.available) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+        <XCircle className="size-4 shrink-0 text-zinc-400" />
+        <p className="font-mono text-[12.5px] text-zinc-500 line-through">
+          {row.domain}
+        </p>
+        <span className="ml-auto text-[10.5px] text-zinc-500">ถูกจองแล้ว</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-3 py-2.5">
+      <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+      <div className="min-w-0 flex-1">
+        <p className="font-mono text-[13px] font-bold text-zinc-900">
+          {row.domain}
+        </p>
+        {priceThb !== null ? (
+          <p className="text-[10.5px] text-zinc-500">
+            ~฿{priceThb.toLocaleString()}/ปี
+            {row.renewalUsd && row.renewalUsd > (row.registrationUsd ?? 0) ? (
+              <span className="ml-1 text-zinc-400">
+                (ต่ออายุ ~฿
+                {Math.round(row.renewalUsd * usdToThb).toLocaleString()}/ปี)
+              </span>
+            ) : null}
+          </p>
+        ) : null}
+      </div>
+      {row.buyUrl ? (
+        <a
+          href={row.buyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rose-600 px-3 py-1.5 text-[11.5px] font-bold text-white hover:bg-rose-700"
+        >
+          <ShoppingCart className="size-3.5" />
+          ซื้อที่ Porkbun
+          <ExternalLink className="size-3" />
+        </a>
       ) : null}
     </div>
   );
