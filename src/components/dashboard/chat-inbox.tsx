@@ -73,9 +73,15 @@ export function ChatInbox({ shopSlug, initialConversations }: Props) {
     }
   }, [detail?.messages?.length]);
 
-  // Poll for new conversations every 15s
+  // Poll for new conversations every 15s — but only while the tab is
+  // actually visible. A dashboard left open in a background tab was
+  // hitting the uncached /conversations route 24/7 (≈5.7k req/day each,
+  // 0% cache hit); pausing on `document.hidden` drops that to zero when
+  // nobody's looking and we refetch instantly on refocus, so the inbox is
+  // never stale when the operator comes back.
   useEffect(() => {
     const tick = async () => {
+      if (document.hidden) return;
       try {
         const res = await fetch(
           `/api/v1/shops/${shopSlug}/conversations`,
@@ -85,7 +91,14 @@ export function ChatInbox({ shopSlug, initialConversations }: Props) {
       } catch {}
     };
     const id = window.setInterval(tick, 15000);
-    return () => window.clearInterval(id);
+    const onVisible = () => {
+      if (!document.hidden) void tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [shopSlug]);
 
   async function sendReply() {

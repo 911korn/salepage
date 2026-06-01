@@ -84,7 +84,8 @@ export async function GET() {
     }),
   ]);
 
-  return ok({
+  return ok(
+    {
     featured,
     flashSale: flashCoupons.map((c) => ({
       id: c.id,
@@ -101,5 +102,12 @@ export async function GET() {
       expiresAt: c.expiresAt,
       shop: c.shop,
     })),
-  });
+    },
+    {
+      headers: {
+        "Cache-Control":
+          "public, max-age=60, s-maxage=120, stale-while-revalidate=600",
+      },
+    },
+  );
 }

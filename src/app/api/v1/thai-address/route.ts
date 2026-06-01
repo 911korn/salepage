@@ -3,6 +3,15 @@ import { getDataForZipCode } from "thai-data";
 
 export const runtime = "nodejs";
 
+// Thai postcode → address is static reference data (ships in the
+// `thai-data` package), identical for every caller and effectively
+// immutable. Cache hard at the edge so checkout address autocomplete
+// stops invoking a function per keystroke-settle.
+const CACHE_HEADERS = {
+  "Cache-Control":
+    "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+} as const;
+
 interface ThaiZipData {
   zipCode: string;
   subDistrictList: Array<{
@@ -28,18 +37,24 @@ export async function GET(request: Request) {
     .slice(0, 5);
 
   if (postcode.length !== 5) {
-    return NextResponse.json({
-      ok: true,
-      data: { postcode, options: [] },
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        data: { postcode, options: [] },
+      },
+      { headers: CACHE_HEADERS },
+    );
   }
 
   const data = getDataForZipCode(postcode) as ThaiZipData | null;
   if (!data) {
-    return NextResponse.json({
-      ok: true,
-      data: { postcode, options: [] },
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        data: { postcode, options: [] },
+      },
+      { headers: CACHE_HEADERS },
+    );
   }
 
   const districts = new Map(
@@ -76,8 +91,11 @@ export async function GET(request: Request) {
       ),
     );
 
-  return NextResponse.json({
-    ok: true,
-    data: { postcode, options },
-  });
+  return NextResponse.json(
+    {
+      ok: true,
+      data: { postcode, options },
+    },
+    { headers: CACHE_HEADERS },
+  );
 }

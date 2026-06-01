@@ -29,5 +29,10 @@ export async function GET(request: Request) {
   }
   const { cursor, category, sort, verified } = parsed.data;
   const result = await getProductsFeed({ cursor, category, sort, verified });
-  return ok(result);
+  return ok(result, {
+    headers: {
+      "Cache-Control":
+        "public, max-age=30, s-maxage=60, stale-while-revalidate=300",
+    },
+  });
 }

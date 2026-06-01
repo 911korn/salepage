@@ -29,10 +29,18 @@ export async function GET() {
   });
 
   const map = new Map(counts.map((c) => [c.category ?? "", c._count._all]));
-  return ok({
-    categories: CATEGORIES.map((key) => ({
-      key,
-      shopCount: map.get(key) ?? 0,
-    })),
-  });
+  return ok(
+    {
+      categories: CATEGORIES.map((key) => ({
+        key,
+        shopCount: map.get(key) ?? 0,
+      })),
+    },
+    {
+      headers: {
+        "Cache-Control":
+          "public, max-age=60, s-maxage=300, stale-while-revalidate=3600",
+      },
+    },
+  );
 }
