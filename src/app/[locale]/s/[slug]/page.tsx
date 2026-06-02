@@ -5,7 +5,6 @@ import { CartIconLink } from "@/components/buyer/cart-icon-link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
-import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { db, PlanKey, ProductStatus } from "@/lib/db";
 import { getEffectivePlan } from "@/lib/plan";
@@ -14,8 +13,7 @@ import { LogoMark } from "@/components/ui/logo";
 import { MaintenancePage } from "@/components/maintenance-page";
 import { viewerCanBypassMaintenance, viewerIsAdmin } from "@/lib/admin";
 import { getPlatformSetting } from "@/lib/platform-settings";
-import { auth } from "@/lib/auth";
-import { dashboardHref } from "@/lib/dashboard-routing";
+import { StorefrontOwnerCta } from "@/components/storefront/owner-cta";
 import {
   absoluteStorefrontUrl,
   storefrontLabel,
@@ -25,6 +23,14 @@ import { itemListSchema, storeSchema } from "@/lib/jsonld-shared";
 import { ReportButton } from "@/components/report/report-button";
 import { BlockButton } from "@/components/report/block-button";
 import type { Locale } from "@/i18n/routing";
+
+// ISR: cache storefront HTML at the edge (owner-specific UI is a client island).
+// generateStaticParams (even empty) is what opts a dynamic-param route into the
+// ISR pipeline — without it `revalidate` is ignored and the route stays dynamic.
+export const revalidate = 60;
+export function generateStaticParams() {
+  return [];
+}
 
 interface PageProps {
   params: Promise<{ slug: string; locale: Locale }>;
@@ -288,12 +294,7 @@ export default async function StorefrontPage({ params }: PageProps) {
 
   const t = await getTranslations("shop");
   const tCommon = await getTranslations("common");
-  const session = await auth();
   const shop = view;
-  const ownerDashboardHref =
-    dbShop && session?.user?.id === dbShop.ownerId
-      ? dashboardHref("/dashboard", dbShop.slug)
-      : null;
 
   // JSON-LD for the Store + its product catalogue. Google's rich-results
   // parser reads these for sitelinks + the "products in this store" panel.
@@ -330,7 +331,7 @@ export default async function StorefrontPage({ params }: PageProps) {
       <header className="sticky top-0 z-30 border-b border-[color:var(--color-border)] bg-white/85 backdrop-blur-xl">
         <div className="container-page flex h-14 min-w-0 items-center gap-2">
           <Link
-            href={ownerDashboardHref ?? "/"}
+            href="/"
             className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-zinc-700 hover:text-[color:var(--color-fg)]"
           >
             <ArrowLeft className="size-4" /> {t("back")}
@@ -349,22 +350,12 @@ export default async function StorefrontPage({ params }: PageProps) {
             <Store className="size-3.5" /> ร้านอื่น
           </Link>
           <CartIconLink className="shrink-0" />
-          <Link
-            href={ownerDashboardHref ?? "/signup"}
-            className={cn(buttonStyles({
-              size: "sm",
-              className: "shrink-0 px-2.5 text-xs sm:px-3.5 sm:text-sm",
-            }))}
-          >
-            {ownerDashboardHref ? (
-              locale === "th" ? "จัดการร้าน" : tCommon("dashboard")
-            ) : (
-              <>
-                <span className="sm:hidden">สร้างร้าน</span>
-                <span className="hidden sm:inline">{t("createOwn")}</span>
-              </>
-            )}
-          </Link>
+          <StorefrontOwnerCta
+            slug={shop.slug}
+            manageLabel={locale === "th" ? "จัดการร้าน" : tCommon("dashboard")}
+            createShort="สร้างร้าน"
+            createLong={t("createOwn")}
+          />
         </div>
       </header>
 

@@ -19,6 +19,14 @@ import {
 import { productSchema } from "@/lib/jsonld-shared";
 import type { Locale } from "@/i18n/routing";
 
+// ISR: product pages are public + identical for every viewer. generateStaticParams
+// (even empty) opts this dynamic-param route into the ISR pipeline so repeat/bot
+// hits serve from the edge cache instead of invoking a function each time.
+export const revalidate = 60;
+export function generateStaticParams() {
+  return [];
+}
+
 interface PageProps {
   params: Promise<{ locale: Locale; slug: string; productSlug: string }>;
 }
