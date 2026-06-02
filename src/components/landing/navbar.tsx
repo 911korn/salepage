@@ -25,9 +25,10 @@ interface Props {
   signedIn?: boolean;
 }
 
-export function Navbar({ signedIn = false }: Props) {
+export function Navbar({ signedIn: signedInInitial = false }: Props) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState(signedInInitial);
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
 
@@ -37,6 +38,26 @@ export function Navbar({ signedIn = false }: Props) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Resolve auth state CLIENT-side so the marketing homepage can be served
+  // as static HTML (no server-side auth() → no per-request function). Bots
+  // and crawlers — the bulk of the traffic that drove the edge-request cost
+  // — don't execute JS, so they never hit this and just get the cached
+  // signed-out shell. /api/v1/session is per-user and never CDN-cached.
+  useEffect(() => {
+    if (signedInInitial) return;
+    const controller = new AbortController();
+    fetch("/api/v1/session", {
+      signal: controller.signal,
+      headers: { accept: "application/json" },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.ok && json.data?.signedIn) setSignedIn(true);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [signedInInitial]);
 
   return (
     <header

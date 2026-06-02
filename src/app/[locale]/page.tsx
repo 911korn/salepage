@@ -7,7 +7,6 @@ import { StorefrontPreview } from "@/components/landing/storefront-preview";
 import { Pricing } from "@/components/landing/pricing";
 import { FinalCta } from "@/components/landing/cta";
 import { Footer } from "@/components/landing/footer";
-import { auth } from "@/lib/auth";
 import { organizationSchema, websiteSchema } from "@/lib/jsonld-shared";
 import type { Locale } from "@/i18n/routing";
 
@@ -18,7 +17,6 @@ export default async function HomePage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const session = await auth();
 
   // Combine Organization + WebSite into a JSON-LD @graph so Google parses
   // both with a single inline script. WebSite's potentialAction unlocks the
@@ -34,7 +32,11 @@ export default async function HomePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ldGraph) }}
       />
-      <Navbar signedIn={Boolean(session?.user)} />
+      {/* Navbar resolves signed-in state client-side (via /api/v1/session)
+          so this marketing homepage stays statically prerendered — no
+          server-side auth() that would force a function invocation per
+          bot/crawler hit. */}
+      <Navbar />
       <main>
         <Hero />
         <PromptPayDemo />
