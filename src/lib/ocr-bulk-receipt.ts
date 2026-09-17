@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { hasLlmKey, routedAnthropic } from "./ai/router";
 
 /**
  * Bulk shipping-receipt OCR via Claude Sonnet 4.5 vision.
@@ -122,13 +122,12 @@ export async function scanBulkShippingReceipt(
   imageBase64: string,
   mediaType: "image/jpeg" | "image/png" | "image/webp" = "image/jpeg",
 ): Promise<BulkReceiptScanResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return { receipts: [], note: "ANTHROPIC_API_KEY not configured" };
+  if (!hasLlmKey()) {
+    return { receipts: [], note: "no LLM key configured (OPENROUTER_API_KEY / ANTHROPIC_API_KEY)" };
   }
 
   try {
-    const client = new Anthropic({ apiKey });
+    const client = routedAnthropic();
     const response = await client.messages.create({
       model: "claude-sonnet-4-5-20250929",
       max_tokens: 2048,

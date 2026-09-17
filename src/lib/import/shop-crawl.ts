@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import Anthropic from "@anthropic-ai/sdk";
+import { hasLlmKey, routedAnthropic } from "../ai/router";
 import { layeredFetch, REAL_CHROME_HEADERS } from "./headers";
 import { fetchLazadaProduct, isLazadaUrl } from "./lazada";
 import { fetchJsonLdProduct } from "./jsonld";
@@ -192,8 +192,7 @@ async function crawlGenericWithAi(shopUrl: string): Promise<ShopCrawlResult> {
   const ruleBased = await crawlRuleBasedGeneric(shopUrl);
   if (ruleBased.products.length > 0) return ruleBased;
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  if (!hasLlmKey()) {
     throw new Error("ไม่พบสินค้าในหน้าร้านนี้ — ลองวางลิงก์หน้ารวมสินค้า (All products) หรือใช้แท็บ \"ไฟล์ Shopee/Lazada\"");
   }
 
@@ -210,7 +209,7 @@ async function crawlGenericWithAi(shopUrl: string): Promise<ShopCrawlResult> {
     throw new Error("HTML จากหน้าร้านสั้นเกินไป — อาจเป็น single-page app ที่ต้องเรียกข้อมูลผ่าน JS");
   }
 
-  const client = new Anthropic({ apiKey });
+  const client = routedAnthropic();
   const sys =
     "You extract product listings from raw HTML. Return JSON ONLY, no prose. " +
     'Schema: { "products": [{ "name": string, "priceTHB": number|null, "imageUrl": string|null, "productUrl": string|null }] }. ' +

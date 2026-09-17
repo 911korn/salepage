@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { hasLlmKey, routedAnthropic } from "./ai/router";
 
 /**
  * Slip pre-flight detection via Claude Haiku 4.5 vision.
@@ -64,14 +64,13 @@ export async function preflightSlipImage(
   imageBase64: string,
   mediaType: "image/jpeg" | "image/png" | "image/webp" = "image/jpeg",
 ): Promise<SlipPreflightResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  if (!hasLlmKey()) {
     // No Claude key configured — skip pre-flight, let SlipOK be the judge.
     return { isSlip: true, confidence: "low", note: "preflight_skipped" };
   }
 
   try {
-    const client = new Anthropic({ apiKey });
+    const client = routedAnthropic();
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 256,

@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { hasLlmKey, routedAnthropic } from "./ai/router";
 
 /**
  * Apple Guideline 1.2 — "a method for filtering objectionable content".
@@ -22,9 +22,7 @@ export type ModerationVerdict =
   | { ok: true }
   | { ok: false; reason: string };
 
-const ANTHROPIC = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  : null;
+const ANTHROPIC = hasLlmKey() ? routedAnthropic() : null;
 
 const PROMPT = `You are a content moderator for SalePage, a consumer e-commerce app.
 Look at this image and decide if it is acceptable.
