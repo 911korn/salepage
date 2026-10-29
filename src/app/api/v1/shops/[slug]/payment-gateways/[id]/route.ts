@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { resolveSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
-import { hasBusinessPlan } from "@/lib/plan";
+import { hasProPlan } from "@/lib/plan";
 
 export const runtime = "nodejs";
 
@@ -32,11 +32,11 @@ async function guard(request: Request, ctx: Ctx) {
   if (shop.ownerId !== session.user.id) {
     return { err: fail("forbidden", "ไม่ใช่เจ้าของร้านนี้", 403) } as const;
   }
-  if (!(await hasBusinessPlan(session.user.id))) {
+  if (!(await hasProPlan(session.user.id))) {
     return {
       err: fail(
         "upgrade_required",
-        "Payment gateways ใช้ได้กับแผน Business ขึ้นไป",
+        "Payment gateways ใช้ได้กับแผน Pro ขึ้นไป",
         402,
       ),
     } as const;

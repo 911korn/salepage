@@ -2,7 +2,6 @@ import { z } from "zod";
 import { ok, fail, parseJson } from "@/lib/api";
 import { resolveSession } from "@/lib/api-auth";
 import { db, OrderStatus } from "@/lib/db";
-import { hasBusinessPlan } from "@/lib/plan";
 import { buildOrderRef } from "@/lib/orders";
 import { sendOrderShipped } from "@/lib/email";
 import { notifyLineOrderUpdate } from "@/lib/line-order-notifications";
@@ -63,13 +62,9 @@ export async function POST(request: Request, ctx: Ctx) {
   if (shop.ownerId !== session.user.id) {
     return fail("forbidden", "ไม่ใช่เจ้าของร้านนี้", 403);
   }
-  if (!(await hasBusinessPlan(session.user.id))) {
-    return fail(
-      "upgrade_required",
-      "AI Bulk Tracking ใช้ได้กับแผน Business ขึ้นไป",
-      402,
-    );
-  }
+  // Free for every tier since e1acb84 — that commit ungated the scan
+  // route but missed this apply step, so free sellers could scan a stack
+  // of receipts and then hit a 402 when saving the matches.
 
   const parsed = await parseJson(request, Body);
   if (!parsed.ok) return parsed.response;

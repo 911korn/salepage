@@ -377,6 +377,31 @@
     "emptyDesc": "The shop owner is still adding products — check back soon."
   },
   "dashboard": {
+    "billing": {
+      "title": "My plan",
+      "freePlan": "Free",
+      "freeLine": "You are on the free plan",
+      "grantedLine": "Activated by our team, no charges",
+      "onetimeLine": "Paid once for a year, valid until {date}. No automatic charges",
+      "endsLine": "Renewal canceled. Active until {date}, you will not be charged again",
+      "trialLine": "Free trial. Billing starts on {date}; cancel before then and pay nothing",
+      "renewsLine": "Renews automatically on {date}",
+      "trialBadge": "Trial",
+      "upgradeCta": "See plans",
+      "renewCta": "Renew plan",
+      "cancelCta": "Cancel plan",
+      "resumeCta": "Turn auto-renew back on",
+      "portalCta": "Payment method & receipts",
+      "confirmTitle": "Cancel renewal?",
+      "confirmBody": "You keep every feature until {date}. After that your account returns to the free plan and you will not be charged again. You can change your mind before then.",
+      "confirmBodyTrial": "Your trial ends on {date} and you will not be charged. After that your account returns to the free plan.",
+      "confirmYes": "Yes, cancel",
+      "confirmNo": "Keep my plan",
+      "canceledToast": "Renewal canceled. You will not be charged next cycle",
+      "resumedToast": "Auto-renew is back on",
+      "errorGeneric": "Something went wrong, please try again",
+      "manageLink": "Manage plan"
+    },
     "common": {
       "open": "Open shop",
       "viewShop": "View storefront",

@@ -102,7 +102,9 @@ export async function POST(request: Request, ctx: Ctx) {
 
   const parsed = await parseJson(request, BodySchema);
   if (!parsed.ok) return parsed.response;
-  const domain = parsed.data.domain.replace(/\/$/, "");
+  // The zone is always the apex — sellers often type "www.mystore.com",
+  // which Cloudflare refuses as a zone name.
+  const domain = parsed.data.domain.replace(/\/$/, "").replace(/^www\./, "");
 
   if (
     domain.endsWith(".vercel.app") ||
@@ -131,24 +133,14 @@ export async function POST(request: Request, ctx: Ctx) {
     const found = await findZoneByName(domain);
     cfZone = found ?? (await createZone(domain));
   } catch (err) {
-    return fail(
-      "cloudflare_error",
-      err instanceof Error ? err.message : "Cloudflare API error",
-      502,
-    );
+    return domainSetupError(domain, err);
   }
 
   // ── 2. CF DNS records → Vercel ──
   try {
     await attachVercelRecords(cfZone.id, domain);
   } catch (err) {
-    return fail(
-      "cloudflare_error",
-      err instanceof Error
-        ? `Set DNS records ล้มเหลว: ${err.message}`
-        : "DNS records error",
-      502,
-    );
+    return domainSetupError(domain, err);
   }
 
   // ── 3. Vercel project attachment — best-effort ──
@@ -158,7 +150,10 @@ export async function POST(request: Request, ctx: Ctx) {
   // Vercel team" — admin needs to reach out to release.
   let vercelError: string | null = null;
   try {
+    // Both hosts: the CNAME for www already points at Vercel, but Vercel
+    // only serves hostnames attached to the project.
     await attachDomainToProject(domain);
+    await attachDomainToProject(`www.${domain}`);
   } catch (err) {
     vercelError =
       err instanceof Error ? err.message : "Vercel attach failed";
@@ -204,4 +199,37 @@ export async function POST(request: Request, ctx: Ctx) {
     status: row.status,
     failedReason: row.failedReason,
   });
+}
+
+/** Raw provider errors go to the log (they were previously invisible —
+ *  a 502 with no trace), the seller gets a reason + the next step. */
+function domainSetupError(domain: string, err: unknown) {
+  const raw = err instanceof Error ? err.message : String(err);
+  console.error("[shop-domain] setup failed for", domain, raw);
+  if (/1049|not a registered domain|1099|invalid domain/i.test(raw)) {
+    return fail(
+      "domain_not_registered",
+      "ยังไม่พบโดเมนนี้ในระบบทะเบียน — ตรวจตัวสะกด หรือซื้อโดเมนที่ผู้ให้บริการโดเมนก่อน แล้วกลับมาเพิ่มอีกครั้ง",
+      400,
+    );
+  }
+  if (/1116|root domain|subdomain/i.test(raw)) {
+    return fail(
+      "use_root_domain",
+      "ใส่เฉพาะชื่อโดเมนหลัก เช่น mystore.com (ไม่ต้องมี www. หรือ shop.)",
+      400,
+    );
+  }
+  if (/1061|already exists/i.test(raw)) {
+    return fail(
+      "domain_in_use_elsewhere",
+      "โดเมนนี้ผูกกับผู้ให้บริการ DNS เจ้าอื่นอยู่ — ติดต่อทีมงานผ่านหน้าช่วยเหลือ เราจะช่วยย้ายให้",
+      409,
+    );
+  }
+  return fail(
+    "domain_setup_failed",
+    "เชื่อมโดเมนไม่สำเร็จในขณะนี้ — ลองใหม่อีกครั้งในอีกสักครู่ ถ้ายังไม่ได้ติดต่อทีมงานผ่านหน้าช่วยเหลือ",
+    502,
+  );
 }

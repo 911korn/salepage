@@ -4,6 +4,10 @@ import { CreditCard, ChevronRight, Globe } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { SettingsForm } from "@/components/dashboard/settings-form";
 import { SlipCreditsCard } from "@/components/dashboard/slip-credits-card";
+import {
+  SubscriptionCard,
+  type SubscriptionSummary,
+} from "@/components/dashboard/subscription-card";
 import { db } from "@/lib/db";
 import { requireDashboardSession } from "@/lib/dashboard";
 import { resolveDashboardShop, dashboardHref } from "@/lib/dashboard-routing";
@@ -34,6 +38,26 @@ export default async function SettingsPage({
 
   const t = await getTranslations("dashboard.settings");
   const capacity = await getShopSlipCapacity(shop.id, user.id);
+  const sub = await db.subscription.findUnique({ where: { userId: user.id } });
+  const subscription: SubscriptionSummary = {
+    // stripeSubscriptionId prefixes: sub_ = recurring Stripe subscription,
+    // onetime_ = one-time annual checkout, admin_ = granted by the team.
+    kind: !sub
+      ? "none"
+      : sub.stripeSubscriptionId.startsWith("sub_")
+        ? "recurring"
+        : sub.stripeSubscriptionId.startsWith("onetime_")
+          ? "onetime"
+          : "granted",
+    plan: sub?.plan ?? null,
+    status: sub?.status ?? null,
+    currentPeriodEnd: sub?.currentPeriodEnd?.toISOString() ?? null,
+    trialEnd: sub?.trialEnd?.toISOString() ?? null,
+    cancelAtPeriodEnd: sub?.cancelAtPeriodEnd ?? false,
+    hasBillingAccount:
+      !!sub?.stripeCustomerId.startsWith("cus_") ||
+      !!user.stripeCustomerId?.startsWith("cus_"),
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -43,6 +67,8 @@ export default async function SettingsPage({
         </h1>
         <p className="mt-1 text-sm text-zinc-500">{t("subtitle")}</p>
       </header>
+
+      <SubscriptionCard initial={subscription} />
 
       <SlipCreditsCard shopSlug={shop.slug} capacity={capacity} />
 

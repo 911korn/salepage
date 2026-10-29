@@ -343,6 +343,13 @@ function DashboardSidebarInner({
               )}
             </div>
           </div>
+          <Link
+            href={`${dashboardHref("/dashboard/settings", activeShopSlug)}#subscription`}
+            onClick={onClose}
+            className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-white px-2 py-2 text-[12px] font-semibold text-[color:var(--color-brand-700)] hover:bg-[color:var(--color-brand-50)]"
+          >
+            {t("billing.manageLink")}
+          </Link>
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/" })}

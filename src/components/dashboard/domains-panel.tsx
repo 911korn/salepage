@@ -42,7 +42,7 @@ export function DomainsPanel({ shopSlug }: { shopSlug: string }) {
       if (res.ok && json.ok) {
         setDomains(json.data.domains as SavedDomain[]);
       } else if (res.status === 402) {
-        toast.error(json.error?.message ?? "ต้องอัปเกรดเป็น Business+");
+        toast.error(json.error?.message ?? "ต้องอัปเกรดเป็น Pro ขึ้นไป");
       }
     } finally {
       setLoading(false);

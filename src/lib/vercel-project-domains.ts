@@ -63,13 +63,23 @@ async function vercel<T>(
 
 export async function attachDomainToProject(domain: string): Promise<void> {
   const c = client();
-  await vercel(
-    `/v10/projects/${c.projectId}/domains${teamQuery(c.teamId)}`,
-    {
-      method: "POST",
-      body: JSON.stringify({ name: domain }),
-    },
-  );
+  try {
+    await vercel(
+      `/v10/projects/${c.projectId}/domains${teamQuery(c.teamId)}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ name: domain }),
+      },
+    );
+  } catch (err) {
+    // Idempotent: a seller re-adding the same domain must not fail
+    // because the first attempt already attached it to this project.
+    const already = await vercel(
+      `/v9/projects/${c.projectId}/domains/${encodeURIComponent(domain)}${teamQuery(c.teamId)}`,
+    ).catch(() => null);
+    if (already) return;
+    throw err;
+  }
 }
 
 export async function detachDomainFromProject(domain: string): Promise<void> {
