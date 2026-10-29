@@ -12,22 +12,22 @@ export function tempIdFor(seed: string): string {
 }
 
 /**
- * Slugify a product name to URL-safe ASCII + Thai. Lowercase, spaces and
- * symbols become `-`. Preserves Thai characters as-is.
+ * Slugify a product name to URL-safe ASCII (a-z, 0-9, `-`), matching the
+ * manual-create route. Thai-only names come back "" and the caller falls
+ * back to `product-<id>`.
  *
- * MUST include \p{Mark} alongside \p{Letter}. Thai vowels + tone marks
- * (ื ู ี ิ ้ ่ ๊ ๋ etc.) are Unicode "combining marks", not letters — so
- * a naive [^\p{Letter}\p{Number}] strip turns "เสื้อเชิ้ต" into "เสอเชต".
- * 911korn 2026-05-28 spotted on /loopwear, every Thai product had a
- * mangled URL ending.
+ * Thai was allowed here until 2026-10-29: product pages are ISR, and
+ * Next 16.2 puts the decoded pathname into the `x-next-cache-tags` response
+ * header, which throws on non-ASCII — every imported Thai-slug product page
+ * returned 500. (The earlier \p{Mark} fix stopped mangled Thai; this stops
+ * Thai slugs entirely.)
  */
 export function slugify(input: string): string {
   return input
     .trim()
     .toLowerCase()
-    .replace(/[\s_]+/g, "-")
-    .replace(/[^\p{Letter}\p{Number}\p{Mark}\-]/gu, "")
-    .replace(/-{2,}/g, "-")
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
 }

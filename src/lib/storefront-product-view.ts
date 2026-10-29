@@ -1,5 +1,6 @@
 import "server-only";
 
+import { decodeProductSlugParam } from "@/lib/product-slug-alias";
 import { cache } from "react";
 import { db, ProductStatus, ShopStatus } from "@/lib/db";
 import { getProduct as getDemoProduct, getShopBySlug as getDemoShop } from "@/lib/demo-data";
@@ -37,6 +38,7 @@ export const getStorefrontProductView = cache(
     slug: string,
     productSlug: string,
   ): Promise<StorefrontProductView | null> => {
+    productSlug = decodeProductSlugParam(productSlug);
     const shop = await db.shop.findUnique({
       where: { slug },
       select: {
@@ -48,8 +50,13 @@ export const getStorefrontProductView = cache(
         themeColor: true,
         verified: true,
         status: true,
+        suspended: true,
       },
     });
+
+    // Admin-suspended shops are 404 on the storefront; their product pages
+    // must be too, otherwise buyers land on a Buy button that /orders rejects.
+    if (shop?.suspended) return null;
 
     if (shop && shop.status === ShopStatus.ACTIVE) {
       const p = await db.product.findUnique({

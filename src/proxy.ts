@@ -2,6 +2,7 @@ import createMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "./i18n/routing";
 import { ensureLiffReturnParam, resolveLiffStateTarget } from "@/lib/liff-url";
+import { encodeProductSlugAlias, hasNonAscii } from "@/lib/product-slug-alias";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -81,7 +82,7 @@ export async function proxy(request: NextRequest) {
       const rest = localeMatch ? incoming.slice(localeMatch[0].length) : incoming;
       const shopPath =
         rest === "" || rest === "/" ? `/s/${slug}` : `/s/${slug}${rest}`;
-      url.pathname = `${localePrefix}${shopPath}`;
+      url.pathname = aliasThaiProductPath(`${localePrefix}${shopPath}`);
       return NextResponse.rewrite(url);
     }
     // Unknown custom host → fall through; Next renders its default 404.
@@ -91,7 +92,36 @@ export async function proxy(request: NextRequest) {
   const liffStateRedirect = redirectLiffState(request);
   if (liffStateRedirect) return liffStateRedirect;
 
+  // Thai product slugs: serve via an ASCII alias (see product-slug-alias.ts).
+  const productMatch = request.nextUrl.pathname.match(
+    /^(?:\/(th|en))?(?:\/s)?\/([a-z0-9][a-z0-9-]*)\/([^/]+)\/?$/,
+  );
+  if (productMatch && hasNonAscii(safeDecode(productMatch[3]))) {
+    const url = request.nextUrl.clone();
+    url.pathname = aliasThaiProductPath(
+      `/${productMatch[1] ?? "th"}/s/${productMatch[2]}/${productMatch[3]}`,
+    );
+    return NextResponse.rewrite(url);
+  }
+
   return intlMiddleware(request);
+}
+
+function safeDecode(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+/** `/<locale>/s/<shop>/<product>` with a non-ASCII product segment →
+ *  same path with the ASCII alias. Anything else is returned unchanged. */
+function aliasThaiProductPath(pathname: string): string {
+  const m = pathname.match(/^(\/(?:th|en)\/s\/[^/]+\/)([^/]+)\/?$/);
+  if (!m) return pathname;
+  const slug = safeDecode(m[2]);
+  return hasNonAscii(slug) ? m[1] + encodeProductSlugAlias(slug) : pathname;
 }
 
 function redirectLiffState(request: NextRequest) {

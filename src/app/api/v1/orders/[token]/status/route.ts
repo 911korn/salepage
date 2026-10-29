@@ -138,6 +138,39 @@ export async function PATCH(request: Request, ctx: Ctx) {
     });
   }
 
+  // A manual PAID → SHIPPING must leave a Shipment row with shippedAt:
+  // auto-mark-delivered keys off Shipment.shippedAt, so without it the
+  // order sat in SHIPPING forever (7 such orders found 2026-10-29).
+  if (status === "SHIPPING") {
+    const now = new Date();
+    const existing = await db.shipment.findUnique({
+      where: { orderId: order.id },
+      select: { shippedAt: true },
+    });
+    await db.shipment.upsert({
+      where: { orderId: order.id },
+      create: {
+        orderId: order.id,
+        shopId: order.shop.id,
+        provider: "manual",
+        courierCode: "OTHER",
+        courierName: "อื่นๆ",
+        handoff: "DROPOFF",
+        status: "IN_TRANSIT",
+        trackingNumber: trackingNumber ?? order.trackingNumber ?? null,
+        receiverName: order.customerName,
+        receiverPhone: order.customerPhone,
+        receiverAddress: order.customerAddress,
+        bookedAt: now,
+        shippedAt: now,
+      },
+      update: {
+        status: "IN_TRANSIT",
+        shippedAt: existing?.shippedAt ?? now,
+      },
+    });
+  }
+
   if (trackingNumber !== undefined || status === "DELIVERED" || status === "CANCELLED") {
     await db.shipment
       .update({

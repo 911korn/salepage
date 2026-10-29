@@ -13,11 +13,9 @@ import { recomputeTrustScore } from "@/lib/trust-score";
  * the 2nd — outside business hours so the spike on Neon doesn't compete
  * with checkout traffic).
  *
- * Auth: Vercel signs cron requests with `x-vercel-cron-signature` and a
- * shared secret in `CRON_SECRET`. We accept either:
- *   - `Authorization: Bearer <CRON_SECRET>` (the documented method)
- *   - the Vercel signature header (set by the platform automatically)
- * In dev/no-secret mode we allow all so `curl localhost:3000/...` works.
+ * Auth: `Authorization: Bearer <CRON_SECRET>`, which Vercel Cron sends
+ * automatically. The mere presence of a signature header is not proof, so
+ * it is not accepted on its own.
  */
 export const runtime = "nodejs";
 // Long-running sweep — give us 5 minutes since we're potentially scoring
@@ -58,11 +56,13 @@ export async function GET(request: Request) {
 
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  // Local dev: skip auth so contributors can poke the endpoint.
-  if (!secret) return true;
+  if (!secret) {
+    // Fail closed: these jobs move money/order state. Vercel Cron sends
+    // `Authorization: Bearer $CRON_SECRET` once the env var is set.
+    console.error("[cron] CRON_SECRET is not set - refusing to run");
+    return false;
+  }
   const auth = request.headers.get("authorization");
   if (auth === `Bearer ${secret}`) return true;
-  // Vercel auto-signs cron invocations; trust their header.
-  if (request.headers.has("x-vercel-cron-signature")) return true;
   return false;
 }
