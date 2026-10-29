@@ -1529,3 +1529,26 @@ enum ShopDomainStatus {
   VERIFIED     // live + serving
   FAILED       // verification failed — see failedReason
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Error log — self-hosted replacement for a paid error tracker
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One row per distinct error (same source + normalized message + top frame).
+/// Repeats bump `count` + `lastSeenAt` instead of adding rows. Written by
+/// src/instrumentation.ts (server) and POST /api/v1/errors (browser);
+/// surfaced at /admin/errors.
+model ErrorEvent {
+  id          String   @id @default(cuid())
+  fingerprint String   @unique
+  source      String // "server" | "client"
+  message     String
+  stack       String?
+  path        String?
+  userAgent   String?
+  count       Int      @default(1)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@index([lastSeenAt])
+}

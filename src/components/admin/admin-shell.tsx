@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Activity,
   Bell,
+  Bug,
   BriefcaseBusiness,
   Building2,
   CreditCard,
@@ -48,6 +49,7 @@ const NAV_SECTIONS = [
       { href: "/admin", label: "Overview", icon: Gauge, exact: true },
       { href: "/admin/business-plan", label: "Business Plan", icon: BriefcaseBusiness },
       { href: "/admin/audit", label: "Audit log", icon: ScrollText },
+      { href: "/admin/errors", label: "Errors", icon: Bug },
     ],
   },
   {

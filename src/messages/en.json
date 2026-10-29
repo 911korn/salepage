@@ -875,5 +875,21 @@
     "retention": "Note — orders that are still in transit will remain until they're delivered so both buyer and seller can view their history. Your personal data is replaced with \"Deleted user\" immediately on deletion.",
     "privacyLink": "Privacy Policy",
     "contactLink": "Contact support"
+  },
+  "adminErrors": {
+    "title": "Errors",
+    "description": "{total} distinct errors · grouped by message and location",
+    "empty": "No errors recorded yet",
+    "all": "All sources",
+    "server": "Server",
+    "client": "Browser",
+    "filter": "Filter",
+    "times": "{count}×",
+    "first": "First seen {date}",
+    "last": "Last seen {date}",
+    "stack": "Stack trace",
+    "prev": "← Previous",
+    "next": "Next →",
+    "page": "Page {page} / {total}"
   }
 }
